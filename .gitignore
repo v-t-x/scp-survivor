@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local backups (superseded by git history / tags)
+backup_*/
+
+# Editor / OS / tooling
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
