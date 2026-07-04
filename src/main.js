@@ -223,7 +223,9 @@ const BALANCE = {
     maxHealthHealOnPick: 20,
     emergencyHealAmount: 25,
     projectileSpreadDeg: 10,
-    pickupRadiusMultiplier: 1.25
+    pickupRadiusMultiplier: 1.25,
+    rerollsPerRun: 3,
+    skipHealAmount: 8
   },
   feedback: {
     enemyHitFlashMs: 80,
@@ -593,6 +595,7 @@ class PrototypeScene extends Phaser.Scene {
     this.isLevelUpActive = false;
     this.isResolvingLevelUp = false;
     this.pendingLevelUps = 0;
+    this.rerollsRemaining = BALANCE.upgrades.rerollsPerRun;
     this.levelUpOverlay = null;
     this.transientEffects = new Set();
     this.topBannerState = null;
@@ -677,9 +680,11 @@ class PrototypeScene extends Phaser.Scene {
       this.updateMuteText();
     });
 
-    this.input.keyboard.on("keydown-B", () => {
-      this.skipToBossPhase();
-    });
+    if (DEBUG_MODE) {
+      this.input.keyboard.on("keydown-B", () => {
+        this.skipToBossPhase();
+      });
+    }
   }
 
   skipToBossPhase() {
@@ -1007,14 +1012,6 @@ class PrototypeScene extends Phaser.Scene {
         selectedLabel,
         ...statRows
       );
-
-      if (option.id === "pistol") {
-        console.log("Created pistol card");
-      } else if (option.id === "shotgun") {
-        console.log("Created breacher card");
-      } else if (option.id === "tesla") {
-        console.log("Created tesla card");
-      }
     });
 
     this.startMissionButton = this.add.rectangle(
@@ -2909,7 +2906,11 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   handleExperienceCollection() {
+    const collectDistance = 14;
     for (const gem of this.xpGems.getChildren()) {
+      if (!gem.active) {
+        continue;
+      }
       const distance = Phaser.Math.Distance.Between(
         this.player.x,
         this.player.y,
@@ -2917,12 +2918,46 @@ class PrototypeScene extends Phaser.Scene {
         gem.y
       );
 
-      if (distance <= this.pickupRadius) {
-        const xpValue = gem.xpValue ?? BALANCE.xp.gemValue;
-        gem.destroy();
-        this.addExperience(xpValue);
+      // Begin magnetizing once the gem enters pickup radius.
+      if (!gem.isMagnetized && distance <= this.pickupRadius) {
+        gem.isMagnetized = true;
+      }
+
+      if (gem.isMagnetized) {
+        if (distance <= collectDistance) {
+          const xpValue = gem.xpValue ?? BALANCE.xp.gemValue;
+          this.spawnGemPickupSpark(gem.x, gem.y);
+          gem.destroy();
+          this.addExperience(xpValue);
+          continue;
+        }
+
+        // Accelerate toward the player for a satisfying vacuum feel.
+        gem.magnetSpeed = Math.min(620, (gem.magnetSpeed ?? 180) + 26);
+        const angle = Phaser.Math.Angle.Between(
+          gem.x,
+          gem.y,
+          this.player.x,
+          this.player.y
+        );
+        const step = (gem.magnetSpeed / 1000) * 16;
+        gem.x += Math.cos(angle) * step;
+        gem.y += Math.sin(angle) * step;
       }
     }
+  }
+
+  spawnGemPickupSpark(x, y) {
+    const spark = this.add.circle(x, y, 4, 0x9dffb8, 0.9);
+    spark.setDepth(17);
+    this.registerTransientEffect(spark);
+    this.tweens.add({
+      targets: spark,
+      scale: 2.2,
+      alpha: 0,
+      duration: 140,
+      onComplete: () => spark.destroy()
+    });
   }
 
   addExperience(amount) {
@@ -2971,7 +3006,7 @@ class PrototypeScene extends Phaser.Scene {
       GAME_WIDTH / 2,
       GAME_HEIGHT / 2,
       760,
-      350,
+      420,
       0x000000,
       0.84
     );
@@ -2979,7 +3014,7 @@ class PrototypeScene extends Phaser.Scene {
 
     const title = this.add.text(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 145,
+      GAME_HEIGHT / 2 - 175,
       "升级",
       {
         fontSize: "50px",
@@ -2990,7 +3025,7 @@ class PrototypeScene extends Phaser.Scene {
 
     const subtitle = this.add.text(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 102,
+      GAME_HEIGHT / 2 - 132,
       "选择一个升级",
       {
         fontSize: "22px",
@@ -2999,14 +3034,31 @@ class PrototypeScene extends Phaser.Scene {
     );
     subtitle.setOrigin(0.5);
 
+    this.levelUpOverlay.add([backdrop, title, subtitle]);
+
+    this.levelUpCardObjects = [];
+    this.levelUpCards = [];
+    this.renderLevelUpCards();
+    this.createLevelUpButtons();
+  }
+
+  renderLevelUpCards() {
+    if (this.levelUpCardObjects) {
+      for (const object of this.levelUpCardObjects) {
+        if (object?.active) {
+          object.destroy();
+        }
+      }
+    }
+    this.levelUpCardObjects = [];
+    this.levelUpCards = [];
+
     const options = this.getLevelUpChoices();
     const startX = GAME_WIDTH / 2 - 240;
-    this.levelUpCards = [];
-    this.levelUpOverlay.add([backdrop, title, subtitle]);
 
     options.forEach((upgrade, index) => {
       const optionX = startX + index * 240;
-      const optionY = GAME_HEIGHT / 2 + 10;
+      const optionY = GAME_HEIGHT / 2 - 15;
       const currentLevel = this.getUpgradeCurrentLevel(upgrade);
 
       const card = this.add.rectangle(optionX, optionY, 220, 230, 0x1c2333, 1);
@@ -3053,7 +3105,128 @@ class PrototypeScene extends Phaser.Scene {
       );
       currentLevelText.setOrigin(0.5);
 
+      this.levelUpCardObjects.push(card, nameText, descriptionText, currentLevelText);
       this.levelUpOverlay.add([card, nameText, descriptionText, currentLevelText]);
+    });
+  }
+
+  createLevelUpButtons() {
+    const buttonY = GAME_HEIGHT / 2 + 160;
+
+    const rerollButton = this.add.rectangle(
+      GAME_WIDTH / 2 - 115,
+      buttonY,
+      200,
+      46,
+      0x2d3a55,
+      1
+    );
+    rerollButton.setStrokeStyle(2, 0x5f78b0);
+    rerollButton.setInteractive({ useHandCursor: true });
+
+    const rerollLabel = this.add.text(GAME_WIDTH / 2 - 115, buttonY, "", {
+      fontSize: "18px",
+      color: "#dfe8ff",
+      align: "center"
+    });
+    rerollLabel.setOrigin(0.5);
+
+    rerollButton.on("pointerover", () => {
+      if (this.rerollsRemaining > 0) {
+        rerollButton.setFillStyle(0x3a4b6e, 1);
+      }
+    });
+    rerollButton.on("pointerout", () => rerollButton.setFillStyle(0x2d3a55, 1));
+    rerollButton.on("pointerdown", () => this.rerollLevelUpChoices());
+
+    const skipButton = this.add.rectangle(
+      GAME_WIDTH / 2 + 115,
+      buttonY,
+      200,
+      46,
+      0x2d3a55,
+      1
+    );
+    skipButton.setStrokeStyle(2, 0x5f78b0);
+    skipButton.setInteractive({ useHandCursor: true });
+
+    const skipLabel = this.add.text(
+      GAME_WIDTH / 2 + 115,
+      buttonY,
+      `跳过（+${BALANCE.upgrades.skipHealAmount} 生命）`,
+      {
+        fontSize: "18px",
+        color: "#dfe8ff",
+        align: "center"
+      }
+    );
+    skipLabel.setOrigin(0.5);
+
+    skipButton.on("pointerover", () => skipButton.setFillStyle(0x3a4b6e, 1));
+    skipButton.on("pointerout", () => skipButton.setFillStyle(0x2d3a55, 1));
+    skipButton.on("pointerdown", () => this.skipLevelUpChoice());
+
+    this.levelUpRerollButton = rerollButton;
+    this.levelUpRerollLabel = rerollLabel;
+    this.levelUpOverlay.add([rerollButton, rerollLabel, skipButton, skipLabel]);
+    this.updateRerollButtonState();
+  }
+
+  updateRerollButtonState() {
+    if (!this.levelUpRerollLabel) {
+      return;
+    }
+    this.levelUpRerollLabel.setText(`重抽（剩 ${this.rerollsRemaining}）`);
+    const enabled = this.rerollsRemaining > 0;
+    this.levelUpRerollLabel.setColor(enabled ? "#dfe8ff" : "#6b7590");
+    this.levelUpRerollButton.setStrokeStyle(2, enabled ? 0x5f78b0 : 0x3a4256);
+  }
+
+  rerollLevelUpChoices() {
+    if (this.isResolvingLevelUp || this.rerollsRemaining <= 0) {
+      return;
+    }
+    this.rerollsRemaining -= 1;
+    this.renderLevelUpCards();
+    this.updateRerollButtonState();
+    this.playSound("levelUp");
+  }
+
+  skipLevelUpChoice() {
+    if (this.isResolvingLevelUp) {
+      return;
+    }
+    this.isResolvingLevelUp = true;
+
+    for (const card of this.levelUpCards) {
+      card.disableInteractive();
+    }
+
+    this.health = Math.min(
+      this.maxHealth,
+      this.health + BALANCE.upgrades.skipHealAmount
+    );
+
+    if (this.pendingLevelUps > 0) {
+      this.pendingLevelUps -= 1;
+    }
+    this.updateUI();
+
+    this.time.delayedCall(120, () => {
+      if (this.pendingLevelUps > 0) {
+        this.showLevelUpOverlay();
+        return;
+      }
+      if (this.levelUpOverlay) {
+        this.levelUpOverlay.destroy(true);
+        this.levelUpOverlay = null;
+      }
+      this.levelUpCards = [];
+      this.levelUpCardObjects = [];
+      this.isLevelUpActive = false;
+      this.isResolvingLevelUp = false;
+      this.resumeGameplaySystems();
+      this.updateUI();
     });
   }
 
@@ -3095,6 +3268,7 @@ class PrototypeScene extends Phaser.Scene {
         this.levelUpOverlay = null;
       }
       this.levelUpCards = [];
+      this.levelUpCardObjects = [];
       this.isLevelUpActive = false;
       this.isResolvingLevelUp = false;
       this.resumeGameplaySystems();
@@ -3563,7 +3737,7 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   applyPlayerDamage(amount, sourceX = this.player.x, sourceY = this.player.y) {
-    const now = this.time.now;
+    const now = this.elapsedSurvivalMs;
     if (now < this.playerInvulnerableUntilMs) {
       return;
     }
@@ -3596,8 +3770,8 @@ class PrototypeScene extends Phaser.Scene {
       return;
     }
 
-    if (this.time.now < this.playerInvulnerableUntilMs) {
-      const blinkOn = Math.sin(this.time.now * 0.04) > 0;
+    if (this.elapsedSurvivalMs < this.playerInvulnerableUntilMs) {
+      const blinkOn = Math.sin(this.elapsedSurvivalMs * 0.04) > 0;
       this.player.setAlpha(blinkOn ? 1 : 0.35);
     } else {
       this.player.setAlpha(1);
