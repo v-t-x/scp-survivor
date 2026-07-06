@@ -2,8 +2,20 @@ import Phaser from "phaser";
 
 const DEBUG_MODE = false;
 
+// Viewport (canvas) size — HUD and overlays are laid out in this space.
 const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;
+
+// World (playfield) size — larger than the viewport so the camera can follow
+// the player and there is room to kite. Gameplay entities live in world space.
+const WORLD_WIDTH = 1920;
+const WORLD_HEIGHT = 1920;
+
+// Spatial grid used to accelerate nearest-enemy queries. Cell size is a balance
+// between bucket count and per-query cells scanned; STRIDE just packs (cx, cy)
+// into one numeric Map key and only needs to exceed the max cell index.
+const ENEMY_GRID_CELL_SIZE = 160;
+const ENEMY_GRID_STRIDE = 100000;
 
 const BALANCE = {
   match: {
@@ -17,7 +29,12 @@ const BALANCE = {
     baseMaxHealth: 100,
     baseMoveSpeed: 220,
     damageCooldownMs: 500,
-    basePickupRadius: 56
+    basePickupRadius: 56,
+    // Dodge dash (SPACE): burst of speed with brief invulnerability.
+    dashSpeed: 720,
+    dashDurationMs: 160,
+    dashCooldownMs: 2200,
+    dashInvulnerabilityMs: 260
   },
   combat: {
     // Baseline weapon feel.
@@ -81,7 +98,20 @@ const BALANCE = {
     breacherSuppressionStaggerMultiplier: 1.4,
     breacherMagazineSizeBonus: 1,
     breacherReloadDurationMultiplier: 0.88,
-    teslaCooldownMultiplier: 0.88
+    teslaCooldownMultiplier: 0.88,
+    // Mutation (质变) upgrades — one per weapon, changes how the weapon plays.
+    boomerangReturnSpeedMultiplier: 1.1,
+    breacherExplosionRadius: 96,
+    breacherExplosionDamageMultiplier: 0.6,
+    teslaFieldRadius: 130,
+    teslaFieldTickMs: 600,
+    teslaFieldDamageMultiplier: 0.45
+  },
+  meta: {
+    // Local-storage meta progression: credits earned per run, spent on perks.
+    killCreditRate: 0.5,
+    timeCreditRate: 0.4,
+    victoryBonus: 200
   },
   enemy: {
     maxActiveEnemies: 230,
@@ -574,6 +604,127 @@ const UPGRADE_DEFINITIONS = [
         scene.weapons.tesla.cooldownMs * BALANCE.weaponUpgrades.teslaCooldownMultiplier
       );
     }
+  },
+  {
+    key: "pistolBoomerang",
+    name: "回旋弹",
+    description: "【质变】子弹抵达射程后折返飞回，回程可再次命中。",
+    kind: "weapon",
+    weaponId: "pistol",
+    isMutation: true,
+    isAvailable: (scene) =>
+      scene.selectedWeaponId === "pistol" && !scene.weaponMutations.pistolBoomerang,
+    apply: (scene) => {
+      scene.weaponMutations.pistolBoomerang = true;
+    }
+  },
+  {
+    key: "breacherExplosive",
+    name: "爆炸弹",
+    description: "【质变】弹丸命中时引发小范围爆炸，波及周围敌人。",
+    kind: "weapon",
+    weaponId: "shotgun",
+    isMutation: true,
+    isAvailable: (scene) =>
+      scene.selectedWeaponId === "shotgun" && !scene.weaponMutations.breacherExplosive,
+    apply: (scene) => {
+      scene.weaponMutations.breacherExplosive = true;
+    }
+  },
+  {
+    key: "teslaField",
+    name: "常驻电场",
+    description: "【质变】玩家周身持续释放电场，周期性电击近身敌人。",
+    kind: "weapon",
+    weaponId: "tesla",
+    isMutation: true,
+    isAvailable: (scene) =>
+      scene.selectedWeaponId === "tesla" && !scene.weaponMutations.teslaField,
+    apply: (scene) => {
+      scene.weaponMutations.teslaField = true;
+      scene.teslaFieldNextTickAtMs =
+        scene.elapsedSurvivalMs + BALANCE.weaponUpgrades.teslaFieldTickMs;
+    }
+  }
+];
+
+// ---------------------------------------------------------------------------
+// Meta progression (元进度): persistent, cross-run credits + unlocked perks.
+// Stored in localStorage; all access is wrapped so a disabled/blocked storage
+// (private mode, etc.) degrades to an in-memory object instead of crashing.
+// ---------------------------------------------------------------------------
+const META_STORAGE_KEY = "scp-survivor-meta";
+
+function defaultMetaProgress() {
+  return { credits: 0, perks: {} };
+}
+
+function loadMetaProgress() {
+  try {
+    const raw = window.localStorage.getItem(META_STORAGE_KEY);
+    if (!raw) {
+      return defaultMetaProgress();
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      credits: Number.isFinite(parsed?.credits) ? parsed.credits : 0,
+      perks: parsed && typeof parsed.perks === "object" ? parsed.perks : {}
+    };
+  } catch (err) {
+    return defaultMetaProgress();
+  }
+}
+
+function saveMetaProgress(meta) {
+  try {
+    window.localStorage.setItem(META_STORAGE_KEY, JSON.stringify(meta));
+  } catch (err) {
+    // Storage unavailable — keep the in-memory copy; progress just won't persist.
+  }
+}
+
+// One-shot buyable starting bonuses. Applied at run start after weapons init.
+const META_PERKS = [
+  {
+    key: "startMaxHealth",
+    name: "强化装甲",
+    description: "起始最大生命值 +20。",
+    cost: 150,
+    apply: (scene) => {
+      scene.maxHealth += 20;
+      scene.health = scene.maxHealth;
+    }
+  },
+  {
+    key: "startMoveSpeed",
+    name: "轻量护具",
+    description: "起始移动速度 +5%。",
+    cost: 150,
+    apply: (scene) => {
+      scene.playerMoveSpeed *= 1.05;
+    }
+  },
+  {
+    key: "startDamage",
+    name: "军械授权",
+    description: "起始武器伤害 +8%。",
+    cost: 250,
+    apply: (scene) => {
+      const weapon = scene.weapons[scene.selectedWeaponId];
+      if (weapon) {
+        weapon.damage *= 1.08;
+        scene.syncCombatStatsFromWeapons();
+      }
+    }
+  },
+  {
+    key: "startPickupRadius",
+    name: "回收信标",
+    description: "起始拾取范围 +15%。",
+    cost: 120,
+    apply: (scene) => {
+      scene.pickupRadius *= 1.15;
+    }
   }
 ];
 
@@ -583,6 +734,8 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   create() {
+    // Persistent cross-run progress; re-loaded each run (saved on run end).
+    this.meta = loadMetaProgress();
     this.isMissionActive = false;
     this.selectedWeaponId = null;
     this.pendingSelectedWeaponId = null;
@@ -619,6 +772,13 @@ class PrototypeScene extends Phaser.Scene {
     this.upgradeLevels = Object.fromEntries(
       UPGRADE_DEFINITIONS.map((upgrade) => [upgrade.key, 0])
     );
+    // Per-run mutation (质变) flags — one-shot upgrades that change weapon behavior.
+    this.weaponMutations = {
+      pistolBoomerang: false,
+      breacherExplosive: false,
+      teslaField: false
+    };
+    this.teslaFieldNextTickAtMs = 0;
     this.isVictory = false;
     this.nextInstabilityShakeAtMs = 0;
     this.nextDecoySpawnAtMs = Phaser.Math.Between(
@@ -626,9 +786,23 @@ class PrototypeScene extends Phaser.Scene {
       BALANCE.timeline.effects.decoySpawnMaxMs
     );
     this.timelineHudBasePositions = null;
+    this._timelinePhaseCache = null;
+    this._timelinePhaseCacheAtMs = -1;
+    this._enemyGrid = null;
+    this._enemyGridAtMs = -1;
+    // Object pools for high-frequency, short-lived combat visuals. Reusing these
+    // avoids per-hit create/destroy churn (and the GC pauses it caused) during
+    // heavy fights. Reset here so a scene.restart starts with empty pools.
+    this._damageTextPool = [];
+    this._impactPool = [];
+    this._particlePool = [];
+    this._lightningPool = [];
 
     this.playerMoveSpeed = BALANCE.player.baseMoveSpeed;
     this.playerFacingAngle = 0;
+    this.dashUntilMs = 0;
+    this.dashReadyAtMs = 0;
+    this.dashAngle = 0;
     this.pickupRadius = BALANCE.player.basePickupRadius;
     this.projectileCount = 1;
     this.bulletPenetration = 0;
@@ -637,7 +811,8 @@ class PrototypeScene extends Phaser.Scene {
     this.audioContext = null;
     this.audioGain = null;
 
-    this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBackgroundColor("#111319");
 
     this.createPlaceholderTextures();
@@ -648,7 +823,8 @@ class PrototypeScene extends Phaser.Scene {
     this.createUI();
     this.createBuildPanel();
     this.setupInputHandlers();
-    this.createWeaponSelectionScreen();
+    this.isPaused = false;
+    this.createStartScreen();
     this.updateUI();
   }
 
@@ -659,7 +835,12 @@ class PrototypeScene extends Phaser.Scene {
       left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
       tab: Phaser.Input.Keyboard.KeyCodes.TAB,
-      mute: Phaser.Input.Keyboard.KeyCodes.M
+      mute: Phaser.Input.Keyboard.KeyCodes.M,
+      dash: Phaser.Input.Keyboard.KeyCodes.SPACE
+    });
+
+    this.input.keyboard.on("keydown-SPACE", () => {
+      this.tryStartDash();
     });
 
     this.input.keyboard.on("keydown-TAB", (event) => {
@@ -678,6 +859,10 @@ class PrototypeScene extends Phaser.Scene {
       }
       this.soundMuted = !this.soundMuted;
       this.updateMuteText();
+    });
+
+    this.input.keyboard.on("keydown-ESC", () => {
+      this.togglePause();
     });
 
     if (DEBUG_MODE) {
@@ -771,6 +956,10 @@ class PrototypeScene extends Phaser.Scene {
       return;
     }
 
+    if (this.isPaused) {
+      return;
+    }
+
     if (!this.isLevelUpActive) {
       this.elapsedSurvivalMs += delta;
       this.updateTimelineDirector();
@@ -798,6 +987,114 @@ class PrototypeScene extends Phaser.Scene {
     if (this.buildPanel.visible) {
       this.updateBuildPanelText();
     }
+  }
+
+  createStartScreen() {
+    this.setGameplayHudVisible(false);
+    this.cameras.main.setBackgroundColor("#080C16");
+    this.startScreenObjects = [];
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const fontFamily =
+      '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif';
+
+    const bg = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x080c16, 1);
+    bg.setDepth(10);
+    this.startScreenObjects.push(bg);
+
+    const title = this.add.text(cx, cy - 130, "SCP：幸存者", {
+      fontFamily,
+      fontSize: "64px",
+      fontStyle: "bold",
+      color: "#f4f7ff"
+    });
+    title.setShadow(0, 3, "#04070e", 8, false, true);
+    title.setOrigin(0.5);
+    title.setDepth(11);
+    this.startScreenObjects.push(title);
+
+    const subtitle = this.add.text(
+      cx,
+      cy - 70,
+      "在收容失效的设施中生存到底，收容 SCP-049。",
+      {
+        fontFamily,
+        fontSize: "20px",
+        color: "#c5d2ee"
+      }
+    );
+    subtitle.setOrigin(0.5);
+    subtitle.setDepth(11);
+    this.startScreenObjects.push(subtitle);
+
+    const hint = this.add.text(
+      cx,
+      cy - 8,
+      "WASD 移动 · 空格 闪避 · TAB 查看构建 · ESC 暂停 · M 静音",
+      {
+        fontFamily,
+        fontSize: "15px",
+        color: "#8fa2c8"
+      }
+    );
+    hint.setOrigin(0.5);
+    hint.setDepth(11);
+    this.startScreenObjects.push(hint);
+
+    const startButton = this.add.rectangle(cx, cy + 78, 260, 62, 0x2a3242, 1);
+    startButton.setStrokeStyle(2, 0x6f91d8);
+    startButton.setDepth(11);
+    startButton.setInteractive({ useHandCursor: true });
+    startButton.on("pointerover", () => startButton.setFillStyle(0x39527f, 1));
+    startButton.on("pointerout", () => startButton.setFillStyle(0x2a3242, 1));
+    startButton.on("pointerdown", () => this.beginFromStartScreen());
+    this.startScreenObjects.push(startButton);
+
+    const startLabel = this.add.text(cx, cy + 78, "开始游戏", {
+      fontFamily,
+      fontSize: "28px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    });
+    startLabel.setOrigin(0.5);
+    startLabel.setDepth(12);
+    this.startScreenObjects.push(startLabel);
+
+    const creditsHint = this.add.text(
+      cx,
+      cy + 150,
+      `累计学分：${this.meta.credits}（进入后可在解锁商店消费）`,
+      {
+        fontFamily,
+        fontSize: "15px",
+        color: "#ffe08a"
+      }
+    );
+    creditsHint.setOrigin(0.5);
+    creditsHint.setDepth(11);
+    this.startScreenObjects.push(creditsHint);
+
+    for (const object of this.startScreenObjects) {
+      object.setScrollFactor?.(0);
+    }
+  }
+
+  beginFromStartScreen() {
+    this.destroyStartScreen();
+    this.createWeaponSelectionScreen();
+  }
+
+  destroyStartScreen() {
+    if (!this.startScreenObjects) {
+      return;
+    }
+    for (const object of this.startScreenObjects) {
+      if (object?.active) {
+        object.destroy();
+      }
+    }
+    this.startScreenObjects = null;
   }
 
   createWeaponSelectionScreen() {
@@ -1054,6 +1351,62 @@ class PrototypeScene extends Phaser.Scene {
     this.startMissionButtonLabel.setDepth(31);
 
     this.weaponSelectUiObjects.push(this.startMissionButton, this.startMissionButtonLabel);
+
+    // Meta progression: credits display + unlock-store entry.
+    this.weaponSelectCreditsLabel = this.add.text(
+      GAME_WIDTH / 2 - 410,
+      GAME_HEIGHT / 2 - 240,
+      `学分：${this.meta.credits}`,
+      {
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontSize: "18px",
+        fontStyle: "bold",
+        color: "#ffe08a"
+      }
+    );
+    this.weaponSelectCreditsLabel.setOrigin(0, 0.5);
+    this.weaponSelectCreditsLabel.setDepth(31);
+
+    const unlockButton = this.add.rectangle(
+      GAME_WIDTH / 2 + 330,
+      GAME_HEIGHT / 2 - 238,
+      140,
+      40,
+      0x2d2647,
+      1
+    );
+    unlockButton.setStrokeStyle(2, 0x8f78c8);
+    unlockButton.setDepth(31);
+    unlockButton.setInteractive({ useHandCursor: true });
+    unlockButton.on("pointerover", () => unlockButton.setFillStyle(0x3d3560, 1));
+    unlockButton.on("pointerout", () => unlockButton.setFillStyle(0x2d2647, 1));
+    unlockButton.on("pointerdown", () => this.openPerkStore());
+
+    const unlockLabel = this.add.text(
+      GAME_WIDTH / 2 + 330,
+      GAME_HEIGHT / 2 - 238,
+      "解锁商店",
+      {
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontSize: "17px",
+        fontStyle: "bold",
+        color: "#e2c6ff"
+      }
+    );
+    unlockLabel.setOrigin(0.5);
+    unlockLabel.setDepth(32);
+
+    this.weaponSelectUiObjects.push(
+      this.weaponSelectCreditsLabel,
+      unlockButton,
+      unlockLabel
+    );
+
+    // The camera follows the player at world center, so all selection UI must
+    // be pinned to the screen to stay visible and centered.
+    for (const object of this.weaponSelectUiObjects) {
+      object.setScrollFactor?.(0);
+    }
     this.refreshWeaponSelectionVisuals();
   }
 
@@ -1130,6 +1483,7 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   destroyWeaponSelectionScreen() {
+    this.closePerkStore();
     if (!this.weaponSelectUiObjects) {
       return;
     }
@@ -1141,6 +1495,186 @@ class PrototypeScene extends Phaser.Scene {
     this.weaponSelectUiObjects = [];
     this.weaponSelectCards = [];
     this.weaponSelectOverlay = null;
+  }
+
+  openPerkStore() {
+    if (this.perkStoreObjects) {
+      return;
+    }
+    this.perkStoreObjects = [];
+
+    const panelW = 560;
+    const panelH = 420;
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    const backdrop = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6);
+    backdrop.setDepth(60);
+    backdrop.setInteractive();
+    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x141c2f, 1);
+    panel.setStrokeStyle(2, 0x8f78c8);
+    panel.setDepth(61);
+
+    const title = this.add.text(cx, cy - panelH / 2 + 30, "解锁商店（永久起始加成）", {
+      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+      fontSize: "24px",
+      fontStyle: "bold",
+      color: "#e2c6ff"
+    });
+    title.setOrigin(0.5);
+    title.setDepth(62);
+
+    this.perkStoreCreditsLabel = this.add.text(
+      cx,
+      cy - panelH / 2 + 60,
+      `学分：${this.meta.credits}`,
+      {
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontSize: "18px",
+        color: "#ffe08a"
+      }
+    );
+    this.perkStoreCreditsLabel.setOrigin(0.5);
+    this.perkStoreCreditsLabel.setDepth(62);
+
+    this.perkStoreObjects.push(backdrop, panel, title, this.perkStoreCreditsLabel);
+
+    const rowStartY = cy - panelH / 2 + 100;
+    const rowHeight = 64;
+    this.perkStoreRows = [];
+    META_PERKS.forEach((perk, index) => {
+      const rowY = rowStartY + index * rowHeight;
+
+      const nameText = this.add.text(cx - panelW / 2 + 26, rowY, perk.name, {
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontSize: "18px",
+        fontStyle: "bold",
+        color: "#f2f6ff"
+      });
+      nameText.setOrigin(0, 0.5);
+      nameText.setDepth(62);
+
+      const descText = this.add.text(
+        cx - panelW / 2 + 26,
+        rowY + 20,
+        `${perk.description}  （${perk.cost} 学分）`,
+        {
+          fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+          fontSize: "14px",
+          color: "#9fb2d8"
+        }
+      );
+      descText.setOrigin(0, 0.5);
+      descText.setDepth(62);
+
+      const actionButton = this.add.rectangle(cx + panelW / 2 - 70, rowY + 8, 96, 40, 0x2d3a55, 1);
+      actionButton.setDepth(62);
+      const actionLabel = this.add.text(cx + panelW / 2 - 70, rowY + 8, "", {
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#dfe8ff"
+      });
+      actionLabel.setOrigin(0.5);
+      actionLabel.setDepth(63);
+      actionButton.setInteractive({ useHandCursor: true });
+      actionButton.on("pointerdown", () => this.purchasePerk(perk.key));
+
+      this.perkStoreRows.push({ perk, actionButton, actionLabel });
+      this.perkStoreObjects.push(nameText, descText, actionButton, actionLabel);
+    });
+
+    const closeButton = this.add.rectangle(cx, cy + panelH / 2 - 34, 160, 44, 0x3f4a63, 1);
+    closeButton.setStrokeStyle(2, 0x6a7796);
+    closeButton.setDepth(62);
+    closeButton.setInteractive({ useHandCursor: true });
+    closeButton.on("pointerover", () => closeButton.setFillStyle(0x4d5a78, 1));
+    closeButton.on("pointerout", () => closeButton.setFillStyle(0x3f4a63, 1));
+    closeButton.on("pointerdown", () => this.closePerkStore());
+    const closeLabel = this.add.text(cx, cy + panelH / 2 - 34, "返回", {
+      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+      fontSize: "18px",
+      color: "#ffffff"
+    });
+    closeLabel.setOrigin(0.5);
+    closeLabel.setDepth(63);
+    this.perkStoreObjects.push(closeButton, closeLabel);
+
+    for (const object of this.perkStoreObjects) {
+      object.setScrollFactor?.(0);
+    }
+    this.refreshPerkStore();
+  }
+
+  refreshPerkStore() {
+    if (!this.perkStoreRows) {
+      return;
+    }
+    this.perkStoreCreditsLabel.setText(`学分：${this.meta.credits}`);
+    for (const row of this.perkStoreRows) {
+      const owned = !!this.meta.perks[row.perk.key];
+      const affordable = this.meta.credits >= row.perk.cost;
+      if (owned) {
+        row.actionButton.setFillStyle(0x2f4a3a, 1);
+        row.actionLabel.setText("已解锁");
+        row.actionLabel.setColor("#9fe6b8");
+        row.actionButton.disableInteractive();
+      } else {
+        row.actionButton.setFillStyle(affordable ? 0x35527a : 0x2a3242, 1);
+        row.actionLabel.setText("解锁");
+        row.actionLabel.setColor(affordable ? "#dfe8ff" : "#6f7a90");
+        row.actionButton.setInteractive({ useHandCursor: true });
+      }
+    }
+  }
+
+  purchasePerk(perkKey) {
+    const perk = META_PERKS.find((entry) => entry.key === perkKey);
+    if (!perk || this.meta.perks[perkKey] || this.meta.credits < perk.cost) {
+      return;
+    }
+    this.meta.credits -= perk.cost;
+    this.meta.perks[perkKey] = true;
+    saveMetaProgress(this.meta);
+    this.playSound("levelUp");
+    if (this.weaponSelectCreditsLabel?.active) {
+      this.weaponSelectCreditsLabel.setText(`学分：${this.meta.credits}`);
+    }
+    this.refreshPerkStore();
+  }
+
+  closePerkStore() {
+    if (!this.perkStoreObjects) {
+      return;
+    }
+    for (const object of this.perkStoreObjects) {
+      if (object?.active) {
+        object.destroy();
+      }
+    }
+    this.perkStoreObjects = null;
+    this.perkStoreRows = null;
+    this.perkStoreCreditsLabel = null;
+  }
+
+  applyUnlockedPerks() {
+    for (const perk of META_PERKS) {
+      if (this.meta.perks[perk.key]) {
+        perk.apply(this);
+      }
+    }
+  }
+
+  awardRunCredits(isVictory) {
+    const survivalSeconds = this.elapsedSurvivalMs / 1000;
+    const earned =
+      Math.floor(
+        this.killCount * BALANCE.meta.killCreditRate +
+          survivalSeconds * BALANCE.meta.timeCreditRate
+      ) + (isVictory ? BALANCE.meta.victoryBonus : 0);
+    this.meta.credits += earned;
+    saveMetaProgress(this.meta);
+    return earned;
   }
 
   startMissionWithWeapon(weaponId) {
@@ -1164,6 +1698,7 @@ class PrototypeScene extends Phaser.Scene {
 
     this.initWeapons();
     this.syncCombatStatsFromWeapons();
+    this.applyUnlockedPerks();
     this.setupSpawning();
     this.cameras.main.setBackgroundColor("#111319");
     this.setGameplayHudVisible(true);
@@ -1275,8 +1810,8 @@ class PrototypeScene extends Phaser.Scene {
 
   createArenaDecoration() {
     const border = this.add.graphics();
-    border.lineStyle(2, 0x252c3b, 1);
-    border.strokeRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    border.lineStyle(3, 0x3a4664, 1);
+    border.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.arenaBorder = border;
 
     const grid = this.add.graphics();
@@ -1284,22 +1819,24 @@ class PrototypeScene extends Phaser.Scene {
     this.arenaGrid = grid;
 
     const cell = 48;
-    for (let x = cell; x < GAME_WIDTH; x += cell) {
-      grid.lineBetween(x, 0, x, GAME_HEIGHT);
+    for (let x = cell; x < WORLD_WIDTH; x += cell) {
+      grid.lineBetween(x, 0, x, WORLD_HEIGHT);
     }
-    for (let y = cell; y < GAME_HEIGHT; y += cell) {
-      grid.lineBetween(0, y, GAME_WIDTH, y);
+    for (let y = cell; y < WORLD_HEIGHT; y += cell) {
+      grid.lineBetween(0, y, WORLD_WIDTH, y);
     }
   }
 
   createPlayer() {
     this.player = this.physics.add.image(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
+      WORLD_WIDTH / 2,
+      WORLD_HEIGHT / 2,
       "player-rect"
     );
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(24, 24);
+    this.player.setDepth(6);
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
   }
 
   createGroups() {
@@ -1312,6 +1849,9 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   createColliders() {
+    // Enemies push against each other instead of stacking into a single point.
+    this.physics.add.collider(this.enemies, this.enemies);
+
     this.physics.add.overlap(
       this.bullets,
       this.enemies,
@@ -1386,6 +1926,25 @@ class PrototypeScene extends Phaser.Scene {
     this.muteText.setScrollFactor(0);
     this.updateMuteText();
 
+    // Pause button (top-right, below the mute readout). Also bound to ESC.
+    this.pauseButton = this.add.rectangle(GAME_WIDTH - 20, 44, 96, 30, 0x243049, 0.9);
+    this.pauseButton.setOrigin(1, 0);
+    this.pauseButton.setStrokeStyle(1, 0x5f78b0);
+    this.pauseButton.setDepth(45);
+    this.pauseButton.setScrollFactor(0);
+    this.pauseButton.setInteractive({ useHandCursor: true });
+    this.pauseButton.on("pointerover", () => this.pauseButton.setFillStyle(0x33436a, 0.95));
+    this.pauseButton.on("pointerout", () => this.pauseButton.setFillStyle(0x243049, 0.9));
+    this.pauseButton.on("pointerdown", () => this.togglePause());
+
+    this.pauseButtonLabel = this.add.text(GAME_WIDTH - 68, 49, "暂停 (ESC)", {
+      fontSize: "13px",
+      color: "#dfe8ff"
+    });
+    this.pauseButtonLabel.setOrigin(0.5, 0);
+    this.pauseButtonLabel.setDepth(46);
+    this.pauseButtonLabel.setScrollFactor(0);
+
     this.pickupRadiusIndicator = this.add.graphics();
     this.pickupRadiusIndicator.setDepth(4);
 
@@ -1406,6 +1965,7 @@ class PrototypeScene extends Phaser.Scene {
 
     this.eventBannerContainer = this.add.container(0, 0);
     this.eventBannerContainer.setDepth(58);
+    this.eventBannerContainer.setScrollFactor(0);
     this.eventBannerContainer.setVisible(false);
     this.eventBannerBg = this.add.rectangle(GAME_WIDTH / 2, 30, 640, 52, 0x000000, 0.78);
     this.eventBannerBg.setStrokeStyle(2, 0x5f7cb8);
@@ -1462,6 +2022,8 @@ class PrototypeScene extends Phaser.Scene {
       this.xpBarFill,
       this.xpText,
       this.muteText,
+      this.pauseButton,
+      this.pauseButtonLabel,
       this.weaponHudText,
       this.phaseText,
       this.pickupRadiusIndicator
@@ -1476,6 +2038,7 @@ class PrototypeScene extends Phaser.Scene {
   createBuildPanel() {
     this.buildPanel = this.add.container(0, 0);
     this.buildPanel.setDepth(56);
+    this.buildPanel.setScrollFactor(0);
     this.buildPanel.setVisible(false);
 
     const panelBackground = this.add.rectangle(
@@ -1605,6 +2168,67 @@ class PrototypeScene extends Phaser.Scene {
         this.elapsedSurvivalMs +
         (didAttack ? weapon.cooldownMs : Math.min(weapon.cooldownMs, 120));
     }
+
+    if (this.weaponMutations.teslaField && this.weapons.tesla.unlocked) {
+      this.updateTeslaField();
+    }
+  }
+
+  updateTeslaField() {
+    if (this.elapsedSurvivalMs < this.teslaFieldNextTickAtMs) {
+      return;
+    }
+    this.teslaFieldNextTickAtMs =
+      this.elapsedSurvivalMs + BALANCE.weaponUpgrades.teslaFieldTickMs;
+
+    const radius = BALANCE.weaponUpgrades.teslaFieldRadius;
+    const damage = Math.max(
+      1,
+      Math.round(
+        this.weapons.tesla.damage * BALANCE.weaponUpgrades.teslaFieldDamageMultiplier
+      )
+    );
+    const px = this.player.x;
+    const py = this.player.y;
+
+    const grid = this.ensureEnemyGrid();
+    const cellSize = ENEMY_GRID_CELL_SIZE;
+    const cx = Math.floor(px / cellSize);
+    const cy = Math.floor(py / cellSize);
+    const cellRadius = Math.ceil(radius / cellSize);
+    for (let gx = cx - cellRadius; gx <= cx + cellRadius; gx += 1) {
+      for (let gy = cy - cellRadius; gy <= cy + cellRadius; gy += 1) {
+        const bucket = grid.get(gx * ENEMY_GRID_STRIDE + gy);
+        if (!bucket) {
+          continue;
+        }
+        for (const enemy of bucket) {
+          if (!enemy.active || enemy.isDying) {
+            continue;
+          }
+          if (Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y) <= radius) {
+            this.damageEnemy(enemy, damage, enemy.x, enemy.y, px, py, {
+              sourceWeaponId: "tesla"
+            });
+          }
+        }
+      }
+    }
+
+    this.spawnTeslaFieldPulse(px, py, radius);
+  }
+
+  spawnTeslaFieldPulse(x, y, radius) {
+    const pulse = this.add.circle(x, y, radius, 0x74e0ff, 0.16);
+    pulse.setDepth(15);
+    this.registerTransientEffect(pulse);
+    this.tweens.add({
+      targets: pulse,
+      scale: 1.15,
+      alpha: 0,
+      duration: BALANCE.weaponUpgrades.teslaFieldTickMs * 0.8,
+      onComplete: () => pulse.destroy()
+    });
   }
 
   updateBreacherReloadState(weapon) {
@@ -1838,6 +2462,7 @@ class PrototypeScene extends Phaser.Scene {
       0.15
     );
     pulse.setDepth(12);
+    pulse.setScrollFactor(0);
     this.registerTransientEffect(pulse);
 
     this.tweens.add({
@@ -1911,7 +2536,13 @@ class PrototypeScene extends Phaser.Scene {
     this.outageDarknessRt.clear();
     const outsideAlpha = 0.96 * this.outageVisualStrength;
     this.outageDarknessRt.fill(0x000000, outsideAlpha);
-    this.outageLightSprite.setPosition(this.player.x, this.player.y);
+    // Render texture is screen-space (scrollFactor 0); convert the player's
+    // world position into screen space so the light stays on the player.
+    const cam = this.cameras.main;
+    this.outageLightSprite.setPosition(
+      this.player.x - cam.scrollX,
+      this.player.y - cam.scrollY
+    );
     this.outageDarknessRt.erase(this.outageLightSprite);
 
     if (this.arenaGrid) {
@@ -2003,12 +2634,12 @@ class PrototypeScene extends Phaser.Scene {
         const closeX = Phaser.Math.Clamp(
           firstElite.x + Phaser.Math.Between(-65, 65),
           20,
-          GAME_WIDTH - 20
+          WORLD_WIDTH - 20
         );
         const closeY = Phaser.Math.Clamp(
           firstElite.y + Phaser.Math.Between(-65, 65),
           20,
-          GAME_HEIGHT - 20
+          WORLD_HEIGHT - 20
         );
         this.spawnEliteAtEdge(eliteType, director.scaling, { x: closeX, y: closeY });
       } else {
@@ -2034,29 +2665,22 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   getSpawnPositionAtEdge() {
-    const side = Phaser.Math.Between(0, 3);
-    if (side === 0) {
-      return {
-        x: Phaser.Math.Between(0, GAME_WIDTH),
-        y: 0
-      };
-    }
-    if (side === 1) {
-      return {
-        x: GAME_WIDTH,
-        y: Phaser.Math.Between(0, GAME_HEIGHT)
-      };
-    }
-    if (side === 2) {
-      return {
-        x: Phaser.Math.Between(0, GAME_WIDTH),
-        y: GAME_HEIGHT
-      };
-    }
-    return {
-      x: 0,
-      y: Phaser.Math.Between(0, GAME_HEIGHT)
-    };
+    // Spawn on a ring just beyond the visible viewport, around the player,
+    // so enemies enter from off-screen regardless of camera position.
+    const halfView = Math.max(GAME_WIDTH, GAME_HEIGHT) / 2;
+    const spawnDistance = halfView + Phaser.Math.Between(40, 140);
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const x = Phaser.Math.Clamp(
+      this.player.x + Math.cos(angle) * spawnDistance,
+      16,
+      WORLD_WIDTH - 16
+    );
+    const y = Phaser.Math.Clamp(
+      this.player.y + Math.sin(angle) * spawnDistance,
+      16,
+      WORLD_HEIGHT - 16
+    );
+    return { x, y };
   }
 
   spawnEnemyAtEdge(type, scaling) {
@@ -2186,6 +2810,16 @@ class PrototypeScene extends Phaser.Scene {
 
   handlePlayerMovement() {
     const body = this.player.body;
+
+    // While dashing, lock velocity to the dash vector.
+    if (this.elapsedSurvivalMs < this.dashUntilMs) {
+      body.setVelocity(
+        Math.cos(this.dashAngle) * BALANCE.player.dashSpeed,
+        Math.sin(this.dashAngle) * BALANCE.player.dashSpeed
+      );
+      return;
+    }
+
     let velocityX = 0;
     let velocityY = 0;
 
@@ -2213,6 +2847,50 @@ class PrototypeScene extends Phaser.Scene {
     );
   }
 
+  tryStartDash() {
+    if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive) {
+      return;
+    }
+    if (this.elapsedSurvivalMs < this.dashReadyAtMs) {
+      return;
+    }
+
+    // Dash toward the current movement input; fall back to last facing.
+    let dashX = 0;
+    let dashY = 0;
+    if (this.keys.left.isDown) dashX -= 1;
+    if (this.keys.right.isDown) dashX += 1;
+    if (this.keys.up.isDown) dashY -= 1;
+    if (this.keys.down.isDown) dashY += 1;
+    if (dashX !== 0 || dashY !== 0) {
+      this.dashAngle = Math.atan2(dashY, dashX);
+    } else {
+      this.dashAngle = this.playerFacingAngle;
+    }
+
+    this.dashUntilMs = this.elapsedSurvivalMs + BALANCE.player.dashDurationMs;
+    this.dashReadyAtMs = this.elapsedSurvivalMs + BALANCE.player.dashCooldownMs;
+    this.playerInvulnerableUntilMs = Math.max(
+      this.playerInvulnerableUntilMs,
+      this.elapsedSurvivalMs + BALANCE.player.dashInvulnerabilityMs
+    );
+    this.spawnDashTrail();
+    this.playSound("shoot");
+  }
+
+  spawnDashTrail() {
+    const trail = this.add.circle(this.player.x, this.player.y, 12, 0x8fd0ff, 0.5);
+    trail.setDepth(5);
+    this.registerTransientEffect(trail);
+    this.tweens.add({
+      targets: trail,
+      scale: 2,
+      alpha: 0,
+      duration: 240,
+      onComplete: () => trail.destroy()
+    });
+  }
+
   updateTemporaryBuffs() {
     if (this.activeStimUntilMs > 0 && this.elapsedSurvivalMs >= this.activeStimUntilMs) {
       this.activeStimUntilMs = 0;
@@ -2221,6 +2899,10 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   updateEnemies() {
+    // These are constant across the whole frame — compute once instead of per enemy.
+    const instabilitySpeedMultiplier = this.getEnemyInstabilitySpeedMultiplier();
+    const teleportEnabled = this.getTimelinePhase().effects.teleport;
+
     for (const enemy of this.enemies.getChildren()) {
       if (!enemy.active || enemy.isDying || enemy.isBoss) {
         continue;
@@ -2239,7 +2921,6 @@ class PrototypeScene extends Phaser.Scene {
         (enemy.slowUntilMs ?? 0) > this.elapsedSurvivalMs
           ? enemy.slowMultiplier ?? 1
           : 1;
-      const instabilitySpeedMultiplier = this.getEnemyInstabilitySpeedMultiplier();
       if ((enemy.slowUntilMs ?? 0) <= this.elapsedSurvivalMs) {
         enemy.slowMultiplier = 1;
       }
@@ -2254,7 +2935,7 @@ class PrototypeScene extends Phaser.Scene {
         this.physics.moveToObject(enemy, this.player, enemy.moveSpeed);
       }
 
-      if (this.getTimelinePhase().effects.teleport) {
+      if (teleportEnabled) {
         this.tryInstabilityTeleportEnemy(enemy);
       }
 
@@ -2283,12 +2964,12 @@ class PrototypeScene extends Phaser.Scene {
     const newX = Phaser.Math.Clamp(
       enemy.x + Phaser.Math.Between(-distance, distance),
       16,
-      GAME_WIDTH - 16
+      WORLD_WIDTH - 16
     );
     const newY = Phaser.Math.Clamp(
       enemy.y + Phaser.Math.Between(-distance, distance),
       16,
-      GAME_HEIGHT - 16
+      WORLD_HEIGHT - 16
     );
     const blink = this.add.circle(enemy.x, enemy.y, 6, 0xd8b0ff, 0.5);
     blink.setDepth(16);
@@ -2439,24 +3120,61 @@ class PrototypeScene extends Phaser.Scene {
     const margin = 18;
     for (const bullet of this.bullets.getChildren()) {
       const isExpired = this.elapsedSurvivalMs >= bullet.expireAtMs;
+      const distanceFromOrigin = Phaser.Math.Distance.Between(
+        bullet.originX ?? bullet.x,
+        bullet.originY ?? bullet.y,
+        bullet.x,
+        bullet.y
+      );
       const exceededRange =
-        bullet.maxRange !== undefined &&
-        Phaser.Math.Distance.Between(
-          bullet.originX ?? bullet.x,
-          bullet.originY ?? bullet.y,
-          bullet.x,
-          bullet.y
-        ) > bullet.maxRange;
+        bullet.maxRange !== undefined && distanceFromOrigin > bullet.maxRange;
       const outOfBounds =
         bullet.x < -margin ||
-        bullet.x > GAME_WIDTH + margin ||
+        bullet.x > WORLD_WIDTH + margin ||
         bullet.y < -margin ||
-        bullet.y > GAME_HEIGHT + margin;
+        bullet.y > WORLD_HEIGHT + margin;
+
+      // Boomerang mutation: pistol bullets fold back toward the player at max
+      // range instead of despawning, and only die once the return leg runs out.
+      if (
+        bullet.weaponId === "pistol" &&
+        this.weaponMutations.pistolBoomerang &&
+        !bullet.isReturning &&
+        exceededRange &&
+        !outOfBounds
+      ) {
+        this.startBoomerangReturn(bullet);
+        continue;
+      }
 
       if (isExpired || exceededRange || outOfBounds) {
         bullet.destroy();
       }
     }
+  }
+
+  startBoomerangReturn(bullet) {
+    bullet.isReturning = true;
+    // Re-anchor range/expiry from the turn-around point so the return leg gets
+    // its own full travel budget back toward the player.
+    const speed = Math.hypot(bullet.body.velocity.x, bullet.body.velocity.y) || 1;
+    const returnSpeed = speed * BALANCE.weaponUpgrades.boomerangReturnSpeedMultiplier;
+    const angle = Phaser.Math.Angle.Between(
+      bullet.x,
+      bullet.y,
+      this.player.x,
+      this.player.y
+    );
+    bullet.originX = bullet.x;
+    bullet.originY = bullet.y;
+    bullet.expireAtMs =
+      this.elapsedSurvivalMs + (bullet.maxRange / returnSpeed) * 1000 + 120;
+    // Let a returning bullet strike enemies it passed through on the way out.
+    bullet.remainingPenetration = Math.max(bullet.remainingPenetration, 2);
+    bullet.body.setVelocity(
+      Math.cos(angle) * returnSpeed,
+      Math.sin(angle) * returnSpeed
+    );
   }
 
   updateEnemyProjectiles() {
@@ -2465,9 +3183,9 @@ class PrototypeScene extends Phaser.Scene {
       const isExpired = this.elapsedSurvivalMs >= projectile.expireAtMs;
       const outOfBounds =
         projectile.x < -margin ||
-        projectile.x > GAME_WIDTH + margin ||
+        projectile.x > WORLD_WIDTH + margin ||
         projectile.y < -margin ||
-        projectile.y > GAME_HEIGHT + margin;
+        projectile.y > WORLD_HEIGHT + margin;
 
       if (isExpired || outOfBounds) {
         projectile.destroy();
@@ -2720,6 +3438,7 @@ class PrototypeScene extends Phaser.Scene {
     bullet.originY = y;
     bullet.weaponId = weaponId;
     bullet.shotId = shotId;
+    bullet.isReturning = false;
     bullet.expireAtMs = this.elapsedSurvivalMs + (range / speed) * 1000 + 60;
     bullet.setCircle(4);
 
@@ -2728,9 +3447,15 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   spawnLightningSegment(x1, y1, x2, y2) {
-    const graphics = this.add.graphics();
-    graphics.setDepth(19);
-    this.registerTransientEffect(graphics);
+    let graphics = this._lightningPool.pop();
+    if (graphics) {
+      graphics.clear();
+      graphics.setAlpha(1);
+      graphics.setActive(true).setVisible(true);
+    } else {
+      graphics = this.add.graphics();
+      graphics.setDepth(19);
+    }
     graphics.lineStyle(2, 0x99f0ff, 0.95);
     graphics.beginPath();
     graphics.moveTo(x1, y1);
@@ -2749,7 +3474,7 @@ class PrototypeScene extends Phaser.Scene {
       targets: graphics,
       alpha: 0,
       duration: 90,
-      onComplete: () => graphics.destroy()
+      onComplete: () => this.releaseToPool(this._lightningPool, graphics)
     });
   }
 
@@ -2861,12 +3586,12 @@ class PrototypeScene extends Phaser.Scene {
     const x = Phaser.Math.Clamp(
       this.player.x + Math.cos(angle) * distance,
       24,
-      GAME_WIDTH - 24
+      WORLD_WIDTH - 24
     );
     const y = Phaser.Math.Clamp(
       this.player.y + Math.sin(angle) * distance,
       24,
-      GAME_HEIGHT - 24
+      WORLD_HEIGHT - 24
     );
     return { x, y };
   }
@@ -2892,16 +3617,23 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   spawnImpactEffect(x, y) {
-    const impact = this.add.circle(x, y, 4, 0xfff7bf, 0.9);
-    impact.setDepth(17);
-    this.registerTransientEffect(impact);
+    let impact = this._impactPool.pop();
+    if (impact) {
+      impact.setPosition(x, y);
+      impact.setScale(1);
+      impact.setAlpha(0.9);
+      impact.setActive(true).setVisible(true);
+    } else {
+      impact = this.add.circle(x, y, 4, 0xfff7bf, 0.9);
+      impact.setDepth(17);
+    }
 
     this.tweens.add({
       targets: impact,
       scale: 1.9,
       alpha: 0,
       duration: BALANCE.feedback.impactDurationMs,
-      onComplete: () => impact.destroy()
+      onComplete: () => this.releaseToPool(this._impactPool, impact)
     });
   }
 
@@ -3001,6 +3733,9 @@ class PrototypeScene extends Phaser.Scene {
 
     this.levelUpOverlay = this.add.container(0, 0);
     this.levelUpOverlay.setDepth(60);
+    // Pin to the current viewport in WORLD space (not scrollFactor 0), so the
+    // interactive cards' hit areas line up with where they are drawn.
+    this.syncScreenOverlayPosition(this.levelUpOverlay);
 
     const backdrop = this.add.rectangle(
       GAME_WIDTH / 2,
@@ -3042,6 +3777,14 @@ class PrototypeScene extends Phaser.Scene {
     this.createLevelUpButtons();
   }
 
+  syncScreenOverlayPosition(container) {
+    // Place the container so its children (laid out in viewport coordinates)
+    // render over the current camera view while staying in world space, which
+    // keeps interactive hit areas aligned with the drawn cards.
+    const cam = this.cameras.main;
+    container.setPosition(cam.scrollX, cam.scrollY);
+  }
+
   renderLevelUpCards() {
     if (this.levelUpCardObjects) {
       for (const object of this.levelUpCardObjects) {
@@ -3061,19 +3804,34 @@ class PrototypeScene extends Phaser.Scene {
       const optionY = GAME_HEIGHT / 2 - 15;
       const currentLevel = this.getUpgradeCurrentLevel(upgrade);
 
-      const card = this.add.rectangle(optionX, optionY, 220, 230, 0x1c2333, 1);
-      card.setStrokeStyle(2, 0x4b5d88);
+      const isMutation = !!upgrade.isMutation;
+      const cardFill = isMutation ? 0x2a2140 : 0x1c2333;
+      const cardHoverFill = isMutation ? 0x392c58 : 0x27314a;
+      const card = this.add.rectangle(optionX, optionY, 220, 230, cardFill, 1);
+      card.setStrokeStyle(isMutation ? 3 : 2, isMutation ? 0xc79bff : 0x4b5d88);
       card.setInteractive({ useHandCursor: true });
-      card.on("pointerover", () => card.setFillStyle(0x27314a, 1));
-      card.on("pointerout", () => card.setFillStyle(0x1c2333, 1));
+      card.on("pointerover", () => card.setFillStyle(cardHoverFill, 1));
+      card.on("pointerout", () => card.setFillStyle(cardFill, 1));
       card.on("pointerdown", () => {
         this.applyUpgrade(upgrade, card);
       });
       this.levelUpCards.push(card);
 
+      if (isMutation) {
+        const badge = this.add.text(optionX, optionY - 96, "★ 质变", {
+          fontSize: "15px",
+          fontStyle: "bold",
+          color: "#e2c6ff",
+          align: "center"
+        });
+        badge.setOrigin(0.5);
+        this.levelUpCardObjects.push(badge);
+        this.levelUpOverlay.add(badge);
+      }
+
       const nameText = this.add.text(optionX, optionY - 62, upgrade.name, {
         fontSize: "22px",
-        color: "#8cd5ff",
+        color: isMutation ? "#e0b6ff" : "#8cd5ff",
         align: "center",
         wordWrap: { width: 190 }
       });
@@ -3350,6 +4108,17 @@ class PrototypeScene extends Phaser.Scene {
       }
     }
 
+    // For bounded searches use the spatial grid so we only test enemies in the
+    // cells the search radius can reach, instead of scanning all 200+ enemies.
+    if (Number.isFinite(maxDistance)) {
+      return this.findNearestEnemyInGrid(
+        maxDistance,
+        originX,
+        originY,
+        excludeSet
+      );
+    }
+
     let nearest = null;
     let nearestDist = Number.POSITIVE_INFINITY;
 
@@ -3375,6 +4144,82 @@ class PrototypeScene extends Phaser.Scene {
     return nearest;
   }
 
+  // Lazily (re)build a uniform grid of enemy positions, at most once per frame.
+  // elapsedSurvivalMs is constant within a frame, so keying on it rebuilds exactly
+  // once; all findNearestEnemy calls in a frame happen before enemies move.
+  ensureEnemyGrid() {
+    if (
+      this._enemyGrid &&
+      this._enemyGridAtMs === this.elapsedSurvivalMs
+    ) {
+      return this._enemyGrid;
+    }
+
+    const cellSize = ENEMY_GRID_CELL_SIZE;
+    const grid = this._enemyGrid instanceof Map ? this._enemyGrid : new Map();
+    grid.clear();
+
+    for (const enemy of this.enemies.getChildren()) {
+      if (!enemy.active || enemy.isDying) {
+        continue;
+      }
+      const cx = Math.floor(enemy.x / cellSize);
+      const cy = Math.floor(enemy.y / cellSize);
+      const key = cx * ENEMY_GRID_STRIDE + cy;
+      let bucket = grid.get(key);
+      if (!bucket) {
+        bucket = [];
+        grid.set(key, bucket);
+      }
+      bucket.push(enemy);
+    }
+
+    this._enemyGrid = grid;
+    this._enemyGridAtMs = this.elapsedSurvivalMs;
+    return grid;
+  }
+
+  findNearestEnemyInGrid(maxDistance, originX, originY, excludeSet) {
+    const cellSize = ENEMY_GRID_CELL_SIZE;
+    const grid = this.ensureEnemyGrid();
+
+    const originCx = Math.floor(originX / cellSize);
+    const originCy = Math.floor(originY / cellSize);
+    const cellRadius = Math.ceil(maxDistance / cellSize);
+
+    let nearest = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+
+    for (let cx = originCx - cellRadius; cx <= originCx + cellRadius; cx += 1) {
+      for (let cy = originCy - cellRadius; cy <= originCy + cellRadius; cy += 1) {
+        const bucket = grid.get(cx * ENEMY_GRID_STRIDE + cy);
+        if (!bucket) {
+          continue;
+        }
+        for (const enemy of bucket) {
+          if (!enemy.active || enemy.isDying) {
+            continue;
+          }
+          if (excludeSet && excludeSet.has(enemy)) {
+            continue;
+          }
+          const dist = Phaser.Math.Distance.Between(
+            originX,
+            originY,
+            enemy.x,
+            enemy.y
+          );
+          if (dist <= maxDistance && dist < nearestDist) {
+            nearest = enemy;
+            nearestDist = dist;
+          }
+        }
+      }
+    }
+
+    return nearest;
+  }
+
   handleBulletEnemyCollision(bullet, enemy) {
     if (!enemy.active || enemy.isDying) {
       return;
@@ -3383,6 +4228,9 @@ class PrototypeScene extends Phaser.Scene {
     const damage = Math.max(1, Math.round(bullet.damage ?? this.bulletDamage));
     if (bullet.weaponId === "shotgun") {
       this.applyBreacherPelletEffects(bullet, enemy);
+      if (this.weaponMutations.breacherExplosive) {
+        this.applyBreacherExplosion(enemy.x, enemy.y, enemy, damage);
+      }
     }
     this.damageEnemy(
       enemy,
@@ -3460,6 +4308,52 @@ class PrototypeScene extends Phaser.Scene {
     const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
     enemy.body.setVelocity(Math.cos(angle) * strength, Math.sin(angle) * strength);
     enemy.knockbackUntilMs = this.elapsedSurvivalMs + 240;
+  }
+
+  applyBreacherExplosion(x, y, sourceEnemy, pelletDamage) {
+    const radius = BALANCE.weaponUpgrades.breacherExplosionRadius;
+    const splashDamage = Math.max(
+      1,
+      Math.round(pelletDamage * BALANCE.weaponUpgrades.breacherExplosionDamageMultiplier)
+    );
+    // Use the spatial grid so a dense field doesn't cost a full O(n) scan per pellet.
+    const grid = this.ensureEnemyGrid();
+    const cellSize = ENEMY_GRID_CELL_SIZE;
+    const cx = Math.floor(x / cellSize);
+    const cy = Math.floor(y / cellSize);
+    const cellRadius = Math.ceil(radius / cellSize);
+    for (let gx = cx - cellRadius; gx <= cx + cellRadius; gx += 1) {
+      for (let gy = cy - cellRadius; gy <= cy + cellRadius; gy += 1) {
+        const bucket = grid.get(gx * ENEMY_GRID_STRIDE + gy);
+        if (!bucket) {
+          continue;
+        }
+        for (const other of bucket) {
+          if (other === sourceEnemy || !other.active || other.isDying) {
+            continue;
+          }
+          if (Phaser.Math.Distance.Between(x, y, other.x, other.y) <= radius) {
+            this.damageEnemy(other, splashDamage, other.x, other.y, x, y, {
+              sourceWeaponId: "shotgun"
+            });
+          }
+        }
+      }
+    }
+    this.spawnExplosionEffect(x, y, radius);
+  }
+
+  spawnExplosionEffect(x, y, radius) {
+    const blast = this.add.circle(x, y, radius * 0.4, 0xffa040, 0.35);
+    blast.setDepth(17);
+    this.registerTransientEffect(blast);
+    this.tweens.add({
+      targets: blast,
+      scale: 2.4,
+      alpha: 0,
+      duration: 220,
+      onComplete: () => blast.destroy()
+    });
   }
 
   tryInterruptElite(enemy) {
@@ -3571,8 +4465,8 @@ class PrototypeScene extends Phaser.Scene {
     if (enemy.eliteType === "biomass" && enemy.canSplit) {
       for (let index = 0; index < BALANCE.enemy.elite.types.biomass.childCount; index += 1) {
         const angle = (Math.PI * 2 * index) / BALANCE.enemy.elite.types.biomass.childCount;
-        const spawnX = Phaser.Math.Clamp(enemy.x + Math.cos(angle) * 26, 20, GAME_WIDTH - 20);
-        const spawnY = Phaser.Math.Clamp(enemy.y + Math.sin(angle) * 26, 20, GAME_HEIGHT - 20);
+        const spawnX = Phaser.Math.Clamp(enemy.x + Math.cos(angle) * 26, 20, WORLD_WIDTH - 20);
+        const spawnY = Phaser.Math.Clamp(enemy.y + Math.sin(angle) * 26, 20, WORLD_HEIGHT - 20);
         this.spawnBiomassChild(spawnX, spawnY);
       }
     }
@@ -3606,6 +4500,19 @@ class PrototypeScene extends Phaser.Scene {
     });
   }
 
+  // Return a pooled visual to its pool, hidden and deactivated, for reuse.
+  releaseToPool(pool, gameObject) {
+    if (!gameObject || !gameObject.scene) {
+      return;
+    }
+    gameObject.setActive(false).setVisible(false);
+    if (typeof gameObject.clear === "function") {
+      // Graphics objects: drop drawn paths so they don't linger when reused.
+      gameObject.clear();
+    }
+    pool.push(gameObject);
+  }
+
   flashEnemyOnHit(enemy) {
     enemy.setTintFill(0xffffff);
     this.time.delayedCall(BALANCE.feedback.enemyHitFlashMs, () => {
@@ -3616,20 +4523,27 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   spawnFloatingDamage(x, y, damage) {
-    const damageText = this.add.text(x, y - 6, `${damage}`, {
-      fontSize: "14px",
-      color: "#ffe9a8"
-    });
-    damageText.setOrigin(0.5);
-    damageText.setDepth(26);
-    this.registerTransientEffect(damageText);
+    let damageText = this._damageTextPool.pop();
+    if (damageText) {
+      damageText.setText(`${damage}`);
+      damageText.setPosition(x, y - 6);
+      damageText.setAlpha(1);
+      damageText.setActive(true).setVisible(true);
+    } else {
+      damageText = this.add.text(x, y - 6, `${damage}`, {
+        fontSize: "14px",
+        color: "#ffe9a8"
+      });
+      damageText.setOrigin(0.5);
+      damageText.setDepth(26);
+    }
 
     this.tweens.add({
       targets: damageText,
       y: y - BALANCE.feedback.damageNumberRisePx,
       alpha: 0,
       duration: BALANCE.feedback.damageNumberDurationMs,
-      onComplete: () => damageText.destroy()
+      onComplete: () => this.releaseToPool(this._damageTextPool, damageText)
     });
   }
 
@@ -3637,9 +4551,17 @@ class PrototypeScene extends Phaser.Scene {
     for (let index = 0; index < BALANCE.feedback.deathBurstParticles; index += 1) {
       const angle = (Math.PI * 2 * index) / BALANCE.feedback.deathBurstParticles;
       const distance = Phaser.Math.Between(8, 20);
-      const particle = this.add.circle(x, y, 2.5, color, 0.95);
-      particle.setDepth(16);
-      this.registerTransientEffect(particle);
+      let particle = this._particlePool.pop();
+      if (particle) {
+        particle.setPosition(x, y);
+        particle.setScale(1);
+        particle.setAlpha(0.95);
+        particle.setFillStyle(color, 0.95);
+        particle.setActive(true).setVisible(true);
+      } else {
+        particle = this.add.circle(x, y, 2.5, color, 0.95);
+        particle.setDepth(16);
+      }
 
       this.tweens.add({
         targets: particle,
@@ -3647,7 +4569,7 @@ class PrototypeScene extends Phaser.Scene {
         y: y + Math.sin(angle) * distance,
         alpha: 0,
         duration: 180,
-        onComplete: () => particle.destroy()
+        onComplete: () => this.releaseToPool(this._particlePool, particle)
       });
     }
   }
@@ -3698,8 +4620,20 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   spawnScp500() {
-    const x = Phaser.Math.Between(72, GAME_WIDTH - 72);
-    const y = Phaser.Math.Between(72, GAME_HEIGHT - 72);
+    // Place it a short distance from the player so it is reachable in the
+    // larger world but still requires deliberate movement to grab.
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const distance = Phaser.Math.Between(240, 420);
+    const x = Phaser.Math.Clamp(
+      this.player.x + Math.cos(angle) * distance,
+      72,
+      WORLD_WIDTH - 72
+    );
+    const y = Phaser.Math.Clamp(
+      this.player.y + Math.sin(angle) * distance,
+      72,
+      WORLD_HEIGHT - 72
+    );
     const pickup = this.supplyPickups.create(x, y, "scp500");
     pickup.pickupType = "scp500";
     pickup.setCircle(9);
@@ -3794,6 +4728,17 @@ class PrototypeScene extends Phaser.Scene {
   }
 
   getTimelinePhase() {
+    // Memoize per elapsed-time value: within a single frame elapsedSurvivalMs is
+    // constant, and this is called hundreds of times (once per enemy, plus HUD and
+    // effect systems). Recomputing the linear phase scan each time was a measurable
+    // cost at 200+ enemies.
+    if (
+      this._timelinePhaseCache &&
+      this._timelinePhaseCacheAtMs === this.elapsedSurvivalMs
+    ) {
+      return this._timelinePhaseCache;
+    }
+
     const phases = BALANCE.timeline.phases;
     let current = phases[0];
     for (const phase of phases) {
@@ -3808,11 +4753,14 @@ class PrototypeScene extends Phaser.Scene {
     const nextPhase = phases[currentIndex + 1] ?? null;
     const nextAtMs = nextPhase?.atMs ?? BALANCE.match.survivalDurationMs;
 
-    return {
+    const result = {
       ...current,
       nextAtMs,
       countdownMs: Math.max(0, nextAtMs - this.elapsedSurvivalMs)
     };
+    this._timelinePhaseCache = result;
+    this._timelinePhaseCacheAtMs = this.elapsedSurvivalMs;
+    return result;
   }
 
   updatePhaseHud() {
@@ -3911,7 +4859,10 @@ class PrototypeScene extends Phaser.Scene {
     }
 
     const config = BALANCE.boss.scp049;
-    const boss = this.enemies.create(GAME_WIDTH / 2, 72, "enemy-scp049");
+    // Enter from above the player so it is on-screen when it appears.
+    const bossX = Phaser.Math.Clamp(this.player.x, 60, WORLD_WIDTH - 60);
+    const bossY = Phaser.Math.Clamp(this.player.y - 220, 60, WORLD_HEIGHT - 60);
+    const boss = this.enemies.create(bossX, bossY, "enemy-scp049");
     boss.isBoss = true;
     boss.isElite = false;
     boss.isDying = false;
@@ -3925,6 +4876,8 @@ class PrototypeScene extends Phaser.Scene {
     boss.setCircle(18);
     boss.setDepth(12);
     boss.setCollideWorldBounds(true);
+    // Immovable so its own summoned minions cannot shove it around.
+    boss.body.setImmovable(true);
     boss.summonCooldownMs = config.summonCooldownMs;
     boss.nextSummonAtMs = this.elapsedSurvivalMs + config.summonInitialDelayMs;
 
@@ -4001,12 +4954,12 @@ class PrototypeScene extends Phaser.Scene {
       const spawnX = Phaser.Math.Clamp(
         boss.x + Math.cos(angle) * 52,
         24,
-        GAME_WIDTH - 24
+        WORLD_WIDTH - 24
       );
       const spawnY = Phaser.Math.Clamp(
         boss.y + Math.sin(angle) * 52,
         24,
-        GAME_HEIGHT - 24
+        WORLD_HEIGHT - 24
       );
       const minion = this.enemies.create(spawnX, spawnY, baseConfig.textureKey);
       this.initializeEnemyFromConfig(minion, baseConfig, scaling, false);
@@ -4172,6 +5125,13 @@ class PrototypeScene extends Phaser.Scene {
       lines.push(`链击 ${tesla.chainTargets} | 放电 ${(cdLeft / 1000).toFixed(1)}秒`);
     }
 
+    const dashCdLeft = Math.max(0, this.dashReadyAtMs - this.elapsedSurvivalMs);
+    lines.push(
+      dashCdLeft > 0
+        ? `闪避(空格) 冷却 ${(dashCdLeft / 1000).toFixed(1)}秒`
+        : `闪避(空格) 就绪`
+    );
+
     this.weaponHudText.setText(lines.join("\n"));
   }
 
@@ -4189,6 +5149,113 @@ class PrototypeScene extends Phaser.Scene {
     if (this.spawnEvent) {
       this.spawnEvent.paused = true;
     }
+  }
+
+  togglePause() {
+    // Only meaningful during an active mission, and never on top of the
+    // level-up overlay (which has its own pause) or the game-over screen.
+    if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive) {
+      return;
+    }
+    if (this.isPaused) {
+      this.resumeFromPause();
+    } else {
+      this.pauseGame();
+    }
+  }
+
+  pauseGame() {
+    this.isPaused = true;
+    this.pauseGameplaySystems();
+    this.showPauseOverlay();
+  }
+
+  resumeFromPause() {
+    this.isPaused = false;
+    this.hidePauseOverlay();
+    this.resumeGameplaySystems();
+  }
+
+  showPauseOverlay() {
+    if (this.pauseOverlay) {
+      return;
+    }
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const fontFamily =
+      '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif';
+
+    this.pauseOverlay = this.add.container(0, 0);
+    this.pauseOverlay.setDepth(70);
+    // Camera follows the player, so keep the overlay in world space at the
+    // current viewport (not scrollFactor 0) or the interactive hit areas end up
+    // offset from where the buttons are drawn — same fix as the level-up menu.
+    this.syncScreenOverlayPosition(this.pauseOverlay);
+
+    const backdrop = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65);
+    backdrop.setInteractive();
+    const panel = this.add.rectangle(cx, cy, 420, 300, 0x141c2f, 1);
+    panel.setStrokeStyle(2, 0x6f91d8);
+
+    const title = this.add.text(cx, cy - 100, "已暂停", {
+      fontFamily,
+      fontSize: "44px",
+      fontStyle: "bold",
+      color: "#f4f7ff"
+    });
+    title.setOrigin(0.5);
+
+    const resumeButton = this.add.rectangle(cx, cy - 12, 240, 54, 0x2a3242, 1);
+    resumeButton.setStrokeStyle(2, 0x6f91d8);
+    resumeButton.setInteractive({ useHandCursor: true });
+    resumeButton.on("pointerover", () => resumeButton.setFillStyle(0x39527f, 1));
+    resumeButton.on("pointerout", () => resumeButton.setFillStyle(0x2a3242, 1));
+    resumeButton.on("pointerdown", () => this.resumeFromPause());
+    const resumeLabel = this.add.text(cx, cy - 12, "继续游戏", {
+      fontFamily,
+      fontSize: "24px",
+      fontStyle: "bold",
+      color: "#ffffff"
+    });
+    resumeLabel.setOrigin(0.5);
+
+    const quitButton = this.add.rectangle(cx, cy + 62, 240, 54, 0x3a2530, 1);
+    quitButton.setStrokeStyle(2, 0xb06a78);
+    quitButton.setInteractive({ useHandCursor: true });
+    quitButton.on("pointerover", () => quitButton.setFillStyle(0x53303e, 1));
+    quitButton.on("pointerout", () => quitButton.setFillStyle(0x3a2530, 1));
+    quitButton.on("pointerdown", () => this.quitToTitle());
+    const quitLabel = this.add.text(cx, cy + 62, "返回标题", {
+      fontFamily,
+      fontSize: "22px",
+      fontStyle: "bold",
+      color: "#ffd9df"
+    });
+    quitLabel.setOrigin(0.5);
+
+    this.pauseOverlay.add([
+      backdrop,
+      panel,
+      title,
+      resumeButton,
+      resumeLabel,
+      quitButton,
+      quitLabel
+    ]);
+  }
+
+  hidePauseOverlay() {
+    if (this.pauseOverlay) {
+      this.pauseOverlay.destroy(true);
+      this.pauseOverlay = null;
+    }
+  }
+
+  quitToTitle() {
+    // Return to the title screen; a fresh create() resets all run state.
+    this.isPaused = false;
+    this.hidePauseOverlay();
+    this.scene.restart();
   }
 
   clearTransientEffects() {
@@ -4252,6 +5319,8 @@ class PrototypeScene extends Phaser.Scene {
     this.levelUpCards = [];
     this.isLevelUpActive = false;
     this.isResolvingLevelUp = false;
+    this.isPaused = false;
+    this.hidePauseOverlay();
     this.hideBuildPanel();
     this.pickupRadiusIndicator.clear();
   }
@@ -4268,6 +5337,7 @@ class PrototypeScene extends Phaser.Scene {
       0.7
     );
     overlay.setDepth(50);
+    overlay.setScrollFactor(0);
 
     const gameOverText = this.add.text(
       GAME_WIDTH / 2,
@@ -4280,11 +5350,12 @@ class PrototypeScene extends Phaser.Scene {
     );
     gameOverText.setDepth(51);
     gameOverText.setOrigin(0.5);
+    gameOverText.setScrollFactor(0);
 
     const finalStatsText = this.add.text(
       GAME_WIDTH / 2,
       GAME_HEIGHT / 2 - 20,
-      `最终生存时间：${finalTime}秒\n最终击杀数：${this.killCount}`,
+      `最终生存时间：${finalTime}秒\n最终击杀数：${this.killCount}\n获得学分：+${this.lastRunCreditsEarned ?? 0}（累计 ${this.meta.credits}）`,
       {
         fontSize: "22px",
         color: "#d7defa",
@@ -4293,6 +5364,7 @@ class PrototypeScene extends Phaser.Scene {
     );
     finalStatsText.setDepth(51);
     finalStatsText.setOrigin(0.5);
+    finalStatsText.setScrollFactor(0);
 
     const restartButton = this.add.rectangle(
       GAME_WIDTH / 2,
@@ -4303,6 +5375,7 @@ class PrototypeScene extends Phaser.Scene {
       1
     );
     restartButton.setDepth(51);
+    restartButton.setScrollFactor(0);
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on("pointerdown", () => {
       this.scene.restart();
@@ -4319,11 +5392,13 @@ class PrototypeScene extends Phaser.Scene {
     );
     restartLabel.setDepth(52);
     restartLabel.setOrigin(0.5);
+    restartLabel.setScrollFactor(0);
   }
 
   triggerGameOver() {
     this.isGameOver = true;
     this.isVictory = false;
+    this.lastRunCreditsEarned = this.awardRunCredits(false);
     this.freezeForGameOver();
     this.updateUI();
     this.showGameOverOverlay();
@@ -4341,6 +5416,7 @@ class PrototypeScene extends Phaser.Scene {
     );
     overlay.setDepth(50);
     overlay.setStrokeStyle(2, 0x7bd7a8);
+    overlay.setScrollFactor(0);
 
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 98, "任务完成", {
       fontSize: "44px",
@@ -4348,11 +5424,12 @@ class PrototypeScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
     title.setDepth(51);
+    title.setScrollFactor(0);
 
     const detail = this.add.text(
       GAME_WIDTH / 2,
       GAME_HEIGHT / 2 - 12,
-      `SCP-049 已被成功收容。\n生存时间：${finalTime}秒\n击杀数：${this.killCount}`,
+      `SCP-049 已被成功收容。\n生存时间：${finalTime}秒\n击杀数：${this.killCount}\n获得学分：+${this.lastRunCreditsEarned ?? 0}（累计 ${this.meta.credits}）`,
       {
         fontSize: "22px",
         color: "#d7defa",
@@ -4361,6 +5438,7 @@ class PrototypeScene extends Phaser.Scene {
     );
     detail.setOrigin(0.5);
     detail.setDepth(51);
+    detail.setScrollFactor(0);
 
     const restartButton = this.add.rectangle(
       GAME_WIDTH / 2,
@@ -4371,6 +5449,7 @@ class PrototypeScene extends Phaser.Scene {
       1
     );
     restartButton.setDepth(51);
+    restartButton.setScrollFactor(0);
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on("pointerdown", () => {
       this.scene.restart();
@@ -4382,6 +5461,7 @@ class PrototypeScene extends Phaser.Scene {
     });
     restartLabel.setOrigin(0.5);
     restartLabel.setDepth(52);
+    restartLabel.setScrollFactor(0);
   }
 
   triggerVictory() {
@@ -4390,6 +5470,7 @@ class PrototypeScene extends Phaser.Scene {
     }
     this.isGameOver = true;
     this.isVictory = true;
+    this.lastRunCreditsEarned = this.awardRunCredits(true);
     this.freezeForGameOver();
     this.updateUI();
     this.showVictoryOverlay();
