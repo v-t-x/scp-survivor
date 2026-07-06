@@ -22,7 +22,7 @@ npm run build
 npm run preview
 ```
 
-启动后在浏览器打开终端提示的本地地址（默认 http://localhost:5173/）。
+启动后在浏览器打开终端提示的本地地址（默认 http://localhost:5173//）。
 
 ---
 
