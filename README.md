@@ -1,8 +1,17 @@
 # SCP 幸存者 (SCP Survivor)
 
+[![Play](https://img.shields.io/badge/▶️_立即游玩-在线_Demo-4da07b)](https://dist-chi-ten-47.vercel.app)
+[![Phaser](https://img.shields.io/badge/Phaser-3.90-8a2be2)](https://phaser.io/)
+[![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE)
+
 > 2D 俯视角幸存者-like（Survivors-like）单局原型。基金会安保官被困收容设施，在 6 分钟时间轴内杀怪升级、应对电力故障，撑到终点与 SCP-049 决战并取胜。
 
-基于 [Phaser 3](https://phaser.io/) + [Vite](https://vitejs.dev/) 构建，纯 JavaScript，无需素材资源（所有图形由代码程序化生成）。
+基于 [Phaser 3](https://phaser.io/) + [Vite](https://vitejs.dev/) 构建，纯 JavaScript，**无需任何素材资源**——所有图形由 `Graphics.generateTexture` 程序化生成，所有音效由 Web Audio API 实时合成，仓库里没有一张图片、一个音频文件。
+
+**▶️ 在线试玩：https://dist-chi-ten-47.vercel.app**
+
+> 📸 _待补：游戏画面 GIF（评审建议的最高优先级项，需录屏后加在此处）。_
 
 ---
 
@@ -104,18 +113,25 @@ scp-survivor/
 ├── scripts/
 │   ├── balance-sim.mjs   # 数值平衡模拟脚本
 │   └── phase1-cleanup.mjs
-├── 游戏设计方案.md        # 游戏设计文档
+├── docs/                 # 设计文档与开发笔记
+│   ├── design.md         # 游戏设计文档
+│   ├── roadmap-1.md      # 改进方案 1
+│   ├── roadmap-2.md      # 改进方案 2
+│   └── v1.0-notes.md     # v1.0 开发情况
 ├── CHANGELOG.md          # 版本更新日志
+├── LICENSE               # MIT 许可证
 └── package.json
 ```
+
+> `src/main.js` 目前是有意集中的单文件（实体 / 武器 / 场景 / 平衡配置 / UI 均在其中），配置集中在文件顶部的 `BALANCE` 对象，便于快速调参。模块化拆分（`entities/`、`weapons/`、`scenes/`、`config/`）是后续规划项。
 
 ---
 
 ## 文档
 
-- [游戏设计文档](./游戏设计方案.md)
+- [游戏设计文档](./docs/design.md)
 - [更新日志](./CHANGELOG.md)
-- [改进方案](./改进方案2.md)
+- [改进方案 2](./docs/roadmap-2.md) · [改进方案 1](./docs/roadmap-1.md) · [v1.0 开发情况](./docs/v1.0-notes.md)
 
 ---
 
@@ -129,3 +145,12 @@ scp-survivor/
 
 - **v1.0.0**：使用 [Cursor](https://cursor.com/) 辅助开发，完成首个可玩版本。
 - **v1.1.0 及之后**：使用 [Claude Code](https://claude.com/claude-code) 辅助迭代（Bug 修复、手感与空间重构等）。
+
+工程决策与问题诊断由作者主导——例如无敌帧计时的时钟不一致 Bug、相机跟随下升级卡片点击热区错位 Bug 的定位与修复，均记录在 [CHANGELOG](./CHANGELOG.md) 中。
+
+---
+
+## 许可证与署名
+
+- 本项目**代码**采用 [MIT 许可证](./LICENSE)。
+- 「SCP」相关名称与设定源自 [SCP 基金会 Wiki](https://scp-wiki.wikidot.com/)，遵循 [知识共享 署名-相同方式共享 3.0（CC BY-SA 3.0）](https://creativecommons.org/licenses/by-sa/3.0/) 许可。本作为非商业性粉丝原型，SCP-049 等设定版权归其原作者与 SCP 社区所有。

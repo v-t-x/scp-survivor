@@ -17,3 +17,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Internal review notes (not for the public repo)
+GitHub作品集评审.md
