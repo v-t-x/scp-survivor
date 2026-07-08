@@ -3,6 +3,7 @@
 **简体中文** · [English](./README.en.md)
 
 [![Play](https://img.shields.io/badge/▶️_立即游玩-在线_Demo-4da07b)](https://dist-chi-ten-47.vercel.app)
+[![CI](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml)
 [![Phaser](https://img.shields.io/badge/Phaser-3.90-8a2be2)](https://phaser.io/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE)
