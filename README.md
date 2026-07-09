@@ -102,7 +102,7 @@ npm run preview
 - **音频**：Web Audio API 程序化生成音效，无音频文件
 - **图形**：全部由 `Graphics.generateTexture` 程序化生成，无图片资源
 
-主逻辑集中在 [`src/main.js`](./src/main.js)，配置集中在文件顶部的 `BALANCE` 对象，便于调参。
+代码按领域分层：配置集中在 [`src/config/`](./src/config/)（`balance.js` 为总调参表），游戏逻辑按职责拆成 [`src/scene/`](./src/scene/) 下的多个混入（mixin）模块，[`src/main.js`](./src/main.js) 仅负责组装场景与启动。
 
 ---
 
@@ -112,21 +112,39 @@ npm run preview
 scp-survivor/
 ├── index.html            # 入口页面
 ├── src/
-│   └── main.js           # 全部游戏逻辑（单场景 Phaser Scene）
+│   ├── main.js           # 组装 PrototypeScene（混入各模块）并启动 Phaser
+│   ├── config/           # 配置层（无 Phaser 依赖，纯数据）
+│   │   ├── balance.js    # 总调参表（所有数值集中于此）
+│   │   ├── constants.js  # 全局常量（画布/世界尺寸、网格等）
+│   │   ├── upgrades.js   # 升级项定义
+│   │   └── meta.js       # 元进度（localStorage 持久化）
+│   └── scene/            # 场景逻辑，按领域拆分为混入模块
+│       ├── world.js      # 场地、玩家、纹理与输入
+│       ├── enemies.js    # 敌人 AI、刷怪、Boss
+│       ├── weapons.js    # 三把武器与弹丸
+│       ├── combat.js     # 伤害结算、碰撞
+│       ├── progression.js# 经验、升级、构筑
+│       ├── timeline.js   # 6 分钟时间轴导演
+│       ├── effects.js    # 特效与对象池
+│       ├── hud.js        # HUD 与构筑面板
+│       ├── menus.js      # 武器选择/升级/结算覆盖层
+│       └── systems.js    # 音频等系统
 ├── scripts/
 │   ├── balance-sim.mjs   # 数值平衡模拟脚本
 │   └── phase1-cleanup.mjs
 ├── docs/                 # 设计文档与开发笔记
 │   ├── design.md         # 游戏设计文档
+│   ├── dev-log-2026-07.md# 开发记录（性能/重构/上线）
 │   ├── roadmap-1.md      # 改进方案 1
 │   ├── roadmap-2.md      # 改进方案 2
 │   └── v1.0-notes.md     # v1.0 开发情况
+├── .github/workflows/    # CI（构建检查）
 ├── CHANGELOG.md          # 版本更新日志
 ├── LICENSE               # MIT 许可证
 └── package.json
 ```
 
-> `src/main.js` 目前是有意集中的单文件（实体 / 武器 / 场景 / 平衡配置 / UI 均在其中），配置集中在文件顶部的 `BALANCE` 对象，便于快速调参。模块化拆分（`entities/`、`weapons/`、`scenes/`、`config/`）是后续规划项。
+> 架构说明：`PrototypeScene` 是唯一的 Phaser 场景，其行为通过 `Object.assign(prototype, ...mixin)` 由 `src/scene/` 下的各领域模块组合而成；配置层 `src/config/` 不依赖 Phaser，便于独立测试与快速调参。
 
 ---
 

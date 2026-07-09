@@ -1,6 +1,6 @@
 {
   "name": "scp-survivor",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "description": "2D 俯视角幸存者-like 浏览器游戏，基于 Phaser 3 + Vite，零素材（图形与音效均程序化生成）。",

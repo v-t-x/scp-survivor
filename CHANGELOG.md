@@ -5,6 +5,27 @@
 
 ---
 
+## [1.3.0] — 工程化与性能
+
+> 使用 Claude Code 辅助开发；本轮改动走「分支 → PR → CI → 合并」流程。
+
+不改玩法，专注工程质量：性能、架构、部署与仓库呈现。详见 [开发记录](./docs/dev-log-2026-07.md)。
+
+### 性能
+- **空间网格加速最近敌人查询**：`findNearestEnemy` 的有限半径查询改用每帧构建一次的空间网格（`ENEMY_GRID_CELL_SIZE`），只扫描半径覆盖的格子，替代对 200+ 敌人的全量线性扫描。
+- **时间轴阶段每帧缓存**：`getTimelinePhase()` 按 `elapsedSurvivalMs` 记忆化，一帧内数百次调用只计算一次；不稳定速度倍率、传送开关提到循环外。
+- **特效对象池**：伤害数字、冲击圈、死亡粒子、闪电线段改为对象池复用，消除战斗高峰期的 GC 抖动。
+
+### 架构
+- **模块化重构**：`src/main.js` 从单文件（约 5,700 行）拆分为配置层 `src/config/`（`balance` / `constants` / `upgrades` / `meta`）与场景层 `src/scene/`（`world` / `enemies` / `weapons` / `combat` / `progression` / `timeline` / `effects` / `hud` / `menus` / `systems`）；`main.js` 仅负责组装 `PrototypeScene` 并启动。
+
+### 工程与呈现
+- **CI**：新增 GitHub Actions 构建检查工作流（push / PR 触发 `npm run build`）。
+- **上线部署**：部署到 Vercel，README 顶部提供在线试玩链接与徽章。
+- **许可证与文档**：新增 MIT `LICENSE` 与 SCP 的 CC BY-SA 署名；补充英文 README 镜像；设计文档统一迁入 `docs/`。
+
+---
+
 ## [1.2.0] — 手感与空间重构
 
 > 使用 Claude Code 辅助开发。
@@ -63,6 +84,7 @@
 
 ---
 
+[1.3.0]: #130--工程化与性能
 [1.2.0]: #120--手感与空间重构
 [1.1.0]: #110--bug-修复与体验优化
 [1.0.0]: #100--首个可玩版本-mvp
