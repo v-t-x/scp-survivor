@@ -134,6 +134,8 @@ scp-survivor/
 
 - [游戏设计文档](./docs/design.md)
 - [更新日志](./CHANGELOG.md)
+- [开发记录（2026-07）](./docs/dev-log-2026-07.md)
+- [GitHub 作品集评审](./docs/portfolio-review.md)
 - [改进方案 2](./docs/roadmap-2.md) · [改进方案 1](./docs/roadmap-1.md) · [v1.0 开发情况](./docs/v1.0-notes.md)
 
 ---
