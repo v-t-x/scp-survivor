@@ -17,3 +17,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Internal review notes (kept locally, not for the public repo)
+docs/portfolio-review.md
