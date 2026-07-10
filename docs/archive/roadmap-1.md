@@ -2,7 +2,7 @@
 
 > **历史归档**：本文可能包含已完成、已删除或已被取代的方案，仅用于追溯设计演进，不是当前批准的任务清单。当前权威来源为 [产品愿景](../product-vision.md)、[当前游戏设计](../design.md)、[开发策略](../development-strategy.md) 以及 Project Lead 的直接指令。
 
-> 基于 [VERSION_REVIEW.md](./VERSION_REVIEW.md) 讨论结论整理  
+> 基于历史文档 `VERSION_REVIEW.md` 的讨论结论整理；该源文档当前不在仓库中。  
 > 决策确认日期：2026-07-03
 
 ---
@@ -424,4 +424,4 @@ BALANCE = {
 
 ---
 
-*本文档为最终执行计划；开发以本文为准，完成后 supersede [VERSION_REVIEW.md](./VERSION_REVIEW.md) 中的建议性描述。*
+*历史原文：本文档当时作为最终执行计划，并用于取代 `VERSION_REVIEW.md` 中的建议性描述。当前不再作为任务来源。*
