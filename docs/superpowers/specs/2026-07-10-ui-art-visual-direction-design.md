@@ -1,192 +1,160 @@
-# UI/Art Visual Direction Design
+# UI/Art 视觉方向设计
 
-## Status and authority
+## 状态与权限
 
-- Approved direction: 2026-07-10.
-- Product decision: the first impression should communicate professional Foundation-facility pressure; gameplay should progressively communicate anomalous loss of control and tactical survival tension.
-- Owner: `feature/ui-art-overhaul`, subject to Project Lead review and shared-file gates.
-- This document authorizes a visual design and implementation plan, not automatic code or asset changes.
-- Current baseline: `main` and the UI/Art worktree use the stable web build and the existing UI Foundation contracts.
+- 批准方向：2026-07-10。
+- 产品决定：玩家刚进入游戏时感受到基金会设施的专业压迫感；游玩过程中逐步感受到异常失控和战术生存紧张感。
+- 负责分支：`feature/ui-art-overhaul`，实施仍需经过 Project Lead 审查。
+- 本文批准视觉设计和实施计划方向，不自动批准代码或素材修改。
+- 当前基线：`main` 与 UI/Art worktree 使用现有稳定 Web 版本和 UI Foundation 接口。
 
-## Design objective
+## 设计目标
 
-The UI/Art layer should make the player's emotional state change over a run:
+UI/Art 应让玩家的情绪随着一局游戏逐步变化：
 
 ```text
-institutional order
-  → warning and operational strain
-  → anomalous interference
-  → containment failure
-  → tactical survival under pressure
+设施秩序
+  → 警告与运转压力
+  → 异常干扰
+  → 收容失效
+  → 高压战术求生
 ```
 
-The visual system must remain readable while becoming less stable. Distortion is a gameplay signal with a beginning, duration, intensity, and recovery state; it is not a permanent decorative filter.
+视觉系统必须在逐渐失稳的同时保持可读。故障和扭曲是玩法状态信号，必须有开始、持续时间、强度和恢复状态，不能成为永久滤镜。
 
-## Three-layer visual language
+## 三层视觉语言
 
-### Layer 1 — Foundation professional pressure
+### 第一层：基金会专业压迫感
 
-This is the default state for the title page, weapon selection, baseline HUD, upgrade cards, pause, and results screens.
+标题页、武器选择、基础 HUD、升级卡片、暂停和结算界面使用这一层。
 
-Visual characteristics:
+- 深蓝黑与冷石墨作为表面色；
+- 冷白与浅青色表示普通信息；
+- 琥珀色表示警告和需要注意的运行状态；
+- 红色只用于即时危险、严重受伤和收容失败；
+- 绿色用于医疗、恢复、收容完成和安全状态；
+- 使用结构化面板、状态灯、设施编号、警告标签和分段读数；
+- 动画克制、布局稳定、层级明确；
+- 最小支持视口下文字仍然清晰。
 
-- deep navy-black and cool graphite surfaces;
-- cool white and pale cyan for ordinary information;
-- amber for warnings and operational attention;
-- red reserved for immediate danger, critical damage, and containment failure;
-- green reserved for medical, restored, contained, or completed states;
-- structured panels, status lights, facility identifiers, warning labels, and segmented readouts;
-- restrained motion, stable alignment, and strong hierarchy;
-- clear typography that remains legible at the smallest supported viewport.
+玩家应感觉设施拥有流程、人员、设备和管理制度，只是这些制度正在承受压力。
 
-The player should feel that the facility has procedures, staff, systems, and a chain of command, even though those systems are under pressure.
+### 第二层：异常失控感
 
-### Layer 2 — Anomalous loss of control
+这一层利用现有时间轴和设施状态表现，不新增玩法系统。界面可以短暂变得不可靠，但必须可读、可恢复。
 
-This layer enters through existing timeline and facility states rather than a new gameplay system. It should make the stable interface visibly unreliable for short, readable intervals.
-
-| Existing state | Presentation response | Recovery requirement |
+| 现有状态 | 表现方式 | 恢复要求 |
 |---|---|---|
-| Power outage | Lower illumination, emergency amber accents, reduced background detail, restrained flicker | Restore baseline contrast when the outage ends |
-| Perception decoys | Brief false markers or signal echoes that cannot be confused with critical UI | Auto-expire and never permanently alter HUD state |
-| Enemy teleport phase | Short displacement trails, warning arcs, or spatial afterimages | Clear after each teleport; no persistent clutter |
-| HUD corruption phase | Bounded text jitter, missing segments, signal labels, or scanline interruptions | Preserve critical values and return to readable state |
-| Bullet deviation phase | Small directional distortion around projectile feedback, never around essential controls | Do not alter the actual gameplay value through presentation code |
-| Boss arrival | Replace ordinary status language with a high-priority containment alert | Resolve into a stable Boss HUD after the alert |
+| 电力故障 | 降低照明、应急琥珀色、背景细节减少、克制闪烁 | 故障结束后恢复基础对比度 |
+| 感知诱饵 | 短暂假标记或信号回波，不能伪装关键 UI | 自动过期，不永久改变 HUD |
+| 敌人传送阶段 | 短位移轨迹、警告弧线或空间残影 | 每次传送后清理，不积累杂物 |
+| HUD 干扰阶段 | 有边界的文字抖动、信号丢段、扫描线中断 | 保留关键数值并恢复可读状态 |
+| 子弹偏移阶段 | 只在弹道反馈附近表现方向扰动 | 不得通过表现层改变实际玩法数值 |
+| Boss 登场 | 普通状态切换为高优先级收容警报 | 警报后进入稳定 Boss HUD |
 
-Rules for this layer:
+规则：关键生命、暂停和交互控件必须保持理解；警告不能只依赖红色；每个效果必须有强度和清理路径；正式素材缺失时继续使用程序化 fallback；表现层只观察玩法状态，不创建或修改玩法状态。
 
-- critical health, pause, and interaction controls must remain understandable;
-- no effect may rely on red alone to communicate meaning;
-- every effect has an explicit intensity and cleanup path;
-- missing formal assets fall back to the existing procedural path;
-- the visual system observes gameplay state and does not create or mutate it.
+### 第三层：战术生存紧张感
 
-### Layer 3 — Tactical survival tension
+战斗中的视觉层级要快速回答三个问题：
 
-During active combat, visual hierarchy should answer three questions quickly:
+1. 现在什么东西可能杀死我？
+2. 我当前有什么应对工具？
+3. 如果继续拖延，哪个决策会变得更糟？
 
-1. What can kill me now?
-2. What is my current response tool?
-3. What decision will become worse if I delay?
+HUD 优先显示生命、当前武器、即时威胁/事件、时间轴压力以及 Boss 生命。敌人和精英警告同时使用形状、运动、图标、位置和颜色。武器信息要表现定位与取舍，而不只是原始数值。
 
-The HUD therefore prioritizes health, active weapon state, immediate threat/event banner, timeline pressure, and Boss health when applicable. Enemy and elite warnings use shape, motion, iconography, and placement in addition to color. Weapon cards and combat readouts should communicate role and trade-off rather than only raw numbers.
+## Theme token 系统
 
-## Theme token system
+第一轮必须建立命名 token，不能在各页面散落颜色和字体值。
 
-The first implementation must establish named tokens instead of scattering colors and font choices across screens.
-
-### Required token groups
-
-| Group | Token examples | Purpose |
+| 分组 | Token 示例 | 用途 |
 |---|---|---|
-| Surface | `surfaceFacility`, `surfacePanel`, `surfaceRaised`, `surfaceOverlay` | Foundation panels and overlays |
-| Text | `textPrimary`, `textSecondary`, `textMuted`, `textCritical` | Information hierarchy |
-| Signal | `signalInfo`, `signalWarning`, `signalDanger`, `signalContained`, `signalAnomaly` | State meaning and alerts |
-| Border | `borderDefault`, `borderFocus`, `borderWarning`, `borderCritical` | Panel and interaction states |
-| Motion | `motionStable`, `motionWarning`, `motionAnomaly`, `motionCritical` | Duration and intensity policy |
-| Typography | `fontDisplay`, `fontBody`, `fontMono`, `fontLabel` | Title, data, labels, and terminal readouts |
+| 表面 | `surfaceFacility`、`surfacePanel`、`surfaceRaised`、`surfaceOverlay` | 基金会面板和覆盖层 |
+| 文字 | `textPrimary`、`textSecondary`、`textMuted`、`textCritical` | 信息层级 |
+| 信号 | `signalInfo`、`signalWarning`、`signalDanger`、`signalContained`、`signalAnomaly` | 状态和警报含义 |
+| 边框 | `borderDefault`、`borderFocus`、`borderWarning`、`borderCritical` | 面板与交互状态 |
+| 动画 | `motionStable`、`motionWarning`、`motionAnomaly`、`motionCritical` | 时长和强度策略 |
+| 字体 | `fontDisplay`、`fontBody`、`fontMono`、`fontLabel` | 标题、正文、终端读数和标签 |
 
-Each token needs a value, contrast intent, allowed use, and fallback behavior. Components must use tokens rather than raw presentation values wherever the existing architecture allows.
+每个 token 必须有值、对比度意图、允许用途和 fallback 行为。组件应尽量使用 token，而不是直接写表现值。
 
-## Screen scope for the first UI/Art slice
+## 第一阶段页面范围
 
-### Title page
+### 标题页
 
-The title page establishes the facility identity before any combat begins. It should show a restrained Foundation title treatment, operational subtitle, concise control hints, and a clear primary action. It may include subtle facility status indicators, but no persistent glitching or horror treatment.
+建立基金会设施身份，显示克制的标题、运行副标题、简明操作提示和清晰的主操作按钮。可以有轻微设施状态指示，但不能持续故障化或恐怖化。
 
-### Weapon selection
+### 武器选择
 
-Weapon selection should feel like an equipment authorization terminal. Each card needs a strong weapon identity, role summary, core trade-offs, selection state, hover/focus state, and clear start action. The store and credits remain visually subordinate to weapon selection so the player understands the run decision first.
+将其设计为装备授权终端。每张卡片必须有武器识别、定位摘要、核心取舍、选中状态、悬停/焦点状态和明确的开始任务操作。解锁商店和学分应从属于武器选择，不得抢夺主要决策。
 
-### Combat HUD
+### 战斗 HUD
 
-The baseline HUD should preserve the current information groups while improving hierarchy:
+保留当前信息分组并改善层级：生命与受伤状态、时间/击杀/等级/经验、武器和弹药/链击状态、时间轴阶段、事件和 Boss 横幅、Boss 生命。HUD 要有稳定基础模式和明确异常变体；异常只改变表现，不改变数值含义、位置契约或更新节奏。
 
-- health and immediate damage state;
-- time, kill count, level, and experience;
-- current weapon and ammunition/chain/projectile state;
-- phase name and next timeline pressure;
-- temporary event and Boss banners;
-- Boss health during the finale.
+### 共享覆盖层
 
-The HUD must have a stable baseline mode and explicit anomaly variants. Anomaly variants may change presentation, but not the meaning, location contract, or update cadence of gameplay values.
+暂停、升级、胜利、失败和构筑面板使用同一套表面、字体、边框、焦点和警告 token。若第一轮时间有限，优先实现标题、武器选择和战斗 HUD，但其他页面必须遵守同一组件规则。
 
-### Shared overlays
+## 素材与音频策略
 
-Pause, upgrade, victory, defeat, and the build panel should use the same surface, typography, border, focus, and warning tokens. They are not part of the first visual polish pass if doing so would delay the title, weapon selection, and combat HUD contracts; they must nevertheless receive the same component rules so later work does not create a second visual language.
+- Theme、面板、标签、警报和动态战斗效果可以继续程序化；
+- 正式素材优先用于玩家、主要敌人、Boss、武器图标和设施表面；
+- 外部素材进入 manifest 前必须完成来源和许可证登记；
+- 素材缺失时必须安全回退，不能产生重复 texture key 警告；
+- 音频表现可以通过现有 `this.playSound()` 兼容入口增加批准的警报/界面提示，但不得改变 AudioManager 生命周期或玩法语义；
+- 来源不明、仅限个人使用或商业条件不兼容的素材不得进入生产资源。
 
-## Asset and audio strategy
+## 动画与 VFX 边界
 
-The first UI/Art slice is a mixed-resource pass:
+运动必须解释状态，而不是永久增加噪声：稳定页面使用短暂悬停/焦点动画，警告使用有限脉冲，异常状态使用有边界的抖动/闪烁/偏移，严重事件可以有一次短警报转场。所有临时效果必须有 owner，并在场景 shutdown/restart 时清理。子弹、命中、闪电、火花和 Debug 图形继续适合程序化生成。
 
-- Theme, panels, labels, alerts, and many dynamic combat effects may remain procedural;
-- formal assets should first target high-recognition repeated elements such as player, main enemies, Boss, weapon icons, and facility surfaces;
-- any external asset must have a complete provenance and license record before entering the production manifest;
-- unsupported or missing assets must render the procedural fallback without duplicate texture-key warnings;
-- audio presentation may add approved alert or interface cues through existing `this.playSound()` compatibility, but may not alter audio manager lifecycle or gameplay semantics;
-- no external asset with unknown, personal-only, or incompatible commercial-use terms is allowed into the production resource list.
+## 可访问性与可读性
 
-## Animation and VFX budget
+- 关键状态至少通过两种通道表达，例如颜色加形状、文字、声音或运动；
+- 警告和危险状态要兼容常见色觉差异；
+- 异常效果期间文字仍然可读；
+- 故障强度有上限，并且有稳定 fallback；
+- 摄像机跟随时指针热区必须与绘制卡片对齐；
+- 视口缩放不能隐藏主操作或破坏 HUD 层级。
 
-Motion should communicate state, not permanently increase visual noise.
+## 接口边界
 
-- stable screens use short hover, focus, and selection transitions;
-- warnings use a limited pulse or sweep with a defined duration;
-- anomaly states use bounded jitter, flicker, offset, or afterimage effects;
-- critical events may use a brief alert transition and screen response;
-- every transient effect must be registered with an owner and destroyed on scene shutdown/restart;
-- procedural particles remain appropriate for bullets, impacts, lightning, sparks, and debug graphics.
+### UI/Art 负责
 
-## Accessibility and readability
+- `src/ui/theme.js` 和表现组件；
+- `src/scene/hud.js`、`src/scene/menus.js` 中的表现部分；
+- 批准的视觉素材、manifest 条目、来源记录和表现效果；
+- 使用现有公共接口的表现/音频调用。
 
-- critical state is communicated through at least two channels, such as color plus shape, text, sound, or motion;
-- warning and danger states must remain distinguishable for common color-vision differences;
-- text remains readable during anomaly effects;
-- motion and glitch intensity must be bounded and have a stable fallback;
-- pointer hit areas must remain aligned with drawn cards under camera follow;
-- viewport scaling must preserve primary action visibility and HUD hierarchy.
+### 需要 Project Lead 审批
 
-## Interface boundaries
+- `src/main.js`；
+- `src/assets/manifest.js`、`src/scenes/PreloadScene.js`；
+- `AudioManager`、`UIManager` 公共接口；
+- 玩法配置、持久化、依赖、入口和项目级文档；
+- 任何新的玩法到表现层事件或状态契约。
 
-### UI/Art-owned
+### Gameplay 负责
 
-- `src/ui/theme.js` and presentation components;
-- approved presentation portions of `src/scene/hud.js` and `src/scene/menus.js`;
-- approved visual assets, manifest entries, provenance records, and presentation effects;
-- visual/audio presentation calls using existing public contracts.
+伤害、生命、刷怪、AI、武器行为、时间轴、升级概率、任务条件和胜负逻辑。UI/Art 缺少玩法数据时必须提出接口请求，不得为了渲染方便自行创造或修改玩法状态。
 
-### Project Lead approval required
+## 第一阶段验收标准
 
-- `src/main.js`;
-- `src/assets/manifest.js` and `src/scenes/PreloadScene.js`;
-- `src/audio/AudioManager.js` and `src/ui/UIManager.js` public interfaces;
-- gameplay configuration, persistence schemas, dependency files, entry points, and project-wide docs;
-- any new gameplay-to-presentation event or state contract.
+- 新玩家在战斗前能识别基金会设施背景；
+- 标题、武器选择、HUD、升级、暂停和结算使用同一套 Theme token；
+- UI 同时具备稳定基础模式和有边界的异常变体；
+- 生命、武器、事件、时间轴和 Boss 生命始终可读；
+- 每个视觉效果都有时长、强度和清理 owner；
+- fallback 和纹理 key 保持兼容；
+- 外部素材来源与许可证记录完整；
+- 不需要未批准的玩法、持久化、manager 或客户端改动；
+- 实施可以拆成 Theme、页面、异常状态和正式素材等可审查提交。
 
-### Gameplay-owned
+## 相关文档
 
-- damage, health, spawning, AI, weapon behavior, timeline rules, upgrade probabilities, task conditions, and win/loss logic.
-
-Missing gameplay data must be reported as an interface request. UI/Art must not invent or silently change gameplay state to make a screen easier to render.
-
-## Acceptance criteria for the first visual design
-
-The design is ready for implementation when:
-
-- a new player can identify the Foundation facility context before combat;
-- the same Theme tokens cover title, weapon selection, HUD, upgrade, pause, and results;
-- the UI has a stable baseline and bounded anomaly variants;
-- health, weapon state, event warnings, timeline pressure, and Boss health remain readable;
-- visual effects have explicit duration, intensity, and cleanup ownership;
-- fallback behavior and texture keys remain compatible;
-- every external asset has a complete provenance and license record;
-- the design does not require gameplay, persistence, manager, or client-platform changes without a separate approval;
-- the first implementation can be split into reviewable commits: Theme, screens, anomaly states, and approved assets.
-
-## Related documents
-
-- [UI、美术、音频与资源方向](../art-and-asset-direction.md)
-- [当前游戏设计](../design.md)
-- [许可与商业化准备](../licensing-and-commercialization.md)
+- [UI、美术、音频与资源方向](../../art-and-asset-direction.md)
+- [当前游戏设计](../../design.md)
+- [许可与商业化准备](../../licensing-and-commercialization.md)
 - [UI/Art 第一阶段计划](../plans/2026-07-10-ui-art-phase1-planning.md)

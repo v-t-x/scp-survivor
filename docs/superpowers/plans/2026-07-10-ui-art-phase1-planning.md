@@ -1,47 +1,49 @@
-# UI/Art Phase 1 Planning Implementation Plan
+# UI/Art 第一阶段实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans only after the Project Lead approves the resulting proposal. This plan's first wave produces a presentation proposal and no asset or UI implementation.
+> **给 Agent 的要求：**只有 Project Lead 批准提案后，才能使用 `superpowers:executing-plans` 执行本计划。本计划的第一轮只产出表现方案，不导入素材、不实现 UI。
 
-**Goal:** Produce a concrete, licensed, fallback-safe proposal for the first UI/Art vertical slice: theme, title, weapon selection, and combat HUD.
+**目标：**为第一轮 UI/Art 视觉切片建立具体、可授权、可回退的方案，范围包括 Theme、标题页、武器选择和战斗 HUD。
 
-**Architecture:** Keep gameplay semantics in `src/scene/` and presentation ownership in `src/ui/`, presentation portions of `hud.js` and `menus.js`, and approved asset directories. The proposal must consume the existing `PreloadScene`, manifest, fallback texture, `AudioManager`, and `UIManager` contracts instead of replacing them during the planning wave.
+**架构：**玩法语义继续由 `src/scene/` 负责，表现层由 `src/ui/`、`hud.js` 和 `menus.js` 的表现部分以及批准的素材目录负责。方案必须消费现有 `PreloadScene`、manifest、fallback texture、`AudioManager` 和 `UIManager` 契约，不能在计划阶段替换它们。
 
-**Tech Stack:** Phaser 3.90, Vite 7, JavaScript ES Modules, existing UI theme tokens, asset manifest, procedural fallback factory, Web Audio foundation, and Markdown provenance records.
+**技术栈：**Phaser 3.90、Vite 7、JavaScript ES Modules、现有 UI Theme token、资源 manifest、程序化 fallback factory、Web Audio Foundation 和 Markdown 来源记录。
 
-## Global Constraints
+## 全局约束
 
-- Planning wave only: do not edit `src/`, import assets, or change runtime behavior.
-- Do not change damage, health, spawning, AI, timeline, upgrade probability, victory, defeat, or meta-progression.
-- Preserve existing texture keys, fallback behavior, `this.playSound()` compatibility, and localStorage semantics.
-- External assets require author/source, original URL, license, modification status, commercial-use status, and required attribution before implementation.
-- Do not edit `src/main.js`, gameplay configuration, persistence, `AudioManager`, `UIManager`, or Preload contracts without a separately listed Project Lead gate.
-- End with a clean worktree, exact verification output, and a small proposal-only commit.
+- 第一轮只做计划：不得修改 `src/`、导入素材或改变运行时行为；
+- 不得改变伤害、生命、刷怪、AI、时间轴、升级概率、胜利、失败或元进度；
+- 保持现有 texture key、fallback、`this.playSound()` 兼容入口和 localStorage 语义；
+- 外部素材进入生产资源前必须记录作者/来源、URL、许可证、修改状态、商业使用状态和署名要求；
+- `src/main.js`、玩法配置、持久化、`AudioManager`、`UIManager` 和 Preload 契约需要单独审批；
+- 结束时必须有干净 worktree、实际验证结果和只包含方案的提交。
 
 ---
 
-### Task 1: Inventory current presentation and resource contracts
+### Task 1：盘点当前表现和资源契约
 
-**Files:**
-- Read: `src/ui/theme.js`
-- Read: `src/ui/UIManager.js`
-- Read: `src/assets/manifest.js`
-- Read: `src/assets/fallbackTextureFactory.js`
-- Read: `src/scenes/PreloadScene.js`
-- Read: `src/scene/hud.js`
-- Read: `src/scene/menus.js`
-- Read: `src/scene/effects.js`
-- Read: `src/audio/AudioManager.js`
-- Read: `docs/art-and-asset-direction.md`
-- Read: `docs/licensing-and-commercialization.md`
-- Create: `docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
+**文件：**
 
-**Interfaces:**
-- Consumes: current UI object ownership, texture keys, manifest arrays, fallback generation, manager facade, and audio calls.
-- Produces: a fact-based inventory and a list of safe presentation seams.
+- 阅读：`src/ui/theme.js`
+- 阅读：`src/ui/UIManager.js`
+- 阅读：`src/assets/manifest.js`
+- 阅读：`src/assets/fallbackTextureFactory.js`
+- 阅读：`src/scenes/PreloadScene.js`
+- 阅读：`src/scene/hud.js`
+- 阅读：`src/scene/menus.js`
+- 阅读：`src/scene/effects.js`
+- 阅读：`src/audio/AudioManager.js`
+- 阅读：`docs/art-and-asset-direction.md`
+- 阅读：`docs/licensing-and-commercialization.md`
+- 创建：`docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
 
-- [ ] **Step 1: Confirm branch and clean state**
+**接口：**
 
-Run:
+- 输入：当前 UI 对象所有权、纹理 key、manifest 数组、fallback 生成、manager facade 和音频调用；
+- 输出：事实盘点和安全的表现层切入点清单。
+
+- [ ] **步骤 1：确认分支和干净状态**
+
+运行：
 
 ```powershell
 Get-Location
@@ -50,80 +52,84 @@ git status --short --branch
 git rev-parse HEAD
 ```
 
-Expected: the assigned `feature/ui-art-overhaul` worktree is clean and based on `e9662e0` or a later Project Lead-approved commit.
+预期：当前是 `feature/ui-art-overhaul` worktree，干净，基于 `e9662e0` 或更晚的 Project Lead 批准提交。
 
-- [ ] **Step 2: Trace title, selection, HUD, and overlay ownership**
+- [ ] **步骤 2：追踪标题、选择、HUD 和覆盖层所有权**
 
-Run:
+运行：
 
 ```powershell
 rg -n "createStartScreen|createWeaponSelection|createUI|updateUI|pause|levelUp|showVictory|showGameOver|setGameplayHudVisible|theme|UIManager" src/ui src/scene src/main.js
 ```
 
-Record which objects are created, destroyed, pinned to the camera, and made interactive. Identify any current shared-file dependency.
+记录哪些对象被创建、销毁、固定到摄像机和设置为可交互，并标出共享文件依赖。
 
-- [ ] **Step 3: Trace asset and audio loading**
+- [ ] **步骤 3：追踪素材和音频加载**
 
-Run:
+运行：
 
 ```powershell
 rg -n "IMAGE_ASSETS|SPRITESHEET_ASSETS|ATLAS_ASSETS|AUDIO_ASSETS|textures\.exists|generateTexture|AudioManager|playSound" src/assets src/scenes src/audio src/scene src/main.js
 ```
 
-Record current key names, fallback behavior, duplicate-key protections, first-interaction audio behavior, and destruction behavior.
+记录现有 key、fallback、重复 key 防护、首次交互音频和销毁行为。
 
-### Task 2: Design the first visual slice
+### Task 2：设计第一轮视觉切片
 
-**Files:**
-- Modify: `docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
+**文件：**
 
-**Interfaces:**
-- Consumes: Task 1 inventory and the approved art direction.
-- Produces: a theme proposal and screen-by-screen scope with explicit gameplay boundaries.
+- 修改：`docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
 
-- [ ] **Step 1: Define visual language**
+**接口：**
 
-Specify palette tokens, typography roles, spacing scale, panel/card states, alert states, focus/hover/disabled states, contrast expectations, and fallback appearance. Every token must have a name, value or range, and usage location.
+- 输入：Task 1 盘点结果和已批准的美术方向；
+- 输出：Theme 方案、页面范围和明确的玩法边界。
 
-- [ ] **Step 2: Define screen scope**
+- [ ] **步骤 1：定义视觉语言**
 
-For title, weapon selection, and combat HUD, specify layout hierarchy, text/data consumed, object ownership, interaction behavior, responsive constraints, and exit/destroy behavior. Explicitly list what remains unchanged in gameplay.
+指定颜色 token、字体角色、间距尺度、面板/卡片状态、警报状态、焦点/悬停/禁用状态、对比度要求和 fallback 外观。每个 token 必须有名称、值或范围和使用位置。
 
-- [ ] **Step 3: Define asset migration order**
+- [ ] **步骤 2：定义页面范围**
 
-Classify each proposed asset as procedural, original, external, or generated. For external assets, include a provenance row with source URL, license, modifications, commercial-use status, attribution, and redistribution constraints. Do not accept “to be sourced” as an asset record.
+分别说明标题、武器选择和战斗 HUD 的布局层级、使用的数据、对象所有权、交互行为、响应式约束和退出/销毁行为。明确哪些玩法保持不变。
 
-- [ ] **Step 4: Define manifest and fallback contract**
+- [ ] **步骤 3：定义素材迁移顺序**
 
-For every proposed key, specify the key string, asset type, loader entry, fallback generator, expected dimensions, and duplicate-key check. Keep all current keys backward compatible or provide a reviewed migration table.
+把每个素材分类为程序化、原创、外部或生成。外部素材必须提供来源 URL、许可证、修改内容、商业使用状态、署名和再分发条件；不能用“待寻找”作为来源记录。
 
-### Task 3: Define implementation boundaries and verification
+- [ ] **步骤 4：定义 manifest 和 fallback 契约**
 
-**Files:**
-- Modify: `docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
+为每个拟定 key 指定 key 字符串、素材类型、加载入口、fallback factory、预期尺寸和重复 key 检查。保持现有 key 兼容，或提供经过审查的迁移表。
 
-**Interfaces:**
-- Consumes: visual slice and asset contract.
-- Produces: exact file list, shared-file requests, verification matrix, and rollback plan.
+### Task 3：定义实施边界和验证
 
-- [ ] **Step 1: Name exact files and ownership**
+**文件：**
 
-Separate files into `UI/Art-owned`, `Project Lead approval required`, and `Gameplay-owned`. For every shared file, state the smallest requested change and affected branches.
+- 修改：`docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md`
 
-- [ ] **Step 2: Define verification**
+**接口：**
 
-Include commands and manual checks for:
+- 输入：视觉切片和素材契约；
+- 输出：精确文件清单、共享文件申请、验证矩阵和回滚方案。
+
+- [ ] **步骤 1：标出文件所有权**
+
+把文件分为 `UI/Art 负责`、`需要 Project Lead 审批` 和 `Gameplay 负责`。每个共享文件都要写明最小变更和受影响分支。
+
+- [ ] **步骤 2：定义验证**
+
+方案必须包含：
 
 ```powershell
 npm run build
 git diff --check
 ```
 
-and title, weapon selection, HUD, upgrade, pause, victory, defeat, restart, representative viewport sizes, pointer-hit alignment, missing assets, duplicate keys, first-interaction audio, console output, and clean worktree.
+以及标题、武器选择、HUD、升级、暂停、胜利、失败、重启、代表性视口、指针热区、缺失素材、重复 key、首次交互音频、控制台输出和干净 worktree 检查。
 
-- [ ] **Step 3: Review scope and commit**
+- [ ] **步骤 3：审查范围并提交**
 
-Run:
+运行：
 
 ```powershell
 git diff --check
@@ -131,11 +137,11 @@ git status --short --branch
 git diff --stat
 ```
 
-Expected: only the proposal file is changed. Commit:
+预期：只有 proposal 文件发生变化。提交：
 
 ```powershell
 git add docs/superpowers/plans/2026-07-10-ui-art-phase1-proposal.md
 git commit -m "docs: propose UI art phase one slice"
 ```
 
-Report the commit hash and wait for Project Lead approval. Do not import assets or implement UI in the same turn.
+报告 commit hash 并等待 Project Lead 审批。本轮不得导入素材或实现 UI。

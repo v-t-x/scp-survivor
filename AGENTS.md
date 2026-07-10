@@ -42,6 +42,12 @@ Project Lead assigns a scope or explicitly authorizes the work.
   do not authorize implementation unless a direct instruction or currently
   approved plan explicitly activates them.
 
+## Documentation language
+
+New and materially revised project documentation should be written in Chinese.
+Keep code identifiers, shell commands, official product names, license names,
+and source quotations in their original form when precision requires it.
+
 ## Universal safety rules
 
 - Work only inside the current worktree. Never edit another worktree.
