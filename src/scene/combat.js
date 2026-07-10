@@ -183,12 +183,26 @@ export const combatMixin = {
   getEnemyDamageTakenMultiplier(enemy, sourceX, sourceY, combatContext = {}) {
     let multiplier = 1;
 
-    if (
-      enemy.isBoss &&
-      combatContext.sourceWeaponId === "shotgun" &&
-      BALANCE.boss.scp049.shotgunDamageMultiplier > 1
-    ) {
-      multiplier *= BALANCE.boss.scp049.shotgunDamageMultiplier;
+    if (enemy.isBoss) {
+      const bossConfig = BALANCE.boss.scp049;
+      let bossMultiplier = 1;
+      if (
+        combatContext.sourceWeaponId === "shotgun" &&
+        bossConfig.shotgunDamageMultiplier > 1
+      ) {
+        bossMultiplier *= bossConfig.shotgunDamageMultiplier;
+      }
+      if (
+        bossConfig.frenzyEnabled &&
+        enemy.bossState === "frenzy" &&
+        bossConfig.exposedDamageMultiplier > 1
+      ) {
+        bossMultiplier *= bossConfig.exposedDamageMultiplier;
+      }
+      // Cap the combined boss-specific bonus (e.g. breacher 1.5 x exposed 1.35
+      // = 2.025 -> clamped to 2.0) so a fully-exposed shot cannot exceed 2x.
+      multiplier *= Math.min(bossMultiplier, bossConfig.exposedDamageCap);
+      return multiplier;
     }
 
     if (!enemy.isElite || enemy.eliteType !== "riotUnit") {

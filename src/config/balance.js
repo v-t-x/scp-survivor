@@ -272,13 +272,27 @@ export const BALANCE = {
       summonInitialDelayMs: 5000,
       summonCooldownMs: 11000,
       enragedHpThreshold: 0.5,
+      // Deprecated fallback: only read on the frenzyEnabled=false rollback branch
+      // (see updateBoss). Kept so disabling the frenzy mechanic restores the
+      // original under-50%-HP faster-trickle behavior exactly.
       enragedSummonMultiplier: 0.6,
       summonCountMin: 2,
       summonCountMax: 3,
       minionHealthMultiplier: 0.6,
       minionDamageMultiplier: 0.85,
       introDelayMs: 2800,
-      shotgunDamageMultiplier: 1.5
+      shotgunDamageMultiplier: 1.5,
+      // Surgery Frenzy (Option C): explicit telegraphed root-and-summon window.
+      // frenzyEnabled=false reverts to the trickle summon + enragedSummonMultiplier.
+      frenzyEnabled: true,
+      frenzyFirstDelayMs: 12000,
+      frenzyCooldownMs: 14000,
+      frenzyEnragedMultiplier: 0.65,
+      frenzyDurationMs: 2500,
+      frenzySummonCountMin: 3,
+      frenzySummonCountMax: 4,
+      exposedDamageMultiplier: 1.35,
+      exposedDamageCap: 2.0
     }
   },
   facility: {

@@ -715,6 +715,11 @@ export const enemiesMixin = {
     boss.body.setImmovable(true);
     boss.summonCooldownMs = config.summonCooldownMs;
     boss.nextSummonAtMs = this.elapsedSurvivalMs + config.summonInitialDelayMs;
+    // Surgery Frenzy state machine. All timers use elapsedSurvivalMs so they are
+    // pause-safe (update() stops advancing elapsedSurvivalMs while paused).
+    boss.bossState = "normal";
+    boss.stateUntilMs = 0;
+    boss.nextFrenzyAtMs = this.elapsedSurvivalMs + config.frenzyFirstDelayMs;
 
     const label = this.add.text(boss.x, boss.y - 36, "SCP-049", {
       fontSize: "14px",
@@ -754,13 +759,39 @@ export const enemiesMixin = {
       boss.bossLabel.setPosition(boss.x, boss.y - 36);
     }
 
-    if ((boss.staggerUntilMs ?? 0) > this.elapsedSurvivalMs) {
+    const config = BALANCE.boss.scp049;
+
+    // Frenzy roots the boss; otherwise it chases (unless staggered).
+    if (config.frenzyEnabled && boss.bossState === "frenzy") {
+      boss.body.setVelocity(0, 0);
+      // Re-assert the exposed tint each frame: the shared hit-flash clears tint
+      // after every hit, and the boss is hit constantly during this window.
+      boss.setTint(0xff5a6e);
+    } else if ((boss.staggerUntilMs ?? 0) > this.elapsedSurvivalMs) {
       boss.body.setVelocity(0, 0);
     } else {
       this.physics.moveToObject(boss, this.player, boss.moveSpeed);
     }
 
-    const config = BALANCE.boss.scp049;
+    if (config.frenzyEnabled) {
+      // Branch A: explicit frenzy state machine.
+      if (boss.bossState === "frenzy") {
+        if (this.elapsedSurvivalMs >= boss.stateUntilMs) {
+          this.exitFrenzy(boss);
+        }
+      } else {
+        if (this.elapsedSurvivalMs >= boss.nextSummonAtMs) {
+          this.summonBossMinions(boss);
+          boss.nextSummonAtMs = this.elapsedSurvivalMs + boss.summonCooldownMs;
+        }
+        if (this.elapsedSurvivalMs >= boss.nextFrenzyAtMs) {
+          this.enterFrenzy(boss);
+        }
+      }
+      return;
+    }
+
+    // Branch B: rollback — original trickle summon + enragedSummonMultiplier.
     const hpRatio = boss.health / boss.maxHealth;
     const summonInterval =
       hpRatio <= config.enragedHpThreshold
@@ -774,9 +805,41 @@ export const enemiesMixin = {
   },
 
 
-  summonBossMinions(boss) {
+  enterFrenzy(boss) {
     const config = BALANCE.boss.scp049;
-    const count = Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
+    boss.bossState = "frenzy";
+    boss.stateUntilMs = this.elapsedSurvivalMs + config.frenzyDurationMs;
+    boss.setTint(0xff5a6e);
+    boss.body.setVelocity(0, 0);
+    this.summonBossMinions(boss, { frenzy: true });
+    this.showTopBanner("外科狂乱", "SCP-049 暴露了弱点", 1800);
+  },
+
+
+  exitFrenzy(boss) {
+    const config = BALANCE.boss.scp049;
+    this.clearFrenzyTint(boss);
+    boss.bossState = "normal";
+    const hpRatio = boss.health / boss.maxHealth;
+    const cadenceMultiplier =
+      hpRatio <= config.enragedHpThreshold ? config.frenzyEnragedMultiplier : 1;
+    boss.nextFrenzyAtMs =
+      this.elapsedSurvivalMs + config.frenzyCooldownMs * cadenceMultiplier;
+  },
+
+
+  clearFrenzyTint(boss) {
+    if (boss?.active) {
+      boss.clearTint();
+    }
+  },
+
+
+  summonBossMinions(boss, options = {}) {
+    const config = BALANCE.boss.scp049;
+    const count = options.frenzy
+      ? Phaser.Math.Between(config.frenzySummonCountMin, config.frenzySummonCountMax)
+      : Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
     const baseConfig = BALANCE.enemy.types.infectedStaff;
     const scaling = {
       healthMultiplier: config.minionHealthMultiplier,
@@ -812,6 +875,8 @@ export const enemiesMixin = {
       return;
     }
     boss.isDying = true;
+    boss.bossState = "dying";
+    this.clearFrenzyTint(boss);
     boss.body.setVelocity(0, 0);
     this.killCount += 1;
     this.bossPhaseActive = false;
