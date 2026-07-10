@@ -1,5 +1,7 @@
 # SCP Survivor 最终版修改计划
 
+> **历史归档**：本文可能包含已完成、已删除或已被取代的方案，仅用于追溯设计演进，不是当前批准的任务清单。当前权威来源为 [产品愿景](../product-vision.md)、[当前游戏设计](../design.md)、[开发策略](../development-strategy.md) 以及 Project Lead 的直接指令。
+
 > 基于 [VERSION_REVIEW.md](./VERSION_REVIEW.md) 讨论结论整理  
 > 决策确认日期：2026-07-03
 
