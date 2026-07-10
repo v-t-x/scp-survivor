@@ -10,7 +10,7 @@
 
 - UI/art redesign, final textures, animation/VFX presentation, or audio assets.
 - Asset-loading architecture and manager-interface redesign.
-- Desktop packaging, installers, signing, or release automation.
+- Client containers, platform packaging, installers, signing, stores, or release automation.
 
 ## Shared-file rule
 

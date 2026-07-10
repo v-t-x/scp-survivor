@@ -23,7 +23,7 @@ Before analysis or modification:
 |---|---|
 | `main` | `docs/agents/main.md` |
 | `dev/v2` | `docs/agents/dev-v2.md` |
-| `release/desktop-app` | `docs/agents/release-desktop-app.md` |
+| `dev/app-platform` | `docs/agents/dev-app-platform.md` |
 | `refactor/ui-foundation` | `docs/agents/refactor-ui-foundation.md` |
 | `feature/ui-art-overhaul` | `docs/agents/feature-ui-art-overhaul.md` |
 

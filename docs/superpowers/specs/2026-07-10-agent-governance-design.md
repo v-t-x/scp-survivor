@@ -9,7 +9,7 @@ The project is developed concurrently by several AI agents working in separate
 Git branches and worktrees. This governance layer gives every agent a shared set
 of safety rules plus a branch-specific responsibility guide. Its goals are to:
 
-- keep gameplay, UI/art, desktop packaging, and integration work separated;
+- keep gameplay, UI/art, App-platform, and integration work separated;
 - prevent agents from editing another worktree or silently overwriting work;
 - identify shared, high-conflict files before they are changed;
 - require evidence-based build and smoke-test reports;
@@ -26,7 +26,7 @@ AGENTS.md
 CLAUDE.md
 docs/agents/main.md
 docs/agents/dev-v2.md
-docs/agents/release-desktop-app.md
+docs/agents/dev-app-platform.md
 docs/agents/refactor-ui-foundation.md
 docs/agents/feature-ui-art-overhaul.md
 ```
@@ -81,23 +81,26 @@ Primary scope:
 - balance data and gameplay configuration;
 - combat, spawning, timeline, progression, and gameplay systems.
 
-It must not redesign UI/art, replace asset pipelines, own desktop packaging, or
-change release infrastructure unless the Project Lead explicitly approves a
-shared-file change.
+It must not redesign UI/art, replace asset pipelines, own client containers or
+App-platform release infrastructure unless the Project Lead explicitly approves
+a shared-file change.
 
-### `release/desktop-app`
+### `dev/app-platform`
 
-Owner: desktop application Agent.
+Owner: App Platform Agent.
 
 Primary scope:
 
-- desktop runtime and packaging;
-- installers, platform metadata, build and release automation;
-- desktop-only startup, filesystem, security, and distribution concerns.
+- desktop clients and native desktop containers;
+- mobile clients and mobile wrappers;
+- installable web/PWA behavior;
+- launchers and future platform-specific client shells;
+- platform startup, lifecycle, filesystem, permissions, security, and offline operation;
+- installation, updates, signing, stores, packaging, release automation, and distribution.
 
 It must not change gameplay rules, balance, enemy AI, weapon behavior, or UI/art
-design. Changes to web entry points, dependency manifests, and asset paths require
-shared-file approval.
+visual direction. Changes to web entry points, dependency manifests, preload/asset
+contracts, manager interfaces, or persistence schemas require shared-file approval.
 
 ### `refactor/ui-foundation`
 
@@ -178,12 +181,12 @@ resolving the situation autonomously.
 - missing/duplicate asset-key and console warning checks;
 - representative viewport and input-hit-area checks.
 
-### Desktop application
+### App platform
 
 - web production build;
-- desktop application startup;
-- packaging or installer dry run appropriate to the target platform;
-- asset path, CSP/security, offline, and audio behavior checks when affected.
+- startup and package checks for each platform affected by the change;
+- relevant offline, permission, path, security, audio, update, signing, and store checks;
+- explicit reporting of platforms that were not tested.
 
 ### UI foundation fixes
 

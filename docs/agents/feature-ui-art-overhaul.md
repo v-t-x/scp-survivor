@@ -11,7 +11,7 @@
 
 - Gameplay balance, enemy AI, weapon mechanics, timeline rules, win/loss, or
   meta-progression behavior.
-- Desktop packaging and release automation.
+- Client containers, platform packaging, stores, and release automation.
 
 ## Interface rule
 

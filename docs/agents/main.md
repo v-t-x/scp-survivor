@@ -14,7 +14,7 @@ and explicitly authorized release preparation.
 
 ## Not allowed by default
 
-- Implement gameplay, UI/art, audio/assets, or desktop features directly.
+- Implement gameplay, UI/art, audio/assets, or App-platform features directly.
 - Fix a feature defect that belongs to an active owning branch.
 - Merge or push merely because a branch appears ready.
 

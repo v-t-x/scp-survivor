@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Do not modify gameplay, UI, audio, asset, desktop packaging, or persistence code.
+- Do not modify gameplay, UI, audio, asset, App-platform, or persistence code.
 - Do not edit another worktree while implementing these files.
 - Do not merge, push, delete branches/worktrees, rewrite history, or publish a release.
 - `AGENTS.md` is the only authoritative policy source; `CLAUDE.md` must not duplicate it.
@@ -27,7 +27,7 @@
 - Create `CLAUDE.md`: Claude Code bootstrap pointing to `AGENTS.md`.
 - Create `docs/agents/main.md`: protected integration branch guide.
 - Create `docs/agents/dev-v2.md`: gameplay/core branch guide.
-- Create `docs/agents/release-desktop-app.md`: desktop packaging branch guide.
+- Create `docs/agents/dev-app-platform.md`: multi-client App-platform branch guide.
 - Create `docs/agents/refactor-ui-foundation.md`: frozen foundation branch guide.
 - Create `docs/agents/feature-ui-art-overhaul.md`: UI/art branch guide.
 
@@ -82,7 +82,7 @@ Before analysis or modification:
 |---|---|
 | `main` | `docs/agents/main.md` |
 | `dev/v2` | `docs/agents/dev-v2.md` |
-| `release/desktop-app` | `docs/agents/release-desktop-app.md` |
+| `dev/app-platform` | `docs/agents/dev-app-platform.md` |
 | `refactor/ui-foundation` | `docs/agents/refactor-ui-foundation.md` |
 | `feature/ui-art-overhaul` | `docs/agents/feature-ui-art-overhaul.md` |
 
@@ -165,7 +165,7 @@ Run:
 ```powershell
 $agents = Get-Content -Raw -Encoding UTF8 AGENTS.md
 $claude = Get-Content -Raw -Encoding UTF8 CLAUDE.md
-foreach ($branch in @('main','dev/v2','release/desktop-app','refactor/ui-foundation','feature/ui-art-overhaul')) {
+foreach ($branch in @('main','dev/v2','dev/app-platform','refactor/ui-foundation','feature/ui-art-overhaul')) {
   if (-not $agents.Contains($branch)) { throw "Missing branch route: $branch" }
 }
 if (-not $claude.Contains('AGENTS.md')) { throw 'CLAUDE.md does not route to AGENTS.md' }
@@ -188,7 +188,7 @@ commit yet because the routing table must not land without its target guides.
 **Files:**
 - Create: `docs/agents/main.md`
 - Create: `docs/agents/dev-v2.md`
-- Create: `docs/agents/release-desktop-app.md`
+- Create: `docs/agents/dev-app-platform.md`
 - Create: `docs/agents/refactor-ui-foundation.md`
 - Create: `docs/agents/feature-ui-art-overhaul.md`
 
@@ -217,7 +217,7 @@ and explicitly authorized release preparation.
 
 ## Not allowed by default
 
-- Implement gameplay, UI/art, audio/assets, or desktop features directly.
+- Implement gameplay, UI/art, audio/assets, or App-platform features directly.
 - Fix a feature defect that belongs to an active owning branch.
 - Merge or push merely because a branch appears ready.
 
@@ -245,7 +245,7 @@ ancestry changed.
 
 - UI/art redesign, final textures, animation/VFX presentation, or audio assets.
 - Asset-loading architecture and manager-interface redesign.
-- Desktop packaging, installers, signing, or release automation.
+- Client containers, platform packaging, installers, signing, stores, or release automation.
 
 ## Shared-file rule
 
@@ -260,35 +260,44 @@ pause, victory/defeat, or persistence checks whenever the changed system touches
 those paths. Report actual results and final Git status.
 ```
 
-- [ ] **Step 3: Create the desktop guide**
+- [ ] **Step 3: Create the App-platform guide**
 
-`docs/agents/release-desktop-app.md` must state:
+`docs/agents/dev-app-platform.md` must state:
 
 ```markdown
-# `release/desktop-app` Desktop Guide
+# `dev/app-platform` Multi-Client App Guide
 
 ## Owns
 
-- Desktop runtime and packaging.
-- Installers, platform metadata, build/release automation, and distribution.
-- Desktop-only filesystem, security, startup, offline, and platform integration.
+- Desktop clients and native desktop containers.
+- Mobile clients and mobile wrappers.
+- Installable web/PWA behavior.
+- Launchers and future platform-specific client shells.
+- Platform startup, lifecycle, filesystem, permissions, security, and offline operation.
+- Installation, updates, signing, stores, packaging, release automation, and distribution.
+- Platform-specific integrations that preserve gameplay semantics.
 
 ## Does not own
 
-- Gameplay rules, balance, AI, weapons, timeline, win/loss, or meta progression.
-- UI/art design or gameplay-facing visual changes.
+- Gameplay rules, balance, enemies, weapons, bosses, events, timeline, progression,
+  win/loss, or meta-progression behavior.
+- UI/art visual direction, asset creation, animation/VFX design, or audio content.
+- Hidden gameplay changes implemented through platform adapters.
 
 ## Shared-file rule
 
-Before editing `package.json`, lockfiles, `index.html`, build configuration, web
-entry points, preload/asset paths, or shared docs, report the exact desktop need
-and cross-branch impact and obtain Project Lead approval.
+Before editing dependency manifests, lockfiles, `index.html`, build configuration,
+web entry points, preload/asset contracts, UI/audio manager interfaces,
+persistence schemas, or shared docs, report the exact platform requirement and
+cross-branch impact and obtain Project Lead approval.
 
 ## Verification
 
-Run the web production build, desktop startup, and an appropriate package or
-installer dry run. When relevant, verify offline assets, CSP/security, filesystem
-paths, audio, and clean uninstall/upgrade behavior. Report final Git status.
+Always run the web production build. Run startup and package checks for each
+platform affected by the change, and verify relevant offline, permission, path,
+security, audio, update, signing, or store behavior. When a shared client contract
+changes, confirm unaffected platforms or report them as explicitly untested.
+Report actual results and final Git status.
 ```
 
 - [ ] **Step 4: Create the frozen-foundation guide**
@@ -311,7 +320,7 @@ approved defect fixes. New UI/art implementation belongs on
 
 ## Not allowed
 
-- New visual design, art/audio content, gameplay features, or desktop packaging.
+- New visual design, art/audio content, gameplay features, or client-platform implementation.
 - Unrequested refactoring of the established foundation interfaces.
 
 ## Verification
@@ -339,7 +348,7 @@ timers, listeners, console output, and final Git status as relevant.
 
 - Gameplay balance, enemy AI, weapon mechanics, timeline rules, win/loss, or
   meta-progression behavior.
-- Desktop packaging and release automation.
+- Client containers, platform packaging, stores, and release automation.
 
 ## Interface rule
 
@@ -363,7 +372,7 @@ Run:
 $required = @(
   'docs/agents/main.md',
   'docs/agents/dev-v2.md',
-  'docs/agents/release-desktop-app.md',
+  'docs/agents/dev-app-platform.md',
   'docs/agents/refactor-ui-foundation.md',
   'docs/agents/feature-ui-art-overhaul.md'
 )
@@ -409,7 +418,7 @@ $expected = @(
   'CLAUDE.md',
   'docs/agents/main.md',
   'docs/agents/dev-v2.md',
-  'docs/agents/release-desktop-app.md',
+  'docs/agents/dev-app-platform.md',
   'docs/agents/refactor-ui-foundation.md',
   'docs/agents/feature-ui-art-overhaul.md'
 )

@@ -13,7 +13,7 @@ approved defect fixes. New UI/art implementation belongs on
 
 ## Not allowed
 
-- New visual design, art/audio content, gameplay features, or desktop packaging.
+- New visual design, art/audio content, gameplay features, or client-platform implementation.
 - Unrequested refactoring of the established foundation interfaces.
 
 ## Verification
