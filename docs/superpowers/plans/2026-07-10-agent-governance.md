@@ -173,14 +173,15 @@ if (-not $claude.Contains('AGENTS.md')) { throw 'CLAUDE.md does not route to AGE
 
 Expected: command exits successfully with no output.
 
-- [ ] **Step 5: Commit universal entry files**
+- [ ] **Step 5: Verify the entry-file diff and defer commit until guides exist**
 
 ```powershell
-git add AGENTS.md CLAUDE.md
-git commit -m "docs: add repository agent governance"
+git diff --check -- AGENTS.md CLAUDE.md
+git status --short AGENTS.md CLAUDE.md
 ```
 
-Expected: one commit containing exactly `AGENTS.md` and `CLAUDE.md`.
+Expected: no formatting errors and both entry files shown as untracked. Do not
+commit yet because the routing table must not land without its target guides.
 
 ### Task 2: Add focused branch guides
 
@@ -376,14 +377,15 @@ foreach ($path in $required) {
 
 Expected: command exits successfully with no output.
 
-- [ ] **Step 7: Commit branch guides**
+- [ ] **Step 7: Commit the complete, internally valid governance layer**
 
 ```powershell
-git add docs/agents
-git commit -m "docs: add branch-specific agent guides"
+git add AGENTS.md CLAUDE.md docs/agents docs/superpowers/plans/2026-07-10-agent-governance.md
+git commit -m "docs: add repository agent governance"
 ```
 
-Expected: one commit containing exactly the five branch guides.
+Expected: one commit containing the two entry files, five branch guides, and the
+plan correction that keeps routing and target files atomic.
 
 ### Task 3: Run governance acceptance checks
 
@@ -438,19 +440,19 @@ Expected: command exits successfully with no output.
 Run:
 
 ```powershell
-git diff --check HEAD~2..HEAD
-git show --stat --oneline HEAD~2..HEAD
+git diff --check HEAD~1..HEAD
+git show --stat --oneline HEAD~1..HEAD
 git status --short --branch
 ```
 
 Expected:
 
 - `git diff --check` has no output;
-- the two implementation commits contain only governance Markdown files;
+- the implementation commit contains only governance Markdown files;
 - status shows `main` with no modified or untracked files.
 
 - [ ] **Step 4: Report completion without merging or pushing**
 
-Report the design commit, two implementation commits, files created, validation
+Report the design commit, plan commit, implementation commit, files created, validation
 commands and results, final HEAD, and Git status. Do not push or synchronize the
 other worktrees until the Project Lead separately approves that action.
