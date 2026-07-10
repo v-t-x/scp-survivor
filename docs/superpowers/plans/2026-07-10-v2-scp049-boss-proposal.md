@@ -10,6 +10,22 @@
 > **Authority:** `AGENTS.md`, `docs/agents/dev-v2.md`, `docs/product-vision.md`,
 > `docs/design.md`, `docs/development-strategy.md`
 
+### Revision history
+
+- **Rev 1 (initial):** Option C recommended; replace-vs-layer of
+  `enragedSummonMultiplier` left as an open product decision.
+- **Rev 2 (this revision, post Project Lead review):** Direction approved for
+  revision; still **not** approved to write `src/`. This revision resolves the six
+  points the Project Lead requested:
+  1. First implementation **replaces** `enragedSummonMultiplier` — no open
+     replace/layer state remains (§2.3, §3.1, §3.2).
+  2. Concrete initial values and rationale for every frenzy/exposed config key (§3.2.1).
+  3. Explicit `summonBossMinions` frenzy call interface (§3.2.2).
+  4. Explicit `exposedDamageMultiplier` × breacher-1.5× stacking rule and cap (§3.2.3).
+  5. `handleBossDefeat()` sets `boss.bossState = "dying"`, plus frenzy-tint cleanup
+     method and lifecycle (§3.2.4).
+  6. Docs-only wave: no `src/` change, no push, no merge (§ handoff).
+
 ---
 
 ## Task 1 — Current SCP-049 runtime audit
@@ -200,9 +216,11 @@ scaffold from C exists (A can reuse the same `bossState` field and `operating` w
 heal-blocking infection, lunge/movement rework, any new map/task/second boss, and any
 change to victory/defeat/restart contracts beyond adding one intermediate boss state.
 
-**Needs Project Owner confirmation (product decision):** whether the explicit frenzy
-window should *replace* the current implicit `enragedSummonMultiplier` behavior or layer
-on top of it. This proposal assumes **replace** (cleaner rule), but flags it for sign-off.
+**Resolved product decision (Rev 2):** the first implementation **replaces** the current
+implicit `enragedSummonMultiplier` behavior with the explicit frenzy window. The old
+`enragedSummonMultiplier` key is retired (see §3.2.1); enrage below `enragedHpThreshold`
+now expresses itself as a shorter frenzy cadence via `frenzyEnragedMultiplier`, not as a
+hidden summon-interval scale. There is no remaining replace/layer open question.
 
 ---
 
@@ -219,9 +237,9 @@ exclusive state; the table lists it per the plan requirement.
 | State | Entry condition | Update rule | Exit condition | Player signal | Cleanup |
 |---|---|---|---|---|---|
 | `normal` | On spawn (`spawnScp049Boss`) | `moveToObject` chase; summon when `elapsedSurvivalMs >= nextSummonAtMs` | `elapsedSurvivalMs >= nextFrenzyAtMs` → `frenzy` | Chasing boss + HP% HUD | none (steady state) |
-| `frenzy` | From `normal` at `nextFrenzyAtMs` (cadence scales with HP ≤ `enragedHpThreshold`) | Root (velocity 0), summon one enlarged wave via `summonBossMinions`, apply `exposedDamageMultiplier` | `elapsedSurvivalMs >= stateUntilMs` (after `frenzyDurationMs`) → `normal`, set next `nextFrenzyAtMs` | Boss tint + banner + `playSound("bossSummon")`; HUD unchanged | Clear tint on exit |
-| enraged (modifier) | `boss.health/maxHealth <= enragedHpThreshold` | Shortens `nextFrenzyAtMs` cadence (replaces `enragedSummonMultiplier`, pending owner sign-off) | HP rises above threshold (won't in practice) | Faster frenzy rhythm | none |
-| `dying` | `health <= 0` via `handleBossDefeat` | Velocity 0, `isDying=true`, block further state updates | `deathShrinkMs+120` delayed → `triggerVictory` | Death effect + banner | Clear tint, cancel pending frenzy |
+| `frenzy` | From `normal` at `nextFrenzyAtMs` (cadence scales with HP ≤ `enragedHpThreshold`) | Root (velocity 0), summon one enlarged wave via `summonBossMinions(boss, { frenzy: true })`, apply `exposedDamageMultiplier` | `elapsedSurvivalMs >= stateUntilMs` (after `frenzyDurationMs`) → `exitFrenzy` → `normal`, set next `nextFrenzyAtMs` | Boss tint + banner + `playSound("bossSummon")`; HUD unchanged | `exitFrenzy` clears the frenzy tint (§3.2.4) |
+| enraged (modifier) | `boss.health/maxHealth <= enragedHpThreshold` | Shortens `nextFrenzyAtMs` cadence via `frenzyEnragedMultiplier` (replaces the retired `enragedSummonMultiplier`) | HP rises above threshold (won't in practice) | Faster frenzy rhythm | none |
+| `dying` | `health <= 0` via `handleBossDefeat` | `handleBossDefeat` sets `bossState="dying"` and `isDying=true`, zeroes velocity, and blocks all further `updateBoss` state transitions (`updateBoss` already early-returns on `isDying`) | `deathShrinkMs+120` delayed → `triggerVictory` | Death effect + banner | `handleBossDefeat` calls `clearFrenzyTint(boss)` and cancels any pending frenzy (`stateUntilMs`/`nextFrenzyAtMs` become inert once `dying`) (§3.2.4) |
 | shutdown/restart | `scene.restart` / quit / game over | n/a (object destroyed with `enemies` group) | new `create` | none | `destroy` hook nulls `bossEnemy`; `startMissionWithWeapon` resets flags |
 
 Guard composition: `frenzy` root must coexist with `staggerUntilMs` (both zero velocity;
@@ -242,38 +260,119 @@ No new Scene-level fields; no new arrays/timers requiring separate teardown. All
 state lives on the boss object and dies with it (existing `boss.once("destroy")`,
 `enemies.js:730-737`).
 
-**New/changed config (`src/config/balance.js`, `boss.scp049`):**
+#### 3.2.1 New/changed config with concrete initial values (`src/config/balance.js`, `boss.scp049`)
 
-| Key | Type | Purpose |
-|---|---|---|
-| `frenzyEnabled` | boolean | Master rollback flag |
-| `frenzyFirstDelayMs` | number | Delay to first frenzy after spawn |
-| `frenzyCooldownMs` | number | Base gap between frenzies (replaces reliance on `summonCooldownMs` for cadence) |
-| `frenzyEnragedMultiplier` | number | Cadence scale when HP ≤ `enragedHpThreshold` (supersedes `enragedSummonMultiplier`, pending sign-off) |
-| `frenzyDurationMs` | number | Root/exposed window length |
-| `frenzySummonCountMin/Max` | number | Enlarged wave size (bounded by `maxActiveEnemies`) |
-| `exposedDamageMultiplier` | number | Bonus damage during frenzy; must define stacking with `shotgunDamageMultiplier` |
+The old `enragedSummonMultiplier: 0.6` key is **removed** (retired by the Rev-2 replace
+decision). The old `summonInitialDelayMs`, `summonCooldownMs`, `summonCountMin/Max`
+continue to drive the `normal`-state trickle summon; the frenzy keys below drive the new
+explicit window. All timers use the `elapsedSurvivalMs` clock (pause-safe, per §3.4).
 
-**Methods (`src/scene/enemies.js`):**
+| Key | Type | Initial value | Rationale |
+|---|---|---:|---|
+| `frenzyEnabled` | boolean | `true` | Master rollback flag; setting `false` reverts the fight to normal-only chase+trickle summon with no other change |
+| `frenzyFirstDelayMs` | number | `12000` | First frenzy ~12 s after the boss appears. Long enough for the player to read the normal chase + first trickle summon (`summonInitialDelayMs:5000`) before the first telegraphed window, so the mechanic is taught in a calm beat rather than at spawn |
+| `frenzyCooldownMs` | number | `14000` | Base gap between frenzy windows. Sits just above the existing `summonCooldownMs:11000` so a frenzy is a distinct punctuation, not overlapping the trickle summon each cycle; yields ~3–4 windows across a full-HP fight of the current 2500-HP boss |
+| `frenzyEnragedMultiplier` | number | `0.65` | Cadence scale applied to `frenzyCooldownMs` when `hpRatio <= enragedHpThreshold (0.5)` → ~9.1 s gap. Preserves the "gets more aggressive under half HP" feel that `enragedSummonMultiplier:0.6` used to give, now expressed through the visible frenzy rhythm |
+| `frenzyDurationMs` | number | `2500` | Root/exposed window length. Long enough to be a clear burst opportunity for all weapons (pistol included, §2.2) and to land the enlarged wave, short enough that the rooted boss is not a free kill |
+| `frenzySummonCountMin` | number | `3` | Lower bound of the frenzy wave. One above the normal `summonCountMin:2` so a frenzy visibly summons more than a trickle |
+| `frenzySummonCountMax` | number | `4` | Upper bound; one above normal `summonCountMax:3`. Still modest so the wave respects `maxActiveEnemies` and stays readable |
+| `exposedDamageMultiplier` | number | `1.35` | Bonus damage taken while `bossState==="frenzy"`. Rewards committing to the rooted boss without trivializing the 2500-HP pool; interaction with breacher 1.5× is capped in §3.2.3 |
 
-- `updateBoss()` — *modified.* Input: none (reads `this.bossEnemy`, `elapsedSurvivalMs`).
-  Output: none (mutates boss). Adds a state switch: `normal` (current chase+summon),
-  `frenzy` (root+wave+exposed), transition timers. Update owner of all three new fields.
-- `enterFrenzy(boss)` — *new, private helper.* Input: boss. Output: none. Sets
-  `bossState="frenzy"`, `stateUntilMs`, calls `summonBossMinions` with frenzy counts,
-  plays sound/banner/tint. Called only from `updateBoss`.
-- `exitFrenzy(boss)` — *new, private helper.* Input: boss. Output: none. Restores
-  `bossState="normal"`, computes next `nextFrenzyAtMs`, clears tint.
+#### 3.2.2 `summonBossMinions` frenzy call interface
 
-**Changed damage read (`src/scene/combat.js`):**
+`summonBossMinions` gains an **optional options argument** so the frenzy path can request a
+larger wave without a second method. Signature and contract:
 
-- `getEnemyDamageTakenMultiplier(enemy, …)` — *modified.* Adds, for `enemy.isBoss &&
-  enemy.bossState === "frenzy"`, a `*= exposedDamageMultiplier` factor, with an explicit
-  documented interaction with the existing `shotgunDamageMultiplier` branch (e.g.
-  multiplicative, capped). No signature change.
+```
+summonBossMinions(boss, options = {})
+  options.frenzy  : boolean  (default false)
+```
+
+- When `options.frenzy` is falsy → **unchanged** current behavior: count =
+  `Between(summonCountMin, summonCountMax)`, using `minionHealthMultiplier` /
+  `minionDamageMultiplier`, ring radius 52, `maxActiveEnemies` cap, `isBossMinion=true`,
+  `playSound("bossSummon")`. This is exactly the existing call from the `normal` trickle.
+- When `options.frenzy` is `true` → count =
+  `Between(frenzySummonCountMin, frenzySummonCountMax)`; **all other behavior is
+  identical** (same base config, same scaling multipliers, same ring placement, same
+  `maxActiveEnemies` cap check inside the loop, same `isBossMinion=true`, same sound).
+- The `maxActiveEnemies` guard stays **inside** the spawn loop (`enemies.js:787-789`), so a
+  frenzy wave that would exceed the cap simply spawns fewer — no overflow (smoke row #12).
+- Callers: `normal` state calls `summonBossMinions(boss)` (unchanged); `enterFrenzy` calls
+  `summonBossMinions(boss, { frenzy: true })`.
+
+#### 3.2.3 `exposedDamageMultiplier` × breacher-1.5× stacking and cap
+
+The two multipliers combine **multiplicatively**, then the boss-specific portion is
+**clamped to a hard cap of 2.0×** so a fully-exposed breacher shot cannot exceed double
+damage. Defined against the existing `getEnemyDamageTakenMultiplier` boss branch
+(`src/scene/combat.js:186-192`):
+
+- Non-boss enemies: unaffected (no `exposed`, no breacher-boss branch).
+- Boss, `normal`, breacher pellet → `1.5×` (unchanged).
+- Boss, `normal`, pistol/tesla → `1.0×` (unchanged).
+- Boss, `frenzy`, pistol/tesla → `exposedDamageMultiplier = 1.35×`.
+- Boss, `frenzy`, breacher pellet → `1.5 × 1.35 = 2.025×`, **clamped to 2.0×**.
+
+Implementation shape (no signature change): compute
+`bossMultiplier = shotgunFactor * exposedFactor`, then
+`bossMultiplier = Math.min(bossMultiplier, BALANCE.boss.scp049.exposedDamageCap)` with
+`exposedDamageCap: 2.0` added to config. The cap key is listed here rather than in §3.2.1
+because it exists only to bound this interaction. Smoke row #6 verifies the breacher case
+lands at the 2.0× cap, not 2.025×.
+
+#### 3.2.4 `handleBossDefeat` state + frenzy tint lifecycle
+
+**`handleBossDefeat(boss)` (`src/scene/enemies.js:810-825`) — modified:**
+
+- Sets `boss.bossState = "dying"` immediately after the existing `boss.isDying = true`
+  line. This makes the death state explicit in the state machine (§3.1) and, together with
+  the existing `if (!boss?.active || boss.isDying …) return;` guard in `updateBoss`
+  (`enemies.js:749`), guarantees no `frenzy`/`normal` transition can fire after defeat.
+- Calls `this.clearFrenzyTint(boss)` so a boss killed **mid-frenzy** does not play its
+  death effect while still wearing the frenzy tint. Pending frenzy timers
+  (`stateUntilMs`, `nextFrenzyAtMs`) need no explicit cancel — they become inert once
+  `updateBoss` early-returns on `isDying`.
+
+**Frenzy tint lifecycle (single owner pair):**
+
+- `enterFrenzy(boss)` — applies the tint via `boss.setTint(<frenzy color>)` and records
+  nothing extra (Phaser tint lives on the sprite; no separate object to track).
+- `clearFrenzyTint(boss)` — *new, private helper (`enemies.js`)*: `boss.clearTint()` (guard
+  on `boss?.active`). Single method used by **both** `exitFrenzy` (normal window end) and
+  `handleBossDefeat` (death mid-frenzy).
+- `exitFrenzy(boss)` — calls `clearFrenzyTint(boss)`, sets `bossState="normal"`, computes
+  next `nextFrenzyAtMs`.
+- Restart/quit/game-over: the boss sprite is destroyed with the `enemies` group
+  (`clearCombatEntities`, `systems.js:173-179`), so no tint can survive a scene restart;
+  a fresh boss starts untinted at `spawnScp049Boss`. No Scene-level tint state exists.
+
+Reuses only the existing Phaser `setTint`/`clearTint` on the boss sprite — no
+`AudioManager`/`UIManager` API and no new manager or manifest surface.
+
+#### 3.2.5 Methods summary (`src/scene/enemies.js`, `src/scene/combat.js`)
+
+- `updateBoss()` — *modified.* Reads `this.bossEnemy`, `elapsedSurvivalMs`; mutates boss.
+  Adds the `normal`/`frenzy` state switch and calls `enterFrenzy`/`exitFrenzy` at the
+  timer boundaries. Update owner of `bossState`, `stateUntilMs`, `nextFrenzyAtMs`.
+- `enterFrenzy(boss)` — *new, private.* Sets `bossState="frenzy"`,
+  `stateUntilMs = elapsedSurvivalMs + frenzyDurationMs`, applies frenzy tint, calls
+  `summonBossMinions(boss, { frenzy: true })`, plays `playSound("bossSummon")` + banner.
+  Called only from `updateBoss`.
+- `exitFrenzy(boss)` — *new, private.* Calls `clearFrenzyTint(boss)`, restores
+  `bossState="normal"`, sets `nextFrenzyAtMs = elapsedSurvivalMs + frenzyCooldownMs *
+  (hpRatio <= enragedHpThreshold ? frenzyEnragedMultiplier : 1)`.
+- `clearFrenzyTint(boss)` — *new, private.* `boss.clearTint()` (guarded). Shared by
+  `exitFrenzy` and `handleBossDefeat` (§3.2.4).
+- `summonBossMinions(boss, options)` — *modified.* Optional `options.frenzy` selects the
+  frenzy count range; all other behavior unchanged (§3.2.2).
+- `handleBossDefeat(boss)` — *modified.* Sets `bossState="dying"`, calls
+  `clearFrenzyTint(boss)` (§3.2.4); existing victory path unchanged.
+- `getEnemyDamageTakenMultiplier(enemy, …)` (`src/scene/combat.js`) — *modified.* Adds the
+  `frenzy` exposed factor and the 2.0× cap (§3.2.3). No signature change.
 
 No edits to `src/main.js`, `AudioManager`, `UIManager`, manifests, or persistence.
-Reuses existing `this.playSound("bossSummon")`, `showTopBanner`, and tint helpers.
+Reuses existing `this.playSound("bossSummon")`, `showTopBanner`, and Phaser sprite tint.
 
 ### 3.3 Verification
 
@@ -310,22 +409,28 @@ is manual** (run `npm run dev`, use `DEBUG_MODE` key `B` where noted):
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Frenzy timer drifts across pause (if `this.time.delayedCall` used) | Med | Med | Use `elapsedSurvivalMs` deadlines only (matches audited pause semantics) |
-| `exposedDamageMultiplier` stacks with 1.5× breacher → burst too high | Med | Med | Define interaction explicitly (cap/multiplicative) and tune in `balance.js` |
+| `exposedDamageMultiplier` stacks with 1.5× breacher → burst too high | Med | Med | Resolved: multiplicative then hard-capped at 2.0× via `exposedDamageCap` (§3.2.3); smoke row #6 verifies the cap |
 | Boss stuck rooted if frenzy exit missed | Low | High | `stateUntilMs` hard deadline in `updateBoss`; `dying` guard blocks re-entry |
-| Restart leaks tint/state | Low | Med | All state on boss object; dies with `enemies` group; re-init on spawn |
+| Restart leaks tint/state | Low | Med | All state on boss object; `clearFrenzyTint` on exit/defeat; sprite dies with `enemies` group; re-init on spawn (§3.2.4) |
 | Pistol non-lock makes fight unfair without exposure | Med | Med | Frenzy window is the designed equalizer; smoke row #5 gates it |
-| Replacing `enragedSummonMultiplier` changes existing difficulty feel | Med | Low | Product decision flagged for Project Owner sign-off (§2.3) |
+| Retiring `enragedSummonMultiplier` changes existing difficulty feel | Med | Low | Enrage feel preserved via `frenzyEnragedMultiplier:0.65` (§3.2.1); tune in `balance.js`; decision resolved in Rev 2 (§2.3) |
 | Shared-file scope creep (`main.js`/managers/manifest) | Low | High | Contract touches only `enemies.js`, `combat.js`, `balance.js`; none are shared-gate files |
 
 ---
 
 ## Scope, verification, and handoff for this planning wave
 
-- **Files created this wave:** this proposal only
+- **This wave (Rev 2):** revision of the proposal document only, per Project Lead
+  review. Direction approved; writing `src/` is **not** yet approved.
+- **Files changed this wave:** this proposal only
   (`docs/superpowers/plans/2026-07-10-v2-scp049-boss-proposal.md`).
-- **`src/` changes:** none.
+- **`src/` changes:** none. No push, no merge.
+- **Resolved this revision:** replace decision finalized (§2.3, §3.1); concrete config
+  values + rationale (§3.2.1); `summonBossMinions` frenzy interface (§3.2.2); exposed ×
+  breacher stacking + 2.0× cap (§3.2.3); `handleBossDefeat` `bossState="dying"` + frenzy
+  tint lifecycle (§3.2.4).
 - **Verification run this wave:** documentation only; no build/gameplay run was required
   or performed for a docs-only change. The build/smoke matrix in §3.3 is the *proposed*
   verification for the future implementation wave.
-- **Requested next action:** Project Lead review and approval of Option C (and the
-  replace-vs-layer product decision in §2.3) before any `src/` work begins.
+- **Requested next action:** Project Lead re-review of the revised Option C contract
+  before any `src/` work begins.
