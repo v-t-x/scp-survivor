@@ -1,4 +1,7 @@
 import Phaser from "phaser";
+import { PreloadScene } from "./scenes/PreloadScene.js";
+import { AudioManager } from "./audio/AudioManager.js";
+import { UIManager } from "./ui/UIManager.js";
 import { menusMixin } from "./scene/menus.js";
 import { enemiesMixin } from "./scene/enemies.js";
 import { weaponsMixin } from "./scene/weapons.js";
@@ -107,8 +110,16 @@ class PrototypeScene extends Phaser.Scene {
     this.bulletPenetration = 0;
     this.initWeapons();
     this.soundMuted = false;
-    this.audioContext = null;
-    this.audioGain = null;
+    // Audio and UI are owned by dedicated managers (UI/audio Agent). The scene
+    // keeps soundMuted as the single source of truth for mute state; AudioManager
+    // reads it. Gameplay plays sounds via this.playSound() / refreshes HUD via
+    // this.updateUI() as before — those now delegate to these managers.
+    this.audio = new AudioManager(this);
+    this.ui = new UIManager(this);
+    // Release audio/UI resources when the scene shuts down or restarts, so a new
+    // run does not leak a stale AudioContext or manager.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownManagers, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownManagers, this);
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -169,6 +180,21 @@ class PrototypeScene extends Phaser.Scene {
       this.updateBuildPanelText();
     }
   }
+
+
+  // Dispose manager-owned resources on scene shutdown/restart/destroy. A fresh
+  // create() rebuilds this.audio / this.ui, so this prevents a leaked (or
+  // duplicate) AudioContext across runs.
+  teardownManagers() {
+    if (this.audio) {
+      this.audio.destroy();
+      this.audio = null;
+    }
+    if (this.ui) {
+      this.ui.destroy();
+      this.ui = null;
+    }
+  }
 }
 
 Object.assign(
@@ -197,7 +223,9 @@ const config = {
       debug: false
     }
   },
-  scene: PrototypeScene
+  // PreloadScene runs first (Phaser auto-starts the first scene in the array),
+  // loads assets + generates fallback textures, then starts PrototypeScene.
+  scene: [PreloadScene, PrototypeScene]
 };
 
 new Phaser.Game(config);
