@@ -98,6 +98,14 @@ export const BALANCE = {
   },
   enemy: {
     maxActiveEnemies: 230,
+    // Every enemy periodically clones itself. Bounded by maxActiveEnemies so it
+    // cannot grow without limit.
+    replication: {
+      enabled: true,
+      intervalMinMs: 6000,
+      intervalMaxMs: 9000,
+      maxTotalEnemies: 230
+    },
     spawn: {
       startIntervalMs: 950,
       minIntervalMs: 250,
@@ -276,8 +284,8 @@ export const BALANCE = {
       // (see updateBoss). Kept so disabling the frenzy mechanic restores the
       // original under-50%-HP faster-trickle behavior exactly.
       enragedSummonMultiplier: 0.6,
-      summonCountMin: 2,
-      summonCountMax: 3,
+      summonCountMin: 10,
+      summonCountMax: 10,
       minionHealthMultiplier: 0.6,
       minionDamageMultiplier: 0.85,
       introDelayMs: 2800,
@@ -289,8 +297,14 @@ export const BALANCE = {
       frenzyCooldownMs: 14000,
       frenzyEnragedMultiplier: 0.65,
       frenzyDurationMs: 2500,
-      frenzySummonCountMin: 3,
-      frenzySummonCountMax: 4,
+      frenzySummonCountMin: 20,
+      frenzySummonCountMax: 20,
+      frenzySummonRadius: 190,
+      // Frenzy summons a mix of elites and drones at full strength (not the
+      // weakened infected staff the normal trickle uses).
+      frenzyMinionTypes: ["riotUnit", "blinkStalker", "biomass", "drone"],
+      frenzyMinionHealthMultiplier: 1.0,
+      frenzyMinionDamageMultiplier: 1.0,
       exposedDamageMultiplier: 1.35,
       exposedDamageCap: 2.0
     }

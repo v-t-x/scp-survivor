@@ -243,6 +243,12 @@ export const enemiesMixin = {
         BALANCE.timeline.effects.enemyTeleportMinMs,
         BALANCE.timeline.effects.enemyTeleportMaxMs
       );
+    enemy.nextReplicateAtMs =
+      this.elapsedSurvivalMs +
+      Phaser.Math.Between(
+        BALANCE.enemy.replication.intervalMinMs,
+        BALANCE.enemy.replication.intervalMaxMs
+      );
 
     if (config.bodyShape === "circle") {
       enemy.setCircle(config.bodyRadius);
@@ -342,8 +348,62 @@ export const enemiesMixin = {
         this.tryInstabilityTeleportEnemy(enemy);
       }
 
+      if (BALANCE.enemy.replication.enabled) {
+        this.tryReplicateEnemy(enemy);
+      }
+
       enemy.moveSpeed = originalSpeed;
     }
+  },
+
+
+  tryReplicateEnemy(enemy) {
+    if (!enemy.active || enemy.isDying || enemy.isBoss) {
+      return;
+    }
+    if ((enemy.nextReplicateAtMs ?? 0) > this.elapsedSurvivalMs) {
+      return;
+    }
+    // Schedule the next clone regardless, so a capped-out field still spaces
+    // out its attempts instead of retrying every frame.
+    enemy.nextReplicateAtMs =
+      this.elapsedSurvivalMs +
+      Phaser.Math.Between(
+        BALANCE.enemy.replication.intervalMinMs,
+        BALANCE.enemy.replication.intervalMaxMs
+      );
+
+    if (this.enemies.getLength() >= BALANCE.enemy.replication.maxTotalEnemies) {
+      return;
+    }
+
+    const offsetX = Phaser.Math.Between(-24, 24);
+    const offsetY = Phaser.Math.Between(-24, 24);
+    const spawnX = Phaser.Math.Clamp(enemy.x + offsetX, 24, WORLD_WIDTH - 24);
+    const spawnY = Phaser.Math.Clamp(enemy.y + offsetY, 24, WORLD_HEIGHT - 24);
+    const clone = this.cloneEnemyAt(enemy, spawnX, spawnY);
+    if (clone && enemy.isBossMinion) {
+      clone.isBossMinion = true;
+    }
+  },
+
+
+  cloneEnemyAt(source, x, y) {
+    const scaling = { healthMultiplier: 1, damageMultiplier: 1 };
+
+    if (source.isElite && source.eliteType) {
+      // biomass clones must not keep splitting into children on death, but a
+      // straight elite clone is fine; spawnEliteAtEdge sets canSplit for biomass.
+      return this.spawnEliteAtEdge(source.eliteType, scaling, { x, y });
+    }
+
+    const config = BALANCE.enemy.types[source.enemyType];
+    if (!config) {
+      return null;
+    }
+    const clone = this.enemies.create(x, y, config.textureKey);
+    this.initializeEnemyFromConfig(clone, config, scaling, false);
+    return clone;
   },
 
 
@@ -837,9 +897,13 @@ export const enemiesMixin = {
 
   summonBossMinions(boss, options = {}) {
     const config = BALANCE.boss.scp049;
-    const count = options.frenzy
-      ? Phaser.Math.Between(config.frenzySummonCountMin, config.frenzySummonCountMax)
-      : Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
+
+    if (options.frenzy) {
+      this.summonBossFrenzyWave(boss, config);
+      return;
+    }
+
+    const count = Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
     const baseConfig = BALANCE.enemy.types.infectedStaff;
     const scaling = {
       healthMultiplier: config.minionHealthMultiplier,
@@ -864,6 +928,54 @@ export const enemiesMixin = {
       const minion = this.enemies.create(spawnX, spawnY, baseConfig.textureKey);
       this.initializeEnemyFromConfig(minion, baseConfig, scaling, false);
       minion.isBossMinion = true;
+    }
+
+    this.playSound("bossSummon");
+  },
+
+
+  summonBossFrenzyWave(boss, config) {
+    const count = Phaser.Math.Between(
+      config.frenzySummonCountMin,
+      config.frenzySummonCountMax
+    );
+    const scaling = {
+      healthMultiplier: config.frenzyMinionHealthMultiplier,
+      damageMultiplier: config.frenzyMinionDamageMultiplier
+    };
+    const radius = config.frenzySummonRadius;
+
+    for (let index = 0; index < count; index += 1) {
+      if (this.enemies.getLength() >= BALANCE.enemy.maxActiveEnemies) {
+        break;
+      }
+      const angle = (Math.PI * 2 * index) / count;
+      const spawnX = Phaser.Math.Clamp(
+        boss.x + Math.cos(angle) * radius,
+        24,
+        WORLD_WIDTH - 24
+      );
+      const spawnY = Phaser.Math.Clamp(
+        boss.y + Math.sin(angle) * radius,
+        24,
+        WORLD_HEIGHT - 24
+      );
+      const type = Phaser.Utils.Array.GetRandom(config.frenzyMinionTypes);
+
+      let minion;
+      if (type === "drone") {
+        const droneConfig = BALANCE.enemy.types.drone;
+        minion = this.enemies.create(spawnX, spawnY, droneConfig.textureKey);
+        this.initializeEnemyFromConfig(minion, droneConfig, scaling, false);
+      } else {
+        // Reuse the elite factory but force the spawn onto the frenzy ring
+        // instead of the map edge.
+        minion = this.spawnEliteAtEdge(type, scaling, { x: spawnX, y: spawnY });
+      }
+
+      if (minion) {
+        minion.isBossMinion = true;
+      }
     }
 
     this.playSound("bossSummon");
