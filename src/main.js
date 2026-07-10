@@ -118,6 +118,17 @@ class PrototypeScene extends Phaser.Scene {
     this.ui = new UIManager(this);
     // Release audio/UI resources when the scene shuts down or restarts, so a new
     // run does not leak a stale AudioContext or manager.
+    //
+    // create() runs again after every scene.restart(). In Phaser 3.90 restart
+    // fires SHUTDOWN only (never DESTROY), and SHUTDOWN does not clear the scene
+    // EventEmitter's other listeners. A SHUTDOWN .once fires and self-removes each
+    // restart, so it does not accumulate — but a DESTROY .once registered here
+    // never fires on restart and would pile up one per run. Remove any prior
+    // registration before re-adding so each event carries at most one listener.
+    // teardownManagers is idempotent, so firing on both SHUTDOWN and the final
+    // DESTROY is safe.
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownManagers, this);
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownManagers, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownManagers, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownManagers, this);
 
