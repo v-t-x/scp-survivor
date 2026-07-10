@@ -1,5 +1,12 @@
 # `feature/ui-art-overhaul` UI/Art Guide
 
+## Required reading
+
+- `docs/product-vision.md`
+- `docs/development-strategy.md`
+- `docs/art-and-asset-direction.md`
+- `docs/licensing-and-commercialization.md`
+
 ## Owns
 
 - HUD, menus, overlays, layout, theme, accessibility, and presentation.

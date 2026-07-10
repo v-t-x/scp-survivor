@@ -8,171 +8,109 @@
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE)
 
-> 2D 俯视角幸存者-like（Survivors-like）单局原型。基金会安保官被困收容设施，在 6 分钟时间轴内杀怪升级、应对电力故障，撑到终点与 SCP-049 决战并取胜。
+> 2D 俯视角 Survivors-like 单局原型。基金会安保官在 6 分钟收容失效时间轴中战斗、升级、处理设施干扰，并在终局对抗 SCP-049。
 
-基于 [Phaser 3](https://phaser.io/) + [Vite](https://vitejs.dev/) 构建，纯 JavaScript，**无需任何素材资源**——所有图形由 `Graphics.generateTexture` 程序化生成，所有音效由 Web Audio API 实时合成，仓库里没有一张图片、一个音频文件。
+项目使用 Phaser 3、Vite 和原生 JavaScript。当前版本没有正式图片或音频素材：纹理由 Phaser 程序化生成，音效由 Web Audio API 实时合成；资源预加载、manifest 和 fallback 接口已经建立，供后续逐步接入正式素材。
 
-**▶️ 在线试玩：https://dist-chi-ten-47.vercel.app**
-
-> 📸 _待补：游戏画面 GIF（评审建议的最高优先级项，需录屏后加在此处）。_
-
----
+**在线试玩：[https://dist-chi-ten-47.vercel.app](https://dist-chi-ten-47.vercel.app)**
 
 ## 快速开始
 
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器（热更新）
 npm run dev
-
-# 生产构建
 npm run build
-
-# 预览生产构建
 npm run preview
 ```
 
-启动后在浏览器打开终端提示的本地地址（默认 http://localhost:5173/ ）。
-
----
+开发服务器通常运行在 `http://localhost:5173/`，以终端实际输出为准。
 
 ## 操作
 
 | 按键 | 功能 |
-|------|------|
+|---|---|
 | `W` `A` `S` `D` | 移动 |
-| `空格` | 闪避冲刺（带无敌帧，有冷却） |
-| `TAB` | 查看当前构筑面板（按住） |
-| `M` | 静音 / 取消静音 |
-| 鼠标 | 在升级 / 武器选择界面点击选择 |
+| `Space` | 闪避冲刺，带短暂无敌和冷却 |
+| `Tab` | 按住查看当前构筑 |
+| `Esc` | 暂停或继续 |
+| `M` | 静音或恢复声音 |
+| 鼠标 | 选择武器、升级、商店和菜单操作 |
 
-自动攻击：武器会自动瞄准并开火，玩家只需专注走位。
+武器自动瞄准并攻击。升级时可三选一、重抽或跳过回血。
 
----
+## 当前玩法
 
-## 核心玩法
-
-### 循环
-
-```
-选武器（三选一）
-  → 移动 + 自动攻击 + 拾取经验
-  → 升级三选一（可重抽 / 跳过）
-  → 按时间轴应对敌种 / 感知干扰 / 电力故障
-  → 4:00 拾取 SCP-500（可选治疗）
-  → 6:00 清场 → SCP-049 Boss 战
-  → 击败 Boss → 胜利；生命归零 → 失败
+```text
+标题与永久加成商店
+  → 三选一武器
+  → 移动、自动攻击、拾取经验
+  → 升级、质变、重抽或跳过
+  → 应对敌种、感知干扰和固定电力故障
+  → 4:00 出现 SCP-500
+  → 6:00 清场并迎战 SCP-049
+  → 胜利或失败后结算学分并重新开始
 ```
 
-### 6 分钟时间轴
+当前包含：
 
-| 时间 | 阶段 | 主要变化 |
-|------|------|----------|
-| 0:00 | 职员感染 | 仅感染职员 |
-| 1:00 | 爬行者渗入 | 爬行者权重上升 |
-| 2:00 | 无人机部署 | 远程无人机加入，出现感知诱饵 |
-| 3:00 | 电力故障 | 视野收窄 25 秒 |
-| 4:00 | 异常介入 | 敌人短距传送，SCP-500 生成 |
-| 5:00 | 收容加压 | HUD 乱码 + 子弹偏移 + 屏抖 |
-| 6:00 | 终局 | 停止刷怪，SCP-049 登场 |
+- 3 把武器，以及每把武器 1 个一次性质变；
+- 16 个升级定义、每局 3 次重抽和跳过回血；
+- 3 种普通敌人、3 种精英和 SCP-049 Boss；
+- 6 分钟时间轴、电力故障、感知干扰、战斗兴奋剂和 SCP-500；
+- localStorage 学分元进度与 4 个永久起始加成；
+- 标题、武器选择、HUD、构筑、暂停、升级和结算流程。
 
-### 三把武器
+完整实现事实见 [当前游戏设计](./docs/design.md)。产品目标不是只为普通割草玩法更换 SCP 皮肤，长期方向见 [产品愿景](./docs/product-vision.md)。
 
-| 武器 | 定位 |
-|------|------|
-| 基金会勤务手枪 | 中远程单体，自动瞄准，可叠弹丸 / 穿透 |
-| 基金会收容突破器 | 近距爆发，弹匣 + 装填 + 击退 + 压制 |
-| 特斯拉发射器 | 链式 AOE，电弧跳跃多目标 |
+## 技术与结构
 
-### 敌人
+- 引擎：Phaser 3.90，Arcade Physics；
+- 构建：Vite 7；
+- 语言：JavaScript ES Modules；
+- 场景：`PreloadScene` 负责资源与 fallback，随后启动 `PrototypeScene`；
+- 架构：配置、Gameplay mixin、资源、音频和 UI 接口分层；
+- 持久化：localStorage，失败时安全回退到内存默认值。
 
-- **普通**：感染职员（均衡）、异常爬行者（高速低血）、安保无人机（远程）
-- **精英**：防暴镇压单位（正面减伤 + 冲锋）、闪现潜行者（传送 + 冲刺）、复制生物体（死亡分裂）
-- **Boss**：SCP-049（召唤小怪，血量过半后狂暴）
-
----
-
-## 技术栈
-
-- **引擎**：Phaser 3.90（Arcade 物理）
-- **构建**：Vite 7
-- **语言**：原生 JavaScript（ES Module），无 TypeScript
-- **音频**：Web Audio API 程序化生成音效，无音频文件
-- **图形**：全部由 `Graphics.generateTexture` 程序化生成，无图片资源
-
-代码按领域分层：配置集中在 [`src/config/`](./src/config/)（`balance.js` 为总调参表），游戏逻辑按职责拆成 [`src/scene/`](./src/scene/) 下的多个混入（mixin）模块，[`src/main.js`](./src/main.js) 仅负责组装场景与启动。
-
----
-
-## 项目结构
-
-```
+```text
 scp-survivor/
-├── index.html            # 入口页面
 ├── src/
-│   ├── main.js           # 组装 PrototypeScene（混入各模块）并启动 Phaser
-│   ├── config/           # 配置层（无 Phaser 依赖，纯数据）
-│   │   ├── balance.js    # 总调参表（所有数值集中于此）
-│   │   ├── constants.js  # 全局常量（画布/世界尺寸、网格等）
-│   │   ├── upgrades.js   # 升级项定义
-│   │   └── meta.js       # 元进度（localStorage 持久化）
-│   └── scene/            # 场景逻辑，按领域拆分为混入模块
-│       ├── world.js      # 场地、玩家、纹理与输入
-│       ├── enemies.js    # 敌人 AI、刷怪、Boss
-│       ├── weapons.js    # 三把武器与弹丸
-│       ├── combat.js     # 伤害结算、碰撞
-│       ├── progression.js# 经验、升级、构筑
-│       ├── timeline.js   # 6 分钟时间轴导演
-│       ├── effects.js    # 特效与对象池
-│       ├── hud.js        # HUD 与构筑面板
-│       ├── menus.js      # 武器选择/升级/结算覆盖层
-│       └── systems.js    # 音频等系统
-├── scripts/
-│   ├── balance-sim.mjs   # 数值平衡模拟脚本
-│   └── phase1-cleanup.mjs
-├── docs/                 # 设计文档与开发笔记
-│   ├── design.md         # 游戏设计文档
-│   ├── dev-log-2026-07.md# 开发记录（性能/重构/上线）
-│   ├── roadmap-1.md      # 改进方案 1
-│   ├── roadmap-2.md      # 改进方案 2
-│   └── v1.0-notes.md     # v1.0 开发情况
-├── .github/workflows/    # CI（构建检查）
-├── CHANGELOG.md          # 版本更新日志
-├── LICENSE               # MIT 许可证
+│   ├── main.js              # PrototypeScene 组装与生命周期
+│   ├── scenes/              # PreloadScene
+│   ├── config/              # 常量、平衡、升级、元进度
+│   ├── scene/               # Gameplay 领域 mixin
+│   ├── assets/              # manifest、资源 key、fallback 纹理
+│   ├── audio/               # AudioManager
+│   └── ui/                  # UIManager 与 theme token
+├── scripts/                 # 平衡模拟和维护脚本
+├── docs/                    # 权威文档、Agent 手册、归档和过程记录
+├── .github/workflows/       # CI 构建检查
+├── CHANGELOG.md
+├── LICENSE
 └── package.json
 ```
 
-> 架构说明：`PrototypeScene` 是唯一的 Phaser 场景，其行为通过 `Object.assign(prototype, ...mixin)` 由 `src/scene/` 下的各领域模块组合而成；配置层 `src/config/` 不依赖 Phaser，便于独立测试与快速调参。
-
----
+完整仓库分类见 [项目文档与仓库地图](./docs/README.md)。
 
 ## 文档
 
-- [游戏设计文档](./docs/design.md)
+- [项目文档与仓库地图](./docs/README.md)
+- [产品愿景](./docs/product-vision.md)
+- [当前游戏设计](./docs/design.md)
+- [开发策略与并行路线](./docs/development-strategy.md)
+- [UI、美术、音频与资源方向](./docs/art-and-asset-direction.md)
+- [许可与商业化准备](./docs/licensing-and-commercialization.md)
 - [更新日志](./CHANGELOG.md)
-- [开发记录（2026-07）](./docs/dev-log-2026-07.md)
-- [改进方案 2](./docs/roadmap-2.md) · [改进方案 1](./docs/roadmap-1.md) · [v1.0 开发情况](./docs/v1.0-notes.md)
 
----
+旧 Roadmap、旧版本分析和开发记录位于 `docs/archive/`，只用于历史追溯，不代表当前批准任务。
 
-## 说明
+## 开发方式
 
-这是一个学习 / 实验性质的游戏原型。当前为 MVP 单局体验，元进度、多地图、多角色等为后续规划。
-
-### 开发方式
-
-不同版本使用了不同的 AI 编程助手辅助开发：
-
-- **v1.0.0**：使用 [Cursor](https://cursor.com/) 辅助开发，完成首个可玩版本。
-- **v1.1.0 及之后**：使用 [Claude Code](https://claude.com/claude-code) 辅助迭代（Bug 修复、手感与空间重构等）。
-
-工程决策与问题诊断由作者主导——例如无敌帧计时的时钟不一致 Bug、相机跟随下升级卡片点击热区错位 Bug 的定位与修复，均记录在 [CHANGELOG](./CHANGELOG.md) 中。
-
----
+项目在不同阶段使用 Cursor、Claude Code 和 Codex 等 AI 编程助手协作开发。项目所有者确认重大产品与架构决定；Agent 的职责边界和交付规则见 [AGENTS.md](./AGENTS.md)。
 
 ## 许可证与署名
 
-- 本项目**代码**采用 [MIT 许可证](./LICENSE)。
-- 「SCP」相关名称与设定源自 [SCP 基金会 Wiki](https://scp-wiki.wikidot.com/)，遵循 [知识共享 署名-相同方式共享 3.0（CC BY-SA 3.0）](https://creativecommons.org/licenses/by-sa/3.0/) 许可。本作为非商业性粉丝原型，SCP-049 等设定版权归其原作者与 SCP 社区所有。
+- 本仓库代码当前采用 [MIT License](./LICENSE)；
+- SCP 相关衍生内容需要遵守相应的署名与相同方式共享条件；
+- 正式发行前必须逐项复核 SCP 条目、图片、字体、音频和其他外部素材的来源与许可。
+
+详细政策、官方来源和免责声明见 [许可与商业化准备](./docs/licensing-and-commercialization.md)。

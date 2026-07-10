@@ -8,154 +8,109 @@
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE)
 
-> A single-run, top-down 2D Survivors-like prototype. A Foundation security officer is trapped in a breached containment site — level up by killing anomalies across a 6-minute timeline, survive a power outage, and reach the finale to defeat and re-contain SCP-049.
+> A top-down 2D Survivors-like single-run prototype. A Foundation security officer fights and upgrades through a six-minute containment-failure timeline before confronting SCP-049.
 
-Built with [Phaser 3](https://phaser.io/) + [Vite](https://vitejs.dev/) in plain JavaScript, with **zero art assets** — every sprite is generated procedurally via `Graphics.generateTexture`, and every sound is synthesized live through the Web Audio API. There is not a single image or audio file in the repo.
+The project uses Phaser 3, Vite, and plain JavaScript. The current build has no production image or audio assets: textures are generated procedurally and sound effects are synthesized through the Web Audio API. Preloading, asset manifests, and fallback interfaces are already in place for gradual asset integration.
 
-**▶️ Play online: https://dist-chi-ten-47.vercel.app**
-
-> 📸 _TODO: gameplay GIF (the highest-impact item from the portfolio review — to be recorded and added here)._
-
----
+**Play online: [https://dist-chi-ten-47.vercel.app](https://dist-chi-ten-47.vercel.app)**
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start the dev server (hot reload)
 npm run dev
-
-# Production build
 npm run build
-
-# Preview the production build
 npm run preview
 ```
 
-Then open the local URL printed by the terminal (default http://localhost:5173/ ).
-
----
+The development server normally uses `http://localhost:5173/`; follow the terminal output if it differs.
 
 ## Controls
 
 | Key | Action |
-|------|------|
+|---|---|
 | `W` `A` `S` `D` | Move |
-| `Space` | Dodge dash (i-frames, on cooldown) |
-| `TAB` | Show current build panel (hold) |
-| `M` | Mute / unmute |
-| Mouse | Click to choose on the upgrade / weapon-select screens |
+| `Space` | Dodge dash with brief invulnerability and cooldown |
+| `Tab` | Hold to inspect the current build |
+| `Esc` | Pause or resume |
+| `M` | Mute or unmute |
+| Mouse | Weapon, upgrade, store, and menu choices |
 
-Auto-attack: weapons aim and fire automatically — the player only has to focus on positioning.
+Weapons aim and attack automatically. Level-ups support three choices, rerolls, and healing by skipping.
 
----
+## Current Gameplay
 
-## Core Gameplay
-
-### Loop
-
-```
-Pick a weapon (1 of 3)
-  → Move + auto-attack + collect XP
-  → Level up (choose 1 of 3; reroll / skip available)
-  → React to enemy types / perception hazards / power outage along the timeline
-  → 4:00 pick up SCP-500 (optional heal)
-  → 6:00 clear the field → SCP-049 boss fight
-  → Defeat the boss → victory; HP hits zero → defeat
+```text
+Title and permanent-upgrade store
+  → choose one of three weapons
+  → move, auto-attack, and collect XP
+  → level up, mutate the weapon, reroll, or skip
+  → react to enemies, perception hazards, and a fixed power outage
+  → SCP-500 appears at 4:00
+  → clear the field and fight SCP-049 at 6:00
+  → earn credits on victory or defeat, then restart
 ```
 
-### 6-Minute Timeline
+The current implementation includes:
 
-| Time | Phase | Main change |
-|------|------|----------|
-| 0:00 | Staff Infection | Infected staff only |
-| 1:00 | Crawler Infiltration | Crawler spawn weight rises |
-| 2:00 | Drone Deployment | Ranged drones join; perception decoys appear |
-| 3:00 | Power Outage | Vision narrows for 25 s |
-| 4:00 | Anomalous Interference | Enemies short-range teleport; SCP-500 spawns |
-| 5:00 | Containment Surge | HUD glitching + bullet deviation + screen shake |
-| 6:00 | Finale | Spawns stop; SCP-049 enters |
+- three weapons, each with one single-acquisition mutation;
+- 16 upgrade definitions, three rerolls per run, and skip-to-heal;
+- three normal enemies, three elites, and the SCP-049 boss;
+- a six-minute timeline, power outage, perception hazards, combat stim, and SCP-500;
+- localStorage credits and four permanent starting perks;
+- title, weapon-select, HUD, build, pause, level-up, and results flows.
 
-### Three Weapons
+See the [current game design](./docs/design.md) for implementation facts. The product goal is to develop SCP-specific rules and decisions rather than only reskinning a generic horde-survival game; see the [product vision](./docs/product-vision.md).
 
-| Weapon | Role |
-|------|------|
-| Foundation Service Pistol | Mid-to-long-range single target, auto-aim, stackable projectiles / penetration |
-| Foundation Containment Breacher | Close-range burst — magazine + reload + knockback + suppression |
-| Tesla Emitter | Chaining AoE — arcs jump between multiple targets |
+## Technology and Structure
 
-### Enemies
+- Engine: Phaser 3.90 with Arcade Physics;
+- Build: Vite 7;
+- Language: JavaScript ES Modules;
+- Scenes: `PreloadScene` prepares assets and fallbacks, then starts `PrototypeScene`;
+- Architecture: separate configuration, gameplay mixins, asset, audio, and UI interface layers;
+- Persistence: localStorage with a safe in-memory fallback.
 
-- **Normal**: Infected Staff (balanced), Anomalous Crawler (fast, low HP), Security Drone (ranged)
-- **Elite**: Riot Suppression Unit (frontal damage reduction + charge), Blink Stalker (teleport + dash), Replicating Biomass (splits on death)
-- **Boss**: SCP-049 (summons minions; enrages below half HP)
-
----
-
-## Tech Stack
-
-- **Engine**: Phaser 3.90 (Arcade physics)
-- **Build**: Vite 7
-- **Language**: vanilla JavaScript (ES Modules), no TypeScript
-- **Audio**: procedurally synthesized SFX via the Web Audio API — no audio files
-- **Graphics**: everything generated by `Graphics.generateTexture` — no image assets
-
-Core logic lives in [`src/main.js`](./src/main.js); tuning values are centralized in the `BALANCE` object at the top of the file.
-
----
-
-## Project Structure
-
-```
+```text
 scp-survivor/
-├── index.html            # Entry page
 ├── src/
-│   └── main.js           # All game logic (single Phaser Scene)
-├── scripts/
-│   ├── balance-sim.mjs   # Numeric balance simulation script
-│   └── phase1-cleanup.mjs
-├── docs/                 # Design docs & development notes
-│   ├── design.md         # Game design document
-│   ├── roadmap-1.md      # Improvement plan 1
-│   ├── roadmap-2.md      # Improvement plan 2
-│   └── v1.0-notes.md     # v1.0 development notes
-├── CHANGELOG.md          # Version changelog
-├── LICENSE               # MIT license
+│   ├── main.js              # PrototypeScene composition and lifecycle
+│   ├── scenes/              # PreloadScene
+│   ├── config/              # constants, balance, upgrades, meta progress
+│   ├── scene/               # gameplay-domain mixins
+│   ├── assets/              # manifest, keys, fallback textures
+│   ├── audio/               # AudioManager
+│   └── ui/                  # UIManager and theme tokens
+├── scripts/                 # balance simulation and maintenance scripts
+├── docs/                    # authority docs, agent guides, archive, process records
+├── .github/workflows/       # CI build check
+├── CHANGELOG.md
+├── LICENSE
 └── package.json
 ```
 
-> `src/main.js` is currently an intentionally centralized single file (entities / weapons / scene / balance config / UI all live in it), with tuning centralized in the top-of-file `BALANCE` object for fast iteration. Splitting into modules (`entities/`, `weapons/`, `scenes/`, `config/`) is a planned follow-up.
-
----
+See the [documentation and repository map](./docs/README.md) for the complete classification.
 
 ## Documentation
 
-- [Game Design Document](./docs/design.md)
+- [Documentation and repository map](./docs/README.md)
+- [Product vision](./docs/product-vision.md)
+- [Current game design](./docs/design.md)
+- [Development strategy](./docs/development-strategy.md)
+- [UI, art, audio, and asset direction](./docs/art-and-asset-direction.md)
+- [Licensing and commercialization readiness](./docs/licensing-and-commercialization.md)
 - [Changelog](./CHANGELOG.md)
-- [Roadmap 2](./docs/roadmap-2.md) · [Roadmap 1](./docs/roadmap-1.md) · [v1.0 Notes](./docs/v1.0-notes.md)
 
-_(Design docs are currently written in Chinese.)_
+Historical roadmaps, version analysis, and development logs live under `docs/archive/`. They are preserved for context and do not authorize current work.
 
----
+## Development Approach
 
-## Notes
+Different stages of the project have used AI coding assistants including Cursor, Claude Code, and Codex. The project owner confirms major product and architecture decisions. Agent ownership and delivery rules are defined in [AGENTS.md](./AGENTS.md).
 
-This is a learning / experimental game prototype. It is currently an MVP single-run experience; meta progression, multiple maps, and multiple characters are planned for later.
+## License and Attribution
 
-### Development Approach
+- Repository code is currently released under the [MIT License](./LICENSE).
+- SCP-derived content must satisfy the applicable attribution and share-alike requirements.
+- Every SCP article, image, font, audio file, and other external asset must be reviewed before a formal release.
 
-Different versions were built with the help of different AI coding assistants:
-
-- **v1.0.0**: developed with [Cursor](https://cursor.com/), reaching the first playable version.
-- **v1.1.0 and later**: iterated with [Claude Code](https://claude.com/claude-code) (bug fixes, game-feel and spatial rework, etc.).
-
-Engineering decisions and problem diagnosis were author-driven — for example, locating and fixing a clock-inconsistency bug in i-frame timing, and a click hit-area misalignment bug for upgrade cards under camera follow, both recorded in the [CHANGELOG](./CHANGELOG.md).
-
----
-
-## License & Attribution
-
-- The **code** in this project is licensed under the [MIT License](./LICENSE).
-- "SCP"-related names and settings originate from the [SCP Foundation Wiki](https://scp-wiki.wikidot.com/) and are licensed under [Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/). This is a non-commercial fan prototype; SCP-049 and other settings remain the copyright of their original authors and the SCP community.
+See [licensing and commercialization readiness](./docs/licensing-and-commercialization.md) for policy, official sources, and the legal disclaimer.

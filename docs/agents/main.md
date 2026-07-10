@@ -6,6 +6,12 @@
 architecture analysis, governance/roadmap documentation, integration verification,
 and explicitly authorized release preparation.
 
+## Required reading
+
+- `docs/product-vision.md`
+- `docs/design.md`
+- `docs/development-strategy.md`
+
 ## Allowed
 
 - Review branches, commits, diffs, tests, architecture, and merge risk.

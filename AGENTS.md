@@ -14,7 +14,8 @@ Before analysis or modification:
    and `git worktree list`.
 2. Confirm the current worktree matches the assigned branch.
 3. Read the guide selected by the branch-routing table below.
-4. If the branch is unknown or the worktree is unexpectedly dirty, stop
+4. Read the authority documents required by that branch guide before planning.
+5. If the branch is unknown or the worktree is unexpectedly dirty, stop
    modification and report the condition.
 
 ## Branch routing
@@ -29,6 +30,17 @@ Before analysis or modification:
 
 Any unlisted branch defaults to read-only inspection. Do not modify it until the
 Project Lead assigns a scope or explicitly authorizes the work.
+
+## Document authority
+
+- `docs/product-vision.md` defines product intent and SCP differentiation.
+- `docs/design.md` describes the current implemented game.
+- `docs/development-strategy.md` defines approved workstreams and authorization boundaries.
+- `docs/art-and-asset-direction.md` defines presentation and asset direction.
+- `docs/licensing-and-commercialization.md` defines asset provenance and release-risk policy.
+- `docs/archive/` and `docs/superpowers/` are historical or process records. They
+  do not authorize implementation unless a direct instruction or currently
+  approved plan explicitly activates them.
 
 ## Universal safety rules
 

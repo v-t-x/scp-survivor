@@ -6,6 +6,11 @@ Phase 1 is complete and approved. This branch is frozen for audit and narrowly
 approved defect fixes. New UI/art implementation belongs on
 `feature/ui-art-overhaul`.
 
+## Required reading for an approved fix
+
+- `docs/development-strategy.md`
+- `docs/design.md`
+
 ## Allowed
 
 - Read-only audit and historical comparison.

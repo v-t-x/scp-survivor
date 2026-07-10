@@ -1,5 +1,11 @@
 # `dev/v2` Gameplay/Core Guide
 
+## Required reading
+
+- `docs/product-vision.md`
+- `docs/design.md`
+- `docs/development-strategy.md`
+
 ## Owns
 
 - Gameplay loop and runtime state.

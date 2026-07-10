@@ -1,5 +1,11 @@
 # `dev/app-platform` Multi-Client App Guide
 
+## Required reading
+
+- `docs/product-vision.md`
+- `docs/development-strategy.md`
+- `docs/licensing-and-commercialization.md`
+
 ## Owns
 
 - Desktop clients and native desktop containers.
