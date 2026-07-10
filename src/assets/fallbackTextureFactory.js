@@ -1,0 +1,153 @@
+import Phaser from "phaser";
+import { BALANCE } from "../config/balance.js";
+import { TEXTURES } from "./manifest.js";
+
+// Procedural fallback textures.
+//
+// This is the "no real art yet" path: every texture the game needs is drawn with
+// Graphics.generateTexture. When real image assets are added to the manifest and
+// loaded in PreloadScene, those keys will already exist, and each generator below
+// is guarded by textures.exists(key) — so a real sprite is never overwritten and
+// Phaser never warns about a duplicate texture key.
+//
+// Owned by the UI/art Agent. The drawing code is a verbatim move from the old
+// world.js createPlaceholderTextures(); visuals are unchanged.
+
+// Generate a single texture only when its key is not already registered.
+function ensureTexture(scene, key, draw) {
+  if (scene.textures.exists(key)) {
+    return;
+  }
+  draw();
+}
+
+export function generateFallbackTextures(scene) {
+  const graphics = scene.add.graphics();
+
+  ensureTexture(scene, TEXTURES.player, () => {
+    graphics.clear();
+    graphics.fillStyle(0x3f82ff, 1);
+    graphics.fillRect(0, 0, 28, 28);
+    graphics.generateTexture(TEXTURES.player, 28, 28);
+  });
+
+  ensureTexture(scene, TEXTURES.enemyInfected, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.types.infectedStaff.color, 1);
+    graphics.fillCircle(10, 10, 10);
+    graphics.generateTexture(TEXTURES.enemyInfected, 20, 20);
+  });
+
+  ensureTexture(scene, TEXTURES.enemyCrawler, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.types.crawler.color, 1);
+    graphics.fillTriangle(10, 0, 20, 18, 0, 18);
+    graphics.generateTexture(TEXTURES.enemyCrawler, 20, 20);
+  });
+
+  ensureTexture(scene, TEXTURES.enemyDrone, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.types.drone.color, 1);
+    graphics.fillRect(0, 0, 22, 22);
+    graphics.generateTexture(TEXTURES.enemyDrone, 22, 22);
+  });
+
+  ensureTexture(scene, TEXTURES.eliteRiot, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.elite.types.riotUnit.color, 1);
+    graphics.fillRect(0, 0, 34, 34);
+    graphics.generateTexture(TEXTURES.eliteRiot, 34, 34);
+  });
+
+  ensureTexture(scene, TEXTURES.eliteBlink, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.elite.types.blinkStalker.color, 1);
+    graphics.fillTriangle(16, 0, 32, 16, 16, 32);
+    graphics.fillTriangle(16, 0, 16, 32, 0, 16);
+    graphics.generateTexture(TEXTURES.eliteBlink, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.eliteBiomass, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.elite.types.biomass.color, 1);
+    graphics.fillCircle(18, 18, 18);
+    graphics.generateTexture(TEXTURES.eliteBiomass, 36, 36);
+  });
+
+  ensureTexture(scene, TEXTURES.biomassChild, () => {
+    graphics.clear();
+    graphics.fillStyle(BALANCE.enemy.elite.types.biomassChild.color, 1);
+    graphics.fillCircle(10, 10, 10);
+    graphics.generateTexture(TEXTURES.biomassChild, 20, 20);
+  });
+
+  ensureTexture(scene, TEXTURES.bullet, () => {
+    graphics.clear();
+    graphics.fillStyle(0xffde59, 1);
+    graphics.fillCircle(4, 4, 4);
+    graphics.generateTexture(TEXTURES.bullet, 8, 8);
+  });
+
+  ensureTexture(scene, TEXTURES.enemyProjectile, () => {
+    graphics.clear();
+    graphics.fillStyle(0xff3db9, 1);
+    graphics.fillCircle(5, 5, 5);
+    graphics.generateTexture(TEXTURES.enemyProjectile, 10, 10);
+  });
+
+  ensureTexture(scene, TEXTURES.xpGem, () => {
+    graphics.clear();
+    graphics.fillStyle(0x50d66c, 1);
+    graphics.fillCircle(5, 5, 5);
+    graphics.generateTexture(TEXTURES.xpGem, 10, 10);
+  });
+
+  ensureTexture(scene, TEXTURES.combatStim, () => {
+    graphics.clear();
+    graphics.fillStyle(0x9affcc, 1);
+    graphics.fillRect(2, 2, 12, 12);
+    graphics.fillStyle(0x1b4f36, 1);
+    graphics.fillRect(7, 4, 2, 8);
+    graphics.fillRect(4, 7, 8, 2);
+    graphics.generateTexture(TEXTURES.combatStim, 16, 16);
+  });
+
+  ensureTexture(scene, TEXTURES.scp500, () => {
+    graphics.clear();
+    graphics.fillStyle(0xff4040, 1);
+    graphics.fillCircle(9, 9, 9);
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(9, 9, 4);
+    graphics.generateTexture(TEXTURES.scp500, 18, 18);
+  });
+
+  ensureTexture(scene, TEXTURES.enemyScp049, () => {
+    graphics.clear();
+    graphics.fillStyle(0x1a4d32, 1);
+    graphics.fillRect(0, 0, 36, 36);
+    graphics.fillStyle(0x2d6b45, 1);
+    graphics.fillRect(6, 6, 24, 24);
+    graphics.lineStyle(2, 0x8fd4a8, 1);
+    graphics.strokeRect(0, 0, 36, 36);
+    graphics.generateTexture(TEXTURES.enemyScp049, 36, 36);
+  });
+
+  ensureTexture(scene, TEXTURES.powerOutageLight, () => {
+    graphics.clear();
+    const lightRadius = 220;
+    const lightCenter = lightRadius;
+    for (let radius = lightRadius; radius > 0; radius -= 6) {
+      const progress = 1 - radius / lightRadius;
+      const alpha = Phaser.Math.Clamp(0.02 + progress * 0.12, 0.02, 0.2);
+      graphics.fillStyle(0xffffff, alpha);
+      graphics.fillCircle(lightCenter, lightCenter, radius);
+    }
+    graphics.generateTexture(
+      TEXTURES.powerOutageLight,
+      lightRadius * 2,
+      lightRadius * 2
+    );
+  });
+
+  graphics.destroy();
+}
