@@ -11,29 +11,28 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { THEME } from "../ui/theme.js";
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const menusMixin = {
 
   createStartScreen() {
     this.setGameplayHudVisible(false);
-    this.cameras.main.setBackgroundColor("#080C16");
+    this.cameras.main.setBackgroundColor(THEME.surface.facility);
     this.startScreenObjects = [];
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
-    const fontFamily =
-      '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif';
 
-    const bg = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x080c16, 1);
+    const bg = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, THEME.surface.facility, 1);
     bg.setDepth(10);
     this.startScreenObjects.push(bg);
 
     const title = this.add.text(cx, cy - 130, "SCP：幸存者", {
-      fontFamily,
+      fontFamily: THEME.font.display,
       fontSize: "64px",
       fontStyle: "bold",
-      color: "#f4f7ff"
+      color: THEME.text.primary
     });
     title.setShadow(0, 3, "#04070e", 8, false, true);
     title.setOrigin(0.5);
@@ -45,9 +44,9 @@ export const menusMixin = {
       cy - 70,
       "在收容失效的设施中生存到底，收容 SCP-049。",
       {
-        fontFamily,
+        fontFamily: THEME.font.body,
         fontSize: "20px",
-        color: "#c5d2ee"
+        color: THEME.text.secondary
       }
     );
     subtitle.setOrigin(0.5);
@@ -59,42 +58,51 @@ export const menusMixin = {
       cy - 8,
       "WASD 移动 · 空格 闪避 · TAB 查看构建 · ESC 暂停 · M 静音",
       {
-        fontFamily,
+        fontFamily: THEME.font.label,
         fontSize: "15px",
-        color: "#8fa2c8"
+        color: THEME.text.muted
       }
     );
     hint.setOrigin(0.5);
     hint.setDepth(11);
     this.startScreenObjects.push(hint);
 
-    const startButton = this.add.rectangle(cx, cy + 78, 260, 62, 0x2a3242, 1);
-    startButton.setStrokeStyle(2, 0x6f91d8);
+    const startButton = this.add.rectangle(cx, cy + 78, 260, 62, THEME.surface.raised, 1);
+    startButton.setStrokeStyle(2, THEME.border.focus);
     startButton.setDepth(11);
     startButton.setInteractive({ useHandCursor: true });
-    startButton.on("pointerover", () => startButton.setFillStyle(0x39527f, 1));
-    startButton.on("pointerout", () => startButton.setFillStyle(0x2a3242, 1));
+    startButton.on("pointerover", () => startButton.setFillStyle(THEME.border.default, 1));
+    startButton.on("pointerout", () => startButton.setFillStyle(THEME.surface.raised, 1));
     startButton.on("pointerdown", () => this.beginFromStartScreen());
     this.startScreenObjects.push(startButton);
 
     const startLabel = this.add.text(cx, cy + 78, "开始游戏", {
-      fontFamily,
+      fontFamily: THEME.font.display,
       fontSize: "28px",
       fontStyle: "bold",
-      color: "#ffffff"
+      color: THEME.text.onButton
     });
     startLabel.setOrigin(0.5);
     startLabel.setDepth(12);
     this.startScreenObjects.push(startLabel);
 
+    const facilityStatus = this.add.text(cx, cy + 122, "● 电力正常    ● 收容稳定", {
+      fontFamily: THEME.font.label,
+      fontSize: "13px",
+      color: THEME.text.contained
+    });
+    facilityStatus.setOrigin(0.5);
+    facilityStatus.setDepth(11);
+    this.startScreenObjects.push(facilityStatus);
+
     const creditsHint = this.add.text(
       cx,
-      cy + 150,
+      cy + 158,
       `累计学分：${this.meta.credits}（进入后可在解锁商店消费）`,
       {
-        fontFamily,
+        fontFamily: THEME.font.label,
         fontSize: "15px",
-        color: "#ffe08a"
+        color: THEME.text.secondary
       }
     );
     creditsHint.setOrigin(0.5);
@@ -128,7 +136,7 @@ export const menusMixin = {
 
   createWeaponSelectionScreen() {
     this.setGameplayHudVisible(false);
-    this.cameras.main.setBackgroundColor("#080C16");
+    this.cameras.main.setBackgroundColor(THEME.surface.facility);
     this.weaponSelectOverlay = null;
     this.weaponSelectUiObjects = [];
     this.weaponSelectHoveredCardId = null;
@@ -137,20 +145,34 @@ export const menusMixin = {
     const cardWidth = 250;
     const cardHeight = 318;
 
-    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 870, 520, 0x111a2e, 1);
-    bg.setStrokeStyle(2, 0x6f91d8);
+    const bg = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      870,
+      520,
+      THEME.surface.panel,
+      1
+    );
+    bg.setStrokeStyle(2, THEME.border.focus);
     bg.setDepth(10);
     this.weaponSelectUiObjects.push(bg);
 
-    const topAccent = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 246, 830, 3, 0xa3c1ff, 0.8);
+    const topAccent = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2 - 246,
+      830,
+      3,
+      THEME.signal.info,
+      0.8
+    );
     topAccent.setDepth(11);
     this.weaponSelectUiObjects.push(topAccent);
 
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 205, "选择主武器", {
-      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+      fontFamily: THEME.font.display,
       fontSize: "48px",
       fontStyle: "bold",
-      color: "#f4f7ff"
+      color: THEME.text.primary
     });
     title.setShadow(0, 2, "#05080f", 5, false, true);
     title.setOrigin(0.5);
@@ -162,9 +184,9 @@ export const menusMixin = {
       GAME_HEIGHT / 2 - 168,
       "部署前请选择一套装备。",
       {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.body,
         fontSize: "20px",
-        color: "#c5d2ee"
+        color: THEME.text.secondary
       }
     );
     subtitle.setOrigin(0.5);
@@ -235,18 +257,18 @@ export const menusMixin = {
       });
 
       const symbolText = this.add.text(cardX, cardY - 124, option.symbol, {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.display,
         fontSize: "36px",
-        color: "#c8ddff"
+        color: THEME.text.secondary
       });
       symbolText.setOrigin(0.5);
       symbolText.setDepth(21);
 
       const nameText = this.add.text(cardX, cardY - 68, BALANCE.weapons[option.id].name, {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.display,
         fontSize: "22px",
         fontStyle: "bold",
-        color: "#ffffff",
+        color: THEME.text.primary,
         align: "center",
         wordWrap: { width: 216 },
         lineSpacing: 2
@@ -255,9 +277,9 @@ export const menusMixin = {
       nameText.setDepth(21);
 
       const roleText = this.add.text(cardX, cardY - 2, option.role, {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.body,
         fontSize: "15px",
-        color: "#d6e0f5",
+        color: THEME.text.secondary,
         align: "center",
         wordWrap: { width: 214 },
         lineSpacing: 2
@@ -265,12 +287,19 @@ export const menusMixin = {
       roleText.setOrigin(0.5);
       roleText.setDepth(21);
 
-      const difficultyBadge = this.add.rectangle(cardX, cardY + 50, 130, 28, 0x101a2f, 1);
+      const difficultyBadge = this.add.rectangle(
+        cardX,
+        cardY + 50,
+        130,
+        28,
+        THEME.surface.facility,
+        1
+      );
       difficultyBadge.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(option.difficulty.color).color);
       difficultyBadge.setDepth(21);
 
       const difficultyText = this.add.text(cardX, cardY + 50, `难度：${option.difficulty.label}`, {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.label,
         fontSize: "15px",
         color: option.difficulty.color
       });
@@ -282,10 +311,10 @@ export const menusMixin = {
         cardY - cardHeight / 2 + 18,
         "已选择",
         {
-          fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+          fontFamily: THEME.font.label,
           fontSize: "12px",
           fontStyle: "bold",
-          color: "#dff0ff",
+          color: THEME.text.onButton,
           backgroundColor: "#35578D",
           padding: { left: 8, right: 8, top: 2, bottom: 2 }
         }
@@ -300,16 +329,16 @@ export const menusMixin = {
         const stat = option.stats[rowIndex];
         const rowY = statStartY + rowIndex * 30;
         const statLabel = this.add.text(cardX - 90, rowY, stat.label, {
-          fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+          fontFamily: THEME.font.label,
           fontSize: "16px",
-          color: "#9fb2d8"
+          color: THEME.text.muted
         });
         statLabel.setOrigin(0, 0.5);
         statLabel.setDepth(21);
         const statValue = this.add.text(cardX + 90, rowY, stat.value, {
-          fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+          fontFamily: THEME.font.mono,
           fontSize: "16px",
-          color: "#f2f6ff"
+          color: THEME.text.primary
         });
         statValue.setOrigin(1, 0.5);
         statValue.setDepth(21);
@@ -345,10 +374,10 @@ export const menusMixin = {
       GAME_HEIGHT / 2 + 220,
       250,
       58,
-      0x2a3242,
+      THEME.surface.raised,
       1
     );
-    this.startMissionButton.setStrokeStyle(2, 0x475064);
+    this.startMissionButton.setStrokeStyle(2, THEME.border.default);
     this.startMissionButton.setDepth(30);
     this.startMissionButton.setInteractive({ useHandCursor: true });
     this.startMissionButton.on("pointerover", () => {
@@ -370,10 +399,10 @@ export const menusMixin = {
       GAME_HEIGHT / 2 + 220,
       "请选择武器",
       {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.display,
         fontSize: "24px",
         fontStyle: "bold",
-        color: "#7f899c"
+        color: THEME.text.muted
       }
     );
     this.startMissionButtonLabel.setOrigin(0.5);
@@ -387,10 +416,10 @@ export const menusMixin = {
       GAME_HEIGHT / 2 - 240,
       `学分：${this.meta.credits}`,
       {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.label,
         fontSize: "18px",
         fontStyle: "bold",
-        color: "#ffe08a"
+        color: THEME.text.secondary
       }
     );
     this.weaponSelectCreditsLabel.setOrigin(0, 0.5);
@@ -401,14 +430,14 @@ export const menusMixin = {
       GAME_HEIGHT / 2 - 238,
       140,
       40,
-      0x2d2647,
+      THEME.surface.raised,
       1
     );
-    unlockButton.setStrokeStyle(2, 0x8f78c8);
+    unlockButton.setStrokeStyle(2, THEME.signal.anomaly);
     unlockButton.setDepth(31);
     unlockButton.setInteractive({ useHandCursor: true });
-    unlockButton.on("pointerover", () => unlockButton.setFillStyle(0x3d3560, 1));
-    unlockButton.on("pointerout", () => unlockButton.setFillStyle(0x2d2647, 1));
+    unlockButton.on("pointerover", () => unlockButton.setFillStyle(THEME.border.default, 1));
+    unlockButton.on("pointerout", () => unlockButton.setFillStyle(THEME.surface.raised, 1));
     unlockButton.on("pointerdown", () => this.openPerkStore());
 
     const unlockLabel = this.add.text(
@@ -416,10 +445,10 @@ export const menusMixin = {
       GAME_HEIGHT / 2 - 238,
       "解锁商店",
       {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+        fontFamily: THEME.font.label,
         fontSize: "17px",
         fontStyle: "bold",
-        color: "#e2c6ff"
+        color: THEME.text.secondary
       }
     );
     unlockLabel.setOrigin(0.5);
@@ -445,22 +474,10 @@ export const menusMixin = {
       const selected = this.pendingSelectedWeaponId === entry.id;
       const hovered = this.weaponSelectHoveredCardId === entry.id;
 
-      let fill = 0x17223a;
-      let border = 0x40557f;
-      let borderWidth = 2;
-      let scale = hovered ? 1.02 : 1;
-
-      if (hovered) {
-        fill = 0x1d2b49;
-        border = 0x6e91d5;
-      }
-
-      if (selected) {
-        fill = 0x22345a;
-        border = 0x9fc1ff;
-        borderWidth = 3;
-        scale = 1.02;
-      }
+      const scale = 1;
+      const fill = selected ? 0x1e3358 : hovered ? 0x1d2b49 : 0x17223a;
+      const border = selected || hovered ? THEME.border.focus : THEME.border.default;
+      const borderWidth = selected ? 3 : 2;
 
       const drawW = entry.cardWidth * scale;
       const drawH = entry.cardHeight * scale;
@@ -473,12 +490,12 @@ export const menusMixin = {
       entry.cardBg.lineStyle(borderWidth, border, 1);
       entry.cardBg.strokeRoundedRect(drawX, drawY, drawW, drawH, 10);
       if (selected) {
-        entry.cardBg.lineStyle(2, 0x6f9fff, 0.5);
+        entry.cardBg.lineStyle(2, THEME.signal.info, 0.5);
         entry.cardBg.strokeRoundedRect(drawX - 4, drawY - 4, drawW + 8, drawH + 8, 12);
       }
 
       entry.divider.clear();
-      entry.divider.lineStyle(1, 0x50648f, 1);
+      entry.divider.lineStyle(1, THEME.border.default, 1);
       entry.divider.lineBetween(
         entry.cardX - 96,
         entry.cardY + 68,
@@ -502,14 +519,19 @@ export const menusMixin = {
     this.startMissionButton.setFillStyle(
       canStart
         ? this.weaponSelectButtonHovered
-          ? 0x678dd7
-          : 0x547ac5
-        : 0x2a3242,
+          ? THEME.border.focus
+          : THEME.signal.info
+        : THEME.surface.raised,
       1
     );
-    this.startMissionButton.setStrokeStyle(2, canStart ? 0xa9c7ff : 0x475064);
+    this.startMissionButton.setStrokeStyle(
+      2,
+      canStart ? THEME.border.focus : THEME.border.default
+    );
     this.startMissionButtonLabel.setText(canStart ? "开始任务" : "请选择武器");
-    this.startMissionButtonLabel.setColor(canStart ? "#ffffff" : "#7f899c");
+    this.startMissionButtonLabel.setColor(
+      canStart ? THEME.text.onButton : THEME.text.muted
+    );
   },
 
 
