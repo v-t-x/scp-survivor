@@ -1,10 +1,10 @@
 # UI/Art 第一阶段视觉提案
 
-> **状态：**待 Project Lead 审查  
-> **分支：**`feature/ui-art-overhaul`  
-> **基线 HEAD：**`7ba082c`  
-> **设计依据：**[UI/Art 视觉方向设计](../specs/2026-07-10-ui-art-visual-direction-design.md)（2026-07-10 批准）  
-> **计划来源：**[UI/Art 第一阶段实施计划](./2026-07-10-ui-art-phase1-planning.md)  
+> **状态：**待 Project Lead 审查
+> **分支：**`feature/ui-art-overhaul`
+> **基线 HEAD：**`7ba082c`
+> **设计依据：**[UI/Art 视觉方向设计](../specs/2026-07-10-ui-art-visual-direction-design.md)（2026-07-10 批准）
+> **计划来源：**[UI/Art 第一阶段实施计划](./2026-07-10-ui-art-phase1-planning.md)
 > **本轮范围：**仅方案文档；不修改 `src/`、不导入素材、不改变玩法。
 
 ---
@@ -18,7 +18,7 @@
 3. **契约优先**：消费现有 `PreloadScene`、`manifest.js`、`fallbackTextureFactory.js`、`UIManager`、`AudioManager` 和 `this.playSound()` 入口；不替换玩法语义。
 4. **混合资源**：正式素材缺失时继续程序化 fallback；外部素材进入生产前必须完成来源登记。
 
-**第一轮实施页面（批准后）：**标题页、武器选择、战斗 HUD。  
+**第一轮实施页面（批准后）：**标题页、武器选择、战斗 HUD。
 **同批遵守 token 但可延后细化：**暂停、升级、胜利、失败、构筑面板。
 
 ---
