@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { getBossDamageMultiplier } from "./bossRules.js";
 
 // Domain mixin: combat. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const combatMixin = {
@@ -183,12 +184,14 @@ export const combatMixin = {
   getEnemyDamageTakenMultiplier(enemy, sourceX, sourceY, combatContext = {}) {
     let multiplier = 1;
 
-    if (
-      enemy.isBoss &&
-      combatContext.sourceWeaponId === "shotgun" &&
-      BALANCE.boss.scp049.shotgunDamageMultiplier > 1
-    ) {
-      multiplier *= BALANCE.boss.scp049.shotgunDamageMultiplier;
+    if (enemy.isBoss) {
+      const bossConfig = BALANCE.boss.scp049;
+      multiplier *= getBossDamageMultiplier(
+        combatContext.sourceWeaponId,
+        enemy.bossState,
+        bossConfig
+      );
+      return multiplier;
     }
 
     if (!enemy.isElite || enemy.eliteType !== "riotUnit") {
