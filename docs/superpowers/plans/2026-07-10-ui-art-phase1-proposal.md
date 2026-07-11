@@ -1,11 +1,12 @@
 # UI/Art 第一阶段视觉提案
 
-> **状态：**待 Project Lead 审查
+> **状态：**已批准；第一轮标题、武器选择与战斗 HUD 切片已实现，等待完整视觉验收后进入 `main`
 > **分支：**`feature/ui-art-overhaul`
 > **基线 HEAD：**`7ba082c`
 > **设计依据：**[UI/Art 视觉方向设计](../specs/2026-07-10-ui-art-visual-direction-design.md)（2026-07-10 批准）
 > **计划来源：**[UI/Art 第一阶段实施计划](./2026-07-10-ui-art-phase1-planning.md)
-> **本轮范围：**仅方案文档；不修改 `src/`、不导入素材、不改变玩法。
+> **实施跟踪：**[UI/Art 第一轮实施记录](./2026-07-11-ui-art-first-implementation.md)
+> **范围说明：**本文件提交时仅定义方案；后续已按实施记录授权修改 `src/scene/hud.js`、`src/scene/menus.js` 与 `src/ui/theme.js`，未导入素材、未改变玩法。
 
 ---
 
@@ -570,7 +571,7 @@
 | 共享文件冲突 | 严格按 §9.1 审批；单域小 PR |
 | 外部素材许可证 | 入库前强制登记表；无“待寻找” |
 
-**等待项：**Project Lead 审查本提案；批准后方可按 `superpowers:executing-plans` 进入 W0 实施。
+**当前状态：**Project Lead 已批准并完成 W0/W1 第一轮切片。分支已同步 v2 集成后的 `main`，自动化测试与构建通过；进入 `main` 前仍需在当前 HEAD 完成 Boss HUD、低生命 HUD、胜负、restart 与 hover/click 对齐的完整视觉 smoke。
 
 ---
 
@@ -578,6 +579,7 @@
 
 - [UI/Art 视觉方向设计](../specs/2026-07-10-ui-art-visual-direction-design.md)
 - [UI/Art 第一阶段实施计划](./2026-07-10-ui-art-phase1-planning.md)
+- [UI/Art 第一轮实施记录](./2026-07-11-ui-art-first-implementation.md)
 - [UI、美术、音频与资源方向](../../art-and-asset-direction.md)
 - [许可与商业化准备](../../licensing-and-commercialization.md)
 - [产品愿景](../../product-vision.md)

@@ -1,10 +1,8 @@
 // Theme — central catalogue of the UI's colors, fonts, sizes, and spacing.
 //
-// STAGE NOTE: This file only *collects* values that already exist scattered
-// across the scene modules (hud.js, menus.js, progression.js, etc.). It does NOT
-// yet replace those literals. Migrating the ~113 color literals to reference this
-// theme is deliberately deferred to the second-stage UI work, so nothing about
-// the current appearance changes now.
+// STAGE NOTE: Phase 1 now consumes these tokens in the title, weapon selection,
+// and combat HUD. Legacy aliases remain for compatibility; migrating the
+// remaining scene literals is deferred to later UI work.
 //
 // Owned by the UI/art Agent. When the UI is reworked, modules should import from
 // here and the literals should be swapped one call site at a time.
