@@ -103,8 +103,7 @@ export const BALANCE = {
     replication: {
       enabled: true,
       intervalMinMs: 6000,
-      intervalMaxMs: 9000,
-      maxTotalEnemies: 230
+      intervalMaxMs: 9000
     },
     spawn: {
       startIntervalMs: 950,

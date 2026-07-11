@@ -62,7 +62,7 @@ export function tryReplicateEnemy(scene, enemy, balance, math, worldBounds) {
       balance.enemy.replication.intervalMaxMs
     );
 
-  if (scene.enemies.getLength() >= balance.enemy.replication.maxTotalEnemies) {
+  if (scene.enemies.getLength() >= balance.enemy.maxActiveEnemies) {
     return null;
   }
 

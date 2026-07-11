@@ -15,6 +15,7 @@ import {
   cloneEnemyAt as cloneEnemyForScene,
   tryReplicateEnemy as tryReplicateEnemyForScene
 } from "./enemyReplication.js";
+import { getBossUpdateActions, getBossWavePlan } from "./bossRules.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -321,6 +322,10 @@ export const enemiesMixin = {
         continue;
       }
 
+      if (BALANCE.enemy.replication.enabled) {
+        this.tryReplicateEnemy(enemy);
+      }
+
       if ((enemy.knockbackUntilMs ?? 0) > this.elapsedSurvivalMs) {
         continue;
       }
@@ -350,10 +355,6 @@ export const enemiesMixin = {
 
       if (teleportEnabled) {
         this.tryInstabilityTeleportEnemy(enemy);
-      }
-
-      if (BALANCE.enemy.replication.enabled) {
-        this.tryReplicateEnemy(enemy);
       }
 
       enemy.moveSpeed = originalSpeed;
@@ -800,34 +801,28 @@ export const enemiesMixin = {
       this.physics.moveToObject(boss, this.player, boss.moveSpeed);
     }
 
+    const actions = getBossUpdateActions(boss, this.elapsedSurvivalMs, config);
+
     if (config.frenzyEnabled) {
-      // Branch A: explicit frenzy state machine.
-      if (boss.bossState === "frenzy") {
-        if (this.elapsedSurvivalMs >= boss.stateUntilMs) {
-          this.exitFrenzy(boss);
-        }
+      if (actions.exitFrenzy) {
+        this.exitFrenzy(boss);
       } else {
-        if (this.elapsedSurvivalMs >= boss.nextSummonAtMs) {
+        if (actions.summonNormal) {
           this.summonBossMinions(boss);
-          boss.nextSummonAtMs = this.elapsedSurvivalMs + boss.summonCooldownMs;
+          boss.nextSummonAtMs =
+            this.elapsedSurvivalMs + actions.nextSummonDelayMs;
         }
-        if (this.elapsedSurvivalMs >= boss.nextFrenzyAtMs) {
+        if (actions.enterFrenzy) {
           this.enterFrenzy(boss);
         }
       }
       return;
     }
 
-    // Branch B: rollback — original trickle summon + enragedSummonMultiplier.
-    const hpRatio = boss.health / boss.maxHealth;
-    const summonInterval =
-      hpRatio <= config.enragedHpThreshold
-        ? boss.summonCooldownMs * config.enragedSummonMultiplier
-        : boss.summonCooldownMs;
-
-    if (this.elapsedSurvivalMs >= boss.nextSummonAtMs) {
+    if (actions.summonNormal) {
       this.summonBossMinions(boss);
-      boss.nextSummonAtMs = this.elapsedSurvivalMs + summonInterval;
+      boss.nextSummonAtMs =
+        this.elapsedSurvivalMs + actions.nextSummonDelayMs;
     }
   },
 
@@ -870,11 +865,12 @@ export const enemiesMixin = {
       return;
     }
 
-    const count = Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
-    const baseConfig = BALANCE.enemy.types.infectedStaff;
+    const wavePlan = getBossWavePlan(config);
+    const count = Phaser.Math.Between(wavePlan.countMin, wavePlan.countMax);
+    const baseConfig = BALANCE.enemy.types[wavePlan.types[0]];
     const scaling = {
-      healthMultiplier: config.minionHealthMultiplier,
-      damageMultiplier: config.minionDamageMultiplier
+      healthMultiplier: wavePlan.healthMultiplier,
+      damageMultiplier: wavePlan.damageMultiplier
     };
 
     for (let index = 0; index < count; index += 1) {
@@ -883,12 +879,12 @@ export const enemiesMixin = {
       }
       const angle = (Math.PI * 2 * index) / count;
       const spawnX = Phaser.Math.Clamp(
-        boss.x + Math.cos(angle) * 52,
+        boss.x + Math.cos(angle) * wavePlan.radius,
         24,
         WORLD_WIDTH - 24
       );
       const spawnY = Phaser.Math.Clamp(
-        boss.y + Math.sin(angle) * 52,
+        boss.y + Math.sin(angle) * wavePlan.radius,
         24,
         WORLD_HEIGHT - 24
       );
@@ -902,15 +898,13 @@ export const enemiesMixin = {
 
 
   summonBossFrenzyWave(boss, config) {
-    const count = Phaser.Math.Between(
-      config.frenzySummonCountMin,
-      config.frenzySummonCountMax
-    );
+    const wavePlan = getBossWavePlan(config, { frenzy: true });
+    const count = Phaser.Math.Between(wavePlan.countMin, wavePlan.countMax);
     const scaling = {
-      healthMultiplier: config.frenzyMinionHealthMultiplier,
-      damageMultiplier: config.frenzyMinionDamageMultiplier
+      healthMultiplier: wavePlan.healthMultiplier,
+      damageMultiplier: wavePlan.damageMultiplier
     };
-    const radius = config.frenzySummonRadius;
+    const radius = wavePlan.radius;
 
     for (let index = 0; index < count; index += 1) {
       if (this.enemies.getLength() >= BALANCE.enemy.maxActiveEnemies) {
@@ -927,7 +921,7 @@ export const enemiesMixin = {
         24,
         WORLD_HEIGHT - 24
       );
-      const type = Phaser.Utils.Array.GetRandom(config.frenzyMinionTypes);
+      const type = Phaser.Utils.Array.GetRandom(wavePlan.types);
 
       let minion;
       if (type === "drone") {

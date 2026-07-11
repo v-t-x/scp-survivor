@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   resolveEnemyCloneSpec,
@@ -8,10 +9,10 @@ import {
 
 const balance = {
   enemy: {
+    maxActiveEnemies: 230,
     replication: {
       intervalMinMs: 6_000,
-      intervalMaxMs: 9_000,
-      maxTotalEnemies: 230
+      intervalMaxMs: 9_000
     },
     types: {
       infectedStaff: {
@@ -162,7 +163,7 @@ test("reschedules but does not clone at the active-enemy cap", () => {
     nextReplicateAtMs: scene.elapsedSurvivalMs
   };
   children.push(source);
-  while (children.length < balance.enemy.replication.maxTotalEnemies) {
+  while (children.length < balance.enemy.maxActiveEnemies) {
     children.push({ active: true });
   }
 
@@ -173,6 +174,25 @@ test("reschedules but does not clone at the active-enemy cap", () => {
     }),
     null
   );
-  assert.equal(children.length, balance.enemy.replication.maxTotalEnemies);
+  assert.equal(children.length, balance.enemy.maxActiveEnemies);
   assert.equal(source.nextReplicateAtMs, 16_000);
+});
+
+test("schedules replication before knockback and stagger skip movement", async () => {
+  const source = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const updateBlock = source.slice(
+    source.indexOf("  updateEnemies()"),
+    source.indexOf("  tryReplicateEnemy(enemy)")
+  );
+
+  const replicationIndex = updateBlock.indexOf("this.tryReplicateEnemy(enemy)");
+  const knockbackIndex = updateBlock.indexOf("enemy.knockbackUntilMs");
+  const staggerIndex = updateBlock.indexOf("enemy.staggerUntilMs");
+
+  assert.ok(replicationIndex >= 0, "updateEnemies must schedule replication");
+  assert.ok(replicationIndex < knockbackIndex, "knockback must not delay replication");
+  assert.ok(replicationIndex < staggerIndex, "stagger must not delay replication");
 });

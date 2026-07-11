@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { getBossDamageMultiplier } from "./bossRules.js";
 
 // Domain mixin: combat. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const combatMixin = {
@@ -185,23 +186,11 @@ export const combatMixin = {
 
     if (enemy.isBoss) {
       const bossConfig = BALANCE.boss.scp049;
-      let bossMultiplier = 1;
-      if (
-        combatContext.sourceWeaponId === "shotgun" &&
-        bossConfig.shotgunDamageMultiplier > 1
-      ) {
-        bossMultiplier *= bossConfig.shotgunDamageMultiplier;
-      }
-      if (
-        bossConfig.frenzyEnabled &&
-        enemy.bossState === "frenzy" &&
-        bossConfig.exposedDamageMultiplier > 1
-      ) {
-        bossMultiplier *= bossConfig.exposedDamageMultiplier;
-      }
-      // Cap the combined boss-specific bonus (e.g. breacher 1.5 x exposed 1.35
-      // = 2.025 -> clamped to 2.0) so a fully-exposed shot cannot exceed 2x.
-      multiplier *= Math.min(bossMultiplier, bossConfig.exposedDamageCap);
+      multiplier *= getBossDamageMultiplier(
+        combatContext.sourceWeaponId,
+        enemy.bossState,
+        bossConfig
+      );
       return multiplier;
     }
 
