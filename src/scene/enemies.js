@@ -11,6 +11,11 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import {
+  cloneEnemyAt as cloneEnemyForScene,
+  tryReplicateEnemy as tryReplicateEnemyForScene
+} from "./enemyReplication.js";
+import { getBossUpdateActions, getBossWavePlan } from "./bossRules.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -243,6 +248,12 @@ export const enemiesMixin = {
         BALANCE.timeline.effects.enemyTeleportMinMs,
         BALANCE.timeline.effects.enemyTeleportMaxMs
       );
+    enemy.nextReplicateAtMs =
+      this.elapsedSurvivalMs +
+      Phaser.Math.Between(
+        BALANCE.enemy.replication.intervalMinMs,
+        BALANCE.enemy.replication.intervalMaxMs
+      );
 
     if (config.bodyShape === "circle") {
       enemy.setCircle(config.bodyRadius);
@@ -311,6 +322,10 @@ export const enemiesMixin = {
         continue;
       }
 
+      if (BALANCE.enemy.replication.enabled) {
+        this.tryReplicateEnemy(enemy);
+      }
+
       if ((enemy.knockbackUntilMs ?? 0) > this.elapsedSurvivalMs) {
         continue;
       }
@@ -344,6 +359,19 @@ export const enemiesMixin = {
 
       enemy.moveSpeed = originalSpeed;
     }
+  },
+
+
+  tryReplicateEnemy(enemy) {
+    return tryReplicateEnemyForScene(this, enemy, BALANCE, Phaser.Math, {
+      width: WORLD_WIDTH,
+      height: WORLD_HEIGHT
+    });
+  },
+
+
+  cloneEnemyAt(source, x, y) {
+    return cloneEnemyForScene(this, source, x, y, BALANCE);
   },
 
 
@@ -715,6 +743,11 @@ export const enemiesMixin = {
     boss.body.setImmovable(true);
     boss.summonCooldownMs = config.summonCooldownMs;
     boss.nextSummonAtMs = this.elapsedSurvivalMs + config.summonInitialDelayMs;
+    // Surgery Frenzy state machine. All timers use elapsedSurvivalMs so they are
+    // pause-safe (update() stops advancing elapsedSurvivalMs while paused).
+    boss.bossState = "normal";
+    boss.stateUntilMs = 0;
+    boss.nextFrenzyAtMs = this.elapsedSurvivalMs + config.frenzyFirstDelayMs;
 
     const label = this.add.text(boss.x, boss.y - 36, "SCP-049", {
       fontSize: "14px",
@@ -754,33 +787,90 @@ export const enemiesMixin = {
       boss.bossLabel.setPosition(boss.x, boss.y - 36);
     }
 
-    if ((boss.staggerUntilMs ?? 0) > this.elapsedSurvivalMs) {
+    const config = BALANCE.boss.scp049;
+
+    // Frenzy roots the boss; otherwise it chases (unless staggered).
+    if (config.frenzyEnabled && boss.bossState === "frenzy") {
+      boss.body.setVelocity(0, 0);
+      // Re-assert the exposed tint each frame: the shared hit-flash clears tint
+      // after every hit, and the boss is hit constantly during this window.
+      boss.setTint(0xff5a6e);
+    } else if ((boss.staggerUntilMs ?? 0) > this.elapsedSurvivalMs) {
       boss.body.setVelocity(0, 0);
     } else {
       this.physics.moveToObject(boss, this.player, boss.moveSpeed);
     }
 
-    const config = BALANCE.boss.scp049;
-    const hpRatio = boss.health / boss.maxHealth;
-    const summonInterval =
-      hpRatio <= config.enragedHpThreshold
-        ? boss.summonCooldownMs * config.enragedSummonMultiplier
-        : boss.summonCooldownMs;
+    const actions = getBossUpdateActions(boss, this.elapsedSurvivalMs, config);
 
-    if (this.elapsedSurvivalMs >= boss.nextSummonAtMs) {
+    if (config.frenzyEnabled) {
+      if (actions.exitFrenzy) {
+        this.exitFrenzy(boss);
+      } else {
+        if (actions.summonNormal) {
+          this.summonBossMinions(boss);
+          boss.nextSummonAtMs =
+            this.elapsedSurvivalMs + actions.nextSummonDelayMs;
+        }
+        if (actions.enterFrenzy) {
+          this.enterFrenzy(boss);
+        }
+      }
+      return;
+    }
+
+    if (actions.summonNormal) {
       this.summonBossMinions(boss);
-      boss.nextSummonAtMs = this.elapsedSurvivalMs + summonInterval;
+      boss.nextSummonAtMs =
+        this.elapsedSurvivalMs + actions.nextSummonDelayMs;
     }
   },
 
 
-  summonBossMinions(boss) {
+  enterFrenzy(boss) {
     const config = BALANCE.boss.scp049;
-    const count = Phaser.Math.Between(config.summonCountMin, config.summonCountMax);
-    const baseConfig = BALANCE.enemy.types.infectedStaff;
+    boss.bossState = "frenzy";
+    boss.stateUntilMs = this.elapsedSurvivalMs + config.frenzyDurationMs;
+    boss.setTint(0xff5a6e);
+    boss.body.setVelocity(0, 0);
+    this.summonBossMinions(boss, { frenzy: true });
+    this.showTopBanner("外科狂乱", "SCP-049 暴露了弱点", 1800);
+  },
+
+
+  exitFrenzy(boss) {
+    const config = BALANCE.boss.scp049;
+    this.clearFrenzyTint(boss);
+    boss.bossState = "normal";
+    const hpRatio = boss.health / boss.maxHealth;
+    const cadenceMultiplier =
+      hpRatio <= config.enragedHpThreshold ? config.frenzyEnragedMultiplier : 1;
+    boss.nextFrenzyAtMs =
+      this.elapsedSurvivalMs + config.frenzyCooldownMs * cadenceMultiplier;
+  },
+
+
+  clearFrenzyTint(boss) {
+    if (boss?.active) {
+      boss.clearTint();
+    }
+  },
+
+
+  summonBossMinions(boss, options = {}) {
+    const config = BALANCE.boss.scp049;
+
+    if (options.frenzy) {
+      this.summonBossFrenzyWave(boss, config);
+      return;
+    }
+
+    const wavePlan = getBossWavePlan(config);
+    const count = Phaser.Math.Between(wavePlan.countMin, wavePlan.countMax);
+    const baseConfig = BALANCE.enemy.types[wavePlan.types[0]];
     const scaling = {
-      healthMultiplier: config.minionHealthMultiplier,
-      damageMultiplier: config.minionDamageMultiplier
+      healthMultiplier: wavePlan.healthMultiplier,
+      damageMultiplier: wavePlan.damageMultiplier
     };
 
     for (let index = 0; index < count; index += 1) {
@@ -789,12 +879,12 @@ export const enemiesMixin = {
       }
       const angle = (Math.PI * 2 * index) / count;
       const spawnX = Phaser.Math.Clamp(
-        boss.x + Math.cos(angle) * 52,
+        boss.x + Math.cos(angle) * wavePlan.radius,
         24,
         WORLD_WIDTH - 24
       );
       const spawnY = Phaser.Math.Clamp(
-        boss.y + Math.sin(angle) * 52,
+        boss.y + Math.sin(angle) * wavePlan.radius,
         24,
         WORLD_HEIGHT - 24
       );
@@ -807,11 +897,59 @@ export const enemiesMixin = {
   },
 
 
+  summonBossFrenzyWave(boss, config) {
+    const wavePlan = getBossWavePlan(config, { frenzy: true });
+    const count = Phaser.Math.Between(wavePlan.countMin, wavePlan.countMax);
+    const scaling = {
+      healthMultiplier: wavePlan.healthMultiplier,
+      damageMultiplier: wavePlan.damageMultiplier
+    };
+    const radius = wavePlan.radius;
+
+    for (let index = 0; index < count; index += 1) {
+      if (this.enemies.getLength() >= BALANCE.enemy.maxActiveEnemies) {
+        break;
+      }
+      const angle = (Math.PI * 2 * index) / count;
+      const spawnX = Phaser.Math.Clamp(
+        boss.x + Math.cos(angle) * radius,
+        24,
+        WORLD_WIDTH - 24
+      );
+      const spawnY = Phaser.Math.Clamp(
+        boss.y + Math.sin(angle) * radius,
+        24,
+        WORLD_HEIGHT - 24
+      );
+      const type = Phaser.Utils.Array.GetRandom(wavePlan.types);
+
+      let minion;
+      if (type === "drone") {
+        const droneConfig = BALANCE.enemy.types.drone;
+        minion = this.enemies.create(spawnX, spawnY, droneConfig.textureKey);
+        this.initializeEnemyFromConfig(minion, droneConfig, scaling, false);
+      } else {
+        // Reuse the elite factory but force the spawn onto the frenzy ring
+        // instead of the map edge.
+        minion = this.spawnEliteAtEdge(type, scaling, { x: spawnX, y: spawnY });
+      }
+
+      if (minion) {
+        minion.isBossMinion = true;
+      }
+    }
+
+    this.playSound("bossSummon");
+  },
+
+
   handleBossDefeat(boss) {
     if (boss.isDying) {
       return;
     }
     boss.isDying = true;
+    boss.bossState = "dying";
+    this.clearFrenzyTint(boss);
     boss.body.setVelocity(0, 0);
     this.killCount += 1;
     this.bossPhaseActive = false;
