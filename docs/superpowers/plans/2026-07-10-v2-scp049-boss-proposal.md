@@ -1,526 +1,267 @@
-# SCP-049 Rule-Driven Boss Proposal
+# SCP-049 规则驱动 Boss 与 v2 压力模型提案
 
-> **Status:** Planning-wave proposal only. No `src/` changes are made or authorized
-> by this document. Implementation requires explicit Project Lead approval, after
-> which `superpowers:executing-plans` applies.
+> **状态：**项目所有者已批准，且已在 `dev/v2` 实现。
 >
-> **Source plan:** `docs/superpowers/plans/2026-07-10-v2-scp049-boss-planning.md`
-> **Branch / worktree:** `dev/v2` at `C:\scp-survivor-v2`
-> **Baseline HEAD at audit:** `12e13d3` (later than the plan's `e9662e0` floor; clean worktree)
-> **Authority:** `AGENTS.md`, `docs/agents/dev-v2.md`, `docs/product-vision.md`,
-> `docs/design.md`, `docs/development-strategy.md`
+> **确认日期：**2026-07-11
+>
+> **分支 / worktree：**`dev/v2` / `C:\scp-survivor-v2`
+>
+> **初始审计基线：**`12e13d3`
+>
+> **Rev 4 实现基线：**`60be275`
+>
+> **实现 commits：**`70786b5`、`72cdae5`、`60be275`
+> **来源计划：**`docs/superpowers/plans/2026-07-10-v2-scp049-boss-planning.md`
 
-### Revision history
+本提案现在描述已经确认的产品意图和真实实现，不再把当前 `src/` 变更标记为
+“未授权”。合并、push 和发布仍受正常 Git 与验证门禁约束。
 
-- **Rev 1 (initial):** Option C recommended; replace-vs-layer of
-  `enragedSummonMultiplier` left as an open product decision.
-- **Rev 2 (this revision, post Project Lead review):** Direction approved for
-  revision; still **not** approved to write `src/`. This revision resolves the six
-  points the Project Lead requested:
-  1. First implementation **replaces** `enragedSummonMultiplier` — no open
-     replace/layer state remains (§2.3, §3.1, §3.2).
-  2. Concrete initial values and rationale for every frenzy/exposed config key (§3.2.1).
-  3. Explicit `summonBossMinions` frenzy call interface (§3.2.2).
-  4. Explicit `exposedDamageMultiplier` × breacher-1.5× stacking rule and cap (§3.2.3).
-  5. `handleBossDefeat()` sets `boss.bossState = "dying"`, plus frenzy-tint cleanup
-     method and lifecycle (§3.2.4).
-  6. Docs-only wave: no `src/` change, no push, no merge (§ handoff).
-- **Rev 3 (this revision, post Project Lead review):** Fixes a rollback-contract
-  contradiction — Rev 2 both deleted `enragedSummonMultiplier` and claimed
-  `frenzyEnabled=false` restored old behavior, which is impossible with the key gone.
-  Direction approved; still **not** approved to write `src/`. Changes:
-  1. `enragedSummonMultiplier: 0.6` is **kept as a deprecated fallback**, not deleted
-     (§2.3, §3.2.1).
-  2. `frenzyEnabled=true` uses `frenzyEnragedMultiplier`; `frenzyEnabled=false` restores
-     original trickle summon + `enragedSummonMultiplier` (§3.2.1a).
-  3. `updateBoss()` two branches spelled out explicitly (§3.2.6).
-  4. Rollback smoke coverage added (§3.3 row #13); risk register updated.
-  5. Docs-only wave: no `src/` change, no push, no merge (§ handoff).
+## 1. 决策摘要
 
----
+当前 v2 采用“可读的 Boss 规则 + 高密度失控压力”：
 
-## Task 1 — Current SCP-049 runtime audit
+- 保留六分钟流程、SCP-049 终局、胜负条件、restart 和 localStorage 语义；
+- SCP-049 使用 `normal → frenzy → normal → dying` 状态机；
+- 普通召唤固定生成 10 个弱化感染职员；
+- 狂乱召唤固定生成 20 个全强度精英或无人机；
+- 所有非 Boss 敌人每 6–9 秒尝试自我复制；
+- 全局活动敌人硬上限为 230；
+- `DEBUG_MODE=true` 是当前 Boss 测试阶段的明确决定，`B` 键保持可用；
+- 不新增 Scene、存档字段、manager API、manifest、外部素材或客户端接口。
 
-All rows below cite behavior visible in the source at the audited HEAD. No behavior
-is inferred beyond what the code shows.
+这套设计不把“更多敌人”本身当作 SCP 差异化。核心差异来自可观察规则：
+SCP-049 会在狂乱期间停止追击、暴露弱点并产生异常波次，玩家需要在攻击暴露 Boss
+和先处理失控敌群之间选择。递归复制与大波次负责强化设施失控和压迫感。
 
-### 1.1 Boss lifecycle map (methods, timers, fields, balance keys)
+## 2. 修订历史
 
-| Concern | Exact location | What the source does |
-|---|---|---|
-| State flags init | `src/main.js:67-68` | `this.bossPhaseActive = false; this.bossEnemy = null;` set in `create()` |
-| Per-run reset | `src/scene/menus.js:709-711` (`startMissionWithWeapon`) | Resets `bossPhaseActive=false`, `bossEnemy=null`, `bossIntroTimer=null` at mission start |
-| Update dispatch | `src/main.js:176-178` (`update`) | `if (this.bossPhaseActive) this.updateBoss();` — only runs while unpaused, mission active, not game over, not level-up |
-| Boss phase entry | `src/scene/timeline.js:359-394` (`endSurvivalPhase`) | At 6:00 (`BALANCE.match.survivalDurationMs`): `stopRegularSpawning()`, clears decoys/projectiles/regular enemies, banner, then `bossIntroTimer = this.time.delayedCall(BALANCE.boss.scp049.introDelayMs, …)` → `spawnScp049Boss()`. `immediateBoss=true` skips the delay |
-| Debug skip | `src/scene/weapons.js:560-570` (`skipToBossPhase`), bound at `src/scene/systems.js:55-59` (key `B`, `DEBUG_MODE` only) | Forces `elapsedSurvivalMs` to survival duration and calls `endSurvivalPhase(true)` |
-| Boss spawn | `src/scene/enemies.js:691-744` (`spawnScp049Boss`) | Guard: returns if `bossEnemy?.active` or `isGameOver`. Creates `this.enemies.create(x, y, "enemy-scp049")` above the player. Sets `isBoss=true`, `isElite=false`, `isDying=false`, `enemyType="scp049"`, `behavior="chase"`, `moveSpeed/contactDamage/maxHealth/health` from config, `xpReward=0`, `setCircle(18)`, `setDepth(12)`, `setCollideWorldBounds(true)`, `body.setImmovable(true)`, `summonCooldownMs`, `nextSummonAtMs = elapsedSurvivalMs + summonInitialDelayMs`. Adds `boss.bossLabel` text (transient effect), sets `bossEnemy=boss`, `bossPhaseActive=true`, camera shake, `playSound("bossAppear")`, top banner |
-| Boss update | `src/scene/enemies.js:747-774` (`updateBoss`) | Guard on `active/isDying/isGameOver`. Repositions label. If `staggerUntilMs > elapsedSurvivalMs` → `setVelocity(0,0)`, else `physics.moveToObject(boss, player, moveSpeed)`. Computes `hpRatio`; `summonInterval = hpRatio <= enragedHpThreshold ? summonCooldownMs * enragedSummonMultiplier : summonCooldownMs`. When `elapsedSurvivalMs >= nextSummonAtMs` → `summonBossMinions(boss)` and `nextSummonAtMs += summonInterval` |
-| Minion summon | `src/scene/enemies.js:777-807` (`summonBossMinions`) | `count = Between(summonCountMin, summonCountMax)`; base = `BALANCE.enemy.types.infectedStaff` with `healthMultiplier=minionHealthMultiplier`, `damageMultiplier=minionDamageMultiplier`. Spawns on a ring radius 52 around the boss, respecting `BALANCE.enemy.maxActiveEnemies` cap, `initializeEnemyFromConfig(...)`, `minion.isBossMinion=true`, `playSound("bossSummon")` |
-| Boss defeat | `src/scene/enemies.js:810-825` (`handleBossDefeat`) | Guard on `isDying`. Sets `isDying=true`, stops velocity, `killCount+=1`, `bossPhaseActive=false`, banner, `playEnemyDeathEffect`, then `time.delayedCall(BALANCE.feedback.deathShrinkMs + 120, …)` → `triggerVictory()` if not game over |
-| Damage → defeat | `src/scene/combat.js:171-180` (`damageEnemy`) | On `health <= 0`, if `enemy.isBoss` calls `handleBossDefeat(enemy)` and returns (no XP/kill-reward path) |
-| Boss balance keys | `src/config/balance.js:267-283` (`boss.scp049`) | `health:2500, speed:85, contactDamage:20, summonInitialDelayMs:5000, summonCooldownMs:11000, enragedHpThreshold:0.5, enragedSummonMultiplier:0.6, summonCountMin:2, summonCountMax:3, minionHealthMultiplier:0.6, minionDamageMultiplier:0.85, introDelayMs:2800, shotgunDamageMultiplier:1.5` |
-| Presentation hooks | `src/scene/enemies.js:742,806` + `src/audio/AudioManager.js:130-140` | `playSound("bossAppear")`, `playSound("bossSummon")` resolve to procedural tones. Camera shake + `showTopBanner` are Scene-owned. Boss label is a transient effect (`registerTransientEffect`, `src/scene/effects.js:72`) |
-| HUD boss readout | `src/scene/timeline.js:312-338` (`updatePhaseHud`) | After survival ends, shows `终局：SCP-049 | Boss 生命 N%` from `bossEnemy.health/maxHealth`, else `等待 Boss 登场` |
+- **Rev 1：**比较尸体复活、接触瘟疫和“外科狂乱”三个方向，推荐外科狂乱。
+- **Rev 2：**确定状态机、暴露增伤、霰弹枪叠加上限和死亡清理合同。
+- **Rev 3：**保留 `enragedSummonMultiplier`，修复狂乱关闭分支的 cadence 回退合同。
+- **Rev 4：**项目所有者确认当前实现就是目标：
+  - 普通召唤从 2–3 调整为固定 10；
+  - 狂乱召唤从 3–4 弱化感染职员调整为 20 个全强度精英/无人机；
+  - 新增全敌人递归复制与 230 上限；
+  - 保留 `DEBUG_MODE=true`；
+  - 明确 `frenzyEnabled=false` 只关闭狂乱，不自动回退全部 v2 压力。
 
-### 1.2 Weapon fairness and terminal paths
+Rev 1–3 的候选比较属于决策历史；Rev 4 是当前权威合同。
 
-| Concern | Exact location | What the source does |
-|---|---|---|
-| Boss-priority targeting | `src/scene/enemies.js:846-864` (`findNearestEnemy`, `prioritizeBoss` arg) | When `prioritizeBoss` and boss is active/not dying and within `maxDistance`, returns the boss regardless of nearer enemies |
-| Pistol vs boss | `src/scene/weapons.js:271-309` (`attackWithPistol`) | Calls `findNearestEnemy(weapon.range)` with **no** `prioritizeBoss` and default `triggerRange`-less range. Pistol treats the boss as an ordinary nearest target; it does **not** force-lock the boss |
-| Breacher vs boss | `src/scene/weapons.js:312-371` (`attackWithShotgun`) | In boss phase, `attackRange = weapon.range` (full range, not `triggerRange`), and `findNearestEnemy(..., prioritizeBoss=true)`. Boss takes `shotgunDamageMultiplier` (1.5×) via `src/scene/combat.js:183-192` |
-| Breacher control on boss | `src/scene/combat.js:58-101` (`applyBreacherPelletEffects`) | Knockback + stagger + suppression slow are gated on `!enemy.isElite`. The boss is `isElite=false`, so pellets **do** set `boss.staggerUntilMs` and knockback velocity — but `updateBoss` overrides velocity each frame (stagger still zeroes movement; knockback is effectively neutralized by `body.setImmovable(true)` + `moveToObject`) |
-| Tesla vs boss | `src/scene/weapons.js:374-418` (`attackWithTesla`) | `prioritizeBoss=true`; if first target is the boss, **all** `chainTargets` iterations are aimed at the boss (an "overload" dump) with per-chain falloff, instead of bouncing between separate enemies |
-| Victory | `src/scene/menus.js:869-879` (`triggerVictory`) | Sets `isGameOver=true`, `isVictory=true`, awards credits (win bonus), `freezeForGameOver()`, victory overlay |
-| Defeat | `src/scene/combat.js:287-303` (`applyPlayerDamage`) → `src/scene/menus.js:798-805` (`triggerGameOver`) | On `health<=0`, game over overlay; boss contact damage is `contactDamage=20` via `handlePlayerEnemyOverlap` (`src/scene/combat.js:273-275`) |
-| Freeze/cleanup | `src/scene/menus.js:1000-…` (`freezeForGameOver`) + `src/scene/systems.js:173-…` (`clearCombatEntities`) | Pauses systems, clears all groups (`enemies`, projectiles, bullets, gems, pickups, decoys). Boss object is destroyed with the `enemies` group; `boss.once("destroy")` nulls `bossEnemy` (`enemies.js:730-737`) |
-| Pause semantics | `src/scene/menus.js:959-992` + `src/scene/systems.js:143-170` | `pauseGameplaySystems()` pauses `this.physics` and the spawn event only. `this.time` (Phaser clock) is **not** paused, and `elapsedSurvivalMs` stops advancing because `update` early-returns on `isPaused`. Consequence: `elapsedSurvivalMs`-driven summon timing is pause-safe; any `this.time.delayedCall` timer keeps counting during pause |
-| Restart | `src/scene/menus.js:780,856,991` | Victory/defeat/quit all call `this.scene.restart()`, re-running `create()`; boss fields re-init at `main.js:67-68` and again in `startMissionWithWeapon` |
-| Persistence | `src/config` meta + `scp-survivor-meta` localStorage (`docs/design.md:114`) | Boss path only writes credits via `awardRunCredits`; no boss-specific persistence. Schema is `{credits, perks}` |
+## 3. 已实现玩法合同
 
-### 1.3 Current-state fact table (plan-required columns)
+### 3.1 SCP-049 状态机
 
-| Current behavior | Source | Risk if changed | Compatibility requirement |
-|---|---|---|---|
-| `bossPhaseActive` gate drives `updateBoss` and weapon boss-priority | `main.js:176-178`, `weapons.js:318,324,375` | Breaking the flag desyncs targeting and update loop | Any new state must keep `bossPhaseActive` truthy for the whole fight and reset it on defeat/restart |
-| Boss enters via `introDelayMs` timer after clear-out | `timeline.js:378-393` | Adding spawn-time state can double-spawn if the `bossEnemy?.active` guard is bypassed | Preserve the `spawnScp049Boss` idempotency guard (`enemies.js:692-694`) and `bossIntroTimer` cleanup |
-| Boss chases via `moveToObject`; immovable body | `enemies.js:760`, `enemies.js:715` | New movement states could let minions shove the boss or break world-bounds clamp | Keep `setImmovable(true)`; any stop/telegraph state must restore chase cleanly |
-| Stagger zeroes boss velocity per frame | `enemies.js:757-761`, `combat.js:74-79` | A new "vulnerable/rooted" state overlapping stagger could freeze the boss permanently | New states must compose with `staggerUntilMs`, not replace the velocity logic silently |
-| Summon cadence via `nextSummonAtMs` + enrage multiplier | `enemies.js:763-773` | Reworking cadence can starve or flood minions vs `maxActiveEnemies` | Preserve `summonCountMin/Max` and `maxActiveEnemies` cap; keep enrage threshold behavior or explicitly re-approve it |
-| Minions are `infectedStaff` with `isBossMinion=true` | `enemies.js:800-803` | Marking/tracking minions differently can break reward/cleanup branches | Preserve `isBossMinion` and its reward branch (`combat.js:214-216`) |
-| Defeat → delayed `triggerVictory` | `enemies.js:810-825` | A new dying state can skip victory or fire it twice | Keep single-shot `isDying` guard and the six-minute → victory contract |
-| Pistol does **not** force-lock boss; breacher/tesla do | `weapons.js:272,324,375` | New rules that assume all weapons hit the boss equally will misjudge fairness | Any rule must be viable with pistol's non-prioritized targeting, or explicitly re-balance it under Project Lead approval |
-| Breacher 1.5× + stagger on boss | `combat.js:186-192`, `combat.js:67-79` | Adding damage-mult states can stack unexpectedly with 1.5× | New damage windows must define interaction with `shotgunDamageMultiplier` |
-| Boss cleaned via `enemies` group + destroy hook | `enemies.js:730-737`, `systems.js:173-179` | New per-boss timers/arrays leak across restart if not cleared | Every new field/timer needs an explicit cleanup owner tied to defeat/restart/quit |
-| Pause freezes physics + `elapsedSurvivalMs`, not `this.time` | `systems.js:143-149`, `main.js:162-164` | `delayedCall`-based boss logic will drift during pause | Prefer `elapsedSurvivalMs` deadlines over `this.time.delayedCall` for boss-state timing |
-| Presentation via `playSound`/shake/banner/label | `enemies.js:742,806,741,743` | Audio keys and managers are shared-file/other-branch territory | Reuse existing `this.playSound(...)` keys and Scene-owned shake/banner/text; do not add `AudioManager`/`UIManager` API |
-| localStorage schema `{credits,perks}` | `docs/design.md:114` | Persisting boss state breaks old saves | No boss data may enter `scp-survivor-meta` |
+状态由 `src/scene/enemies.js` 的 Boss 对象持有，时间统一使用
+`elapsedSurvivalMs`，因此暂停期间不推进。
 
----
-
-## Task 2 — Candidate SCP-specific rules
-
-The four product-vision questions (`docs/product-vision.md:41-49`) frame every option:
-(1) reinforce SCP identity, (2) create a new player decision, (3) differentiate from
-generic Survivors-like, (4) avoid being only bigger numbers.
-
-SCP-049's canonical identity is the *Plague Doctor* who "cures" the living by killing
-them, reanimating corpses as SCP-049-2 instances, and who carries a lethal pestilence
-on contact. All three options below stay inside Gameplay/Core, add no new map/task/
-second boss, reuse existing summon or movement, and preserve the six-minute → single
-SCP-049 → victory flow.
-
-### Option A — "The Cure": corpse reanimation
-
-1. **Player-observable rule:** When a boss minion dies, it leaves a marked corpse. If
-   the boss is not interrupted, after a short telegraph it reanimates that corpse into a
-   stronger SCP-049-2 instance. Corpses near the boss reanimate; corpses that decay
-   (timer) or are re-hit disappear.
-2. **Telegraph/feedback:** Corpse marker sprite/tint + a windup tint on the boss during
-   a `operating` state; `playSound("bossSummon")` reused for the reanimate beat; top
-   banner on first reanimation only.
-3. **Player decision:** Where and when to kill minions — fight them away from the boss,
-   or spend fire clearing corpses instead of damaging the boss.
-4. **Boss state/timer data:** `boss.bossState`, `boss.stateUntilMs`, a bounded
-   `boss.pendingCorpses` list of `{x, y, expireAtMs}`; reanimation deadline via
-   `elapsedSurvivalMs`.
-5. **Minion interaction:** Directly reuses `summonBossMinions` and `isBossMinion`; adds a
-   death hook that records a corpse for `isBossMinion` kills only.
-6. **Weapon effects:** Pistol/breacher/tesla can all destroy corpse markers (reuse
-   `damageEnemy`/overlap). Breacher's AoE (`applyBreacherExplosion`) naturally clears
-   clusters — mild breacher favoring, acceptable and re-balanceable.
-7. **Accessibility/readability risk:** Highest — a second corpse entity type adds
-   on-screen clutter; colorblind-safe marker + count cap required.
-8. **Likely files:** `src/scene/enemies.js` (state, reanimation), `src/scene/combat.js`
-   (minion-death hook), `src/config/balance.js` (config), reuse `effects.js` transient
-   markers. No `main.js`/manager/manifest edits.
-9. **Rollback path:** Feature-gated by a single balance flag (e.g. `reanimation.enabled`);
-   disabling reverts to current summon-only fight; corpse list is cleared in the same
-   cleanup owners as the boss.
-
-### Option B — "Pestilence Touch": telegraphed surgical lunge
-
-1. **Player-observable rule:** Periodically the boss stops, telegraphs, then lunges
-   toward the player. A landed lunge applies a stacking "感染" debuff that blocks the
-   skip-heal (`docs/design.md:68`) and slightly raises damage taken for a few seconds.
-2. **Telegraph/feedback:** Boss tint + a directional warning (reuse elite teleport
-   warning style, `enemies.js:630-643`); reuse `playSound("bossAppear")`-family tone;
-   contact resolves through the existing player-overlap path.
-3. **Player decision:** Spacing and dodge-timing during the telegraph, and whether to
-   burn the dash (`space`) defensively instead of repositioning for damage.
-4. **Boss state/timer data:** `boss.bossState` (`normal`/`winding`/`lunging`),
-   `boss.stateUntilMs`, `boss.nextLungeAtMs`; player `infectionStacks`, `infectionUntilMs`.
-5. **Minion interaction:** Independent of summons; summon cadence unchanged. Reuses
-   movement (`moveToObject`) and the stagger velocity path.
-6. **Weapon effects:** Neutral across weapons; lunge windup is a free-damage window for
-   all three, keeping pistol viable (addresses the pistol non-lock gap).
-7. **Accessibility/readability risk:** Medium — telegraph direction and infection stacks
-   need clear HUD/entity signals; must not rely on color alone.
-8. **Likely files:** `src/scene/enemies.js` (lunge state), `src/scene/combat.js`
-   (infection application/heal-block), `src/config/balance.js`. Heal-block touches the
-   skip-heal path in `progression`/`combat`; scoped and reversible.
-9. **Rollback path:** Balance flag `pestilence.enabled`; off → boss reverts to pure chase.
-   Infection fields reset on damage-cooldown expiry and on restart.
-
-### Option C — "Surgery Frenzy": explicit vulnerable summon window
-
-1. **Player-observable rule:** Convert today's implicit enrage (faster summons under 50%
-   HP) into an explicit telegraphed `frenzy` state: the boss roots itself to summon a
-   larger wave and, during that window, takes bonus damage ("exposed").
-2. **Telegraph/feedback:** Root + tint + banner; reuse `playSound("bossSummon")`; HUD
-   already shows boss HP% (`timeline.js:321-325`).
-3. **Player decision:** Whether to burst the exposed boss or first thin the incoming
-   wave; risk/reward on positioning during the root.
-4. **Boss state/timer data:** `boss.bossState` (`normal`/`frenzy`), `boss.stateUntilMs`,
-   reuse `nextSummonAtMs`; `exposedDamageMultiplier`.
-5. **Minion interaction:** Directly reuses `summonBossMinions`; the frenzy simply gates a
-   bigger/earlier summon and the exposure window.
-6. **Weapon effects:** Exposure benefits all weapons; must define interaction with the
-   existing `shotgunDamageMultiplier` (1.5×) to avoid runaway stacking.
-7. **Accessibility/readability risk:** Lowest — one extra state, reuses existing HUD and
-   summon telegraphs.
-8. **Likely files:** `src/scene/enemies.js` (state in `updateBoss`), `src/config/balance.js`.
-   Smallest surface; no new entity type, no combat-path heal changes.
-9. **Rollback path:** Balance flag `frenzy.enabled`; off → revert to current enrage
-   multiplier. No persistent fields beyond the boss object.
-
-**Constraint check:** Options A and C reuse the existing summon behavior; Option B reuses
-existing movement. None requires a new map, task system, or second boss.
-
-### 2.2 Scoring (1–5; 1 and 5 explained)
-
-| Criterion | A: Reanimation | B: Pestilence | C: Frenzy |
-|---|---|---|---|
-| SCP identity | **5** — reanimation *is* SCP-049's defining mechanic | 4 | 3 |
-| Player-decision quality | **5** — new spatial layer (where minions die) | 4 | 3 |
-| Implementation scope | 2 — new corpse entity + tracking | 3 | **5** — one state + one multiplier, reuses summon/HUD |
-| Weapon fairness | 3 (breacher AoE favored) | **4** free windows for all incl. pistol | 4 |
-| UI dependency | 2 — needs a clear new marker | 3 | **5** — reuses existing HUD/banners |
-| Restart safety | 3 — corpse list needs cleanup wiring | 3 | **5** — no persistent structures |
-| Testability | 2 — most new states/edges to smoke | 3 | **5** — smallest matrix, deterministic |
-
-*Explained extremes.* A-identity **5**: reanimating the dead is the literal SCP-049
-canon, not a reskin. A-decision **5**: it introduces a positioning decision absent from
-the current fight. C-scope/UI/restart/testability **5**: C adds a single boss state plus
-one damage multiplier, reuses `summonBossMinions`, the existing HUD HP readout, and adds
-no per-boss data structures, so restart and smoke coverage stay minimal.
-
-### 2.3 Recommendation
-
-**Recommend Option C ("Surgery Frenzy") for the first implementation, structured as an
-explicit boss state machine, with Option A recorded as the preferred follow-up.**
-
-Against the four questions: C reinforces SCP identity by making the containment/enrage
-rhythm *observable and answerable* (Q1), creates a real burst-vs-survive decision during
-the telegraphed window (Q2), differentiates from generic auto-battling by rewarding read-
-and-punish over pure DPS (Q3), and is explicitly **not** just larger numbers because the
-new value is a legible rule, not a stat bump (Q4). C also best satisfies the plan's
-architecture directive — "prefer a small state machine and explicit gameplay-to-
-presentation signals" — and scores highest on scope, restart safety, and testability,
-which matters for a first bounded change to a shared boss path.
-
-Option A scores higher on identity and decision depth but carries the most readability,
-cleanup, and test surface; it is the recommended **second** wave once the state-machine
-scaffold from C exists (A can reuse the same `bossState` field and `operating` window).
-
-**Explicitly excluded from the first implementation:** new corpse/SCP-049-2 entity,
-heal-blocking infection, lunge/movement rework, any new map/task/second boss, and any
-change to victory/defeat/restart contracts beyond adding one intermediate boss state.
-
-**Resolved product decision (Rev 2, refined in Rev 3):** the first implementation, **when
-`frenzyEnabled` is `true` (the shipping default)**, replaces the implicit
-`enragedSummonMultiplier` behavior with the explicit frenzy window — enrage below
-`enragedHpThreshold` then expresses itself as a shorter frenzy cadence via
-`frenzyEnragedMultiplier`, not as a hidden summon-interval scale. There is no remaining
-replace/layer open question for the shipping path.
-
-**Rollback contract (Rev 3 fix):** `enragedSummonMultiplier: 0.6` is **kept in config as a
-deprecated fallback**, not deleted. It is the value the old code path reads when
-`frenzyEnabled` is `false`. This resolves the Rev-2 contract contradiction: the master
-rollback flag can only restore the original behavior if the original behavior's data still
-exists. See §3.2.1a for the exact two-branch rule and §3.2.6 for the `updateBoss` branches.
-
----
-
-## Task 3 — Implementation contract and verification
-
-> Contract for the approved Option C. Not implemented in this wave.
-
-### 3.1 Proposed state machine
-
-`boss.bossState` is a string owned by the boss game object, driven exclusively by
-`updateBoss` (`src/scene/enemies.js`). Enrage is a modifier read from HP, not an
-exclusive state; the table lists it per the plan requirement.
-
-| State | Entry condition | Update rule | Exit condition | Player signal | Cleanup |
+| 状态 | 进入条件 | 行为 | 退出条件 | 玩家信号 | 清理 |
 |---|---|---|---|---|---|
-| `normal` | On spawn (`spawnScp049Boss`) | `moveToObject` chase; summon when `elapsedSurvivalMs >= nextSummonAtMs` | `elapsedSurvivalMs >= nextFrenzyAtMs` → `frenzy` | Chasing boss + HP% HUD | none (steady state) |
-| `frenzy` | From `normal` at `nextFrenzyAtMs` (cadence scales with HP ≤ `enragedHpThreshold`) | Root (velocity 0), summon one enlarged wave via `summonBossMinions(boss, { frenzy: true })`, apply `exposedDamageMultiplier` | `elapsedSurvivalMs >= stateUntilMs` (after `frenzyDurationMs`) → `exitFrenzy` → `normal`, set next `nextFrenzyAtMs` | Boss tint + banner + `playSound("bossSummon")`; HUD unchanged | `exitFrenzy` clears the frenzy tint (§3.2.4) |
-| enraged (modifier) | `boss.health/maxHealth <= enragedHpThreshold` | **`frenzyEnabled=true`:** shortens `nextFrenzyAtMs` cadence via `frenzyEnragedMultiplier`. **`frenzyEnabled=false`:** shortens `nextSummonAtMs` cadence via the retained `enragedSummonMultiplier` (original behavior) | HP rises above threshold (won't in practice) | Faster frenzy rhythm (enabled) / faster trickle summon (disabled) | none |
-| `dying` | `health <= 0` via `handleBossDefeat` | `handleBossDefeat` sets `bossState="dying"` and `isDying=true`, zeroes velocity, and blocks all further `updateBoss` state transitions (`updateBoss` already early-returns on `isDying`) | `deathShrinkMs+120` delayed → `triggerVictory` | Death effect + banner | `handleBossDefeat` calls `clearFrenzyTint(boss)` and cancels any pending frenzy (`stateUntilMs`/`nextFrenzyAtMs` become inert once `dying`) (§3.2.4) |
-| shutdown/restart | `scene.restart` / quit / game over | n/a (object destroyed with `enemies` group) | new `create` | none | `destroy` hook nulls `bossEnemy`; `startMissionWithWeapon` resets flags |
+| `normal` | Boss 生成 | 追击玩家；按 cadence 召唤 10 个弱化感染职员 | 到达 `nextFrenzyAtMs` | Boss HP、追击和普通召唤 | 无 |
+| `frenzy` | 狂乱 deadline 到达 | Boss 定身；生成 20 个全强度混合单位；Boss 承受暴露增伤 | 2500ms 后回到 `normal` | 红色 tint、顶部横幅、召唤音效 | `exitFrenzy` 清除 tint |
+| 激怒修饰 | HP ≤ 50% | 狂乱间隔乘以 0.65 | HP 回升；正常流程中不会发生 | 更快的狂乱节奏 | 无 |
+| `dying` | Boss HP ≤ 0 | 禁止后续更新；清理 tint；保持单次胜利路径 | 死亡动画后触发胜利 | 死亡效果和横幅 | 敌人组销毁 Boss |
+| shutdown/restart | 退出、失败、胜利或 restart | 清空战斗实体 | 新一局重新初始化 | 无 | Boss 字段、复制 deadline 和实体全部重建 |
 
-Guard composition: `frenzy` root must coexist with `staggerUntilMs` (both zero velocity;
-no conflict). `bossPhaseActive` stays `true` across `normal`/`frenzy`, flips `false` only
-in `handleBossDefeat` (unchanged).
+`bossPhaseActive` 在 `normal` 和 `frenzy` 中保持为真，只在 Boss 击败后关闭。
+狂乱定身、突破器 stagger 和普通追击由 `updateBoss` 明确排序，避免永久冻结。
 
-### 3.2 Exact public data and methods
+### 3.2 Boss 数值与狂乱配置
 
-**New/changed fields (initialized in `spawnScp049Boss`, `src/scene/enemies.js`):**
+配置位于 `src/config/balance.js` 的 `BALANCE.boss.scp049`。
 
-| Name | Owner file | Shape | Init point | Update owner | Cleanup owner |
-|---|---|---|---|---|---|
-| `boss.bossState` | `enemies.js` | string `"normal"`/`"frenzy"`/`"dying"` | `spawnScp049Boss` (`="normal"`) | `updateBoss` | destroyed with boss; re-init on next spawn |
-| `boss.stateUntilMs` | `enemies.js` | number (ms, `elapsedSurvivalMs` clock) | `spawnScp049Boss` (`=0`) | `updateBoss` | with boss |
-| `boss.nextFrenzyAtMs` | `enemies.js` | number (ms) | `spawnScp049Boss` (`= elapsed + frenzyFirstDelayMs`) | `updateBoss` | with boss |
+| Key | 当前值 | 合同 |
+|---|---:|---|
+| `health` | 2500 | 当前 Boss 生命基线 |
+| `speed` | 85 | 普通状态追击速度 |
+| `contactDamage` | 20 | 接触伤害 |
+| `summonInitialDelayMs` | 5000 | 首次普通召唤延迟 |
+| `summonCooldownMs` | 11000 | 普通召唤基础间隔 |
+| `summonCountMin/Max` | 10 / 10 | 固定 10 个弱化感染职员 |
+| `minionHealthMultiplier` | 0.6 | 普通召唤生命倍率 |
+| `minionDamageMultiplier` | 0.85 | 普通召唤伤害倍率 |
+| `frenzyEnabled` | true | 狂乱状态开关，不是全部 v2 压力总开关 |
+| `frenzyFirstDelayMs` | 12000 | Boss 生成后首次狂乱 |
+| `frenzyCooldownMs` | 14000 | 狂乱基础间隔 |
+| `frenzyEnragedMultiplier` | 0.65 | 半血后狂乱 cadence 倍率 |
+| `frenzyDurationMs` | 2500 | 定身与暴露窗口 |
+| `frenzySummonCountMin/Max` | 20 / 20 | 固定 20 个混合单位 |
+| `frenzySummonRadius` | 190 | 狂乱生成环半径 |
+| `frenzyMinionTypes` | riot、blink、biomass、drone | 全强度混合波次 |
+| `frenzyMinionHealthMultiplier` | 1.0 | 狂乱单位生命倍率 |
+| `frenzyMinionDamageMultiplier` | 1.0 | 狂乱单位伤害倍率 |
+| `exposedDamageMultiplier` | 1.35 | 狂乱期间 Boss 承伤倍率 |
+| `exposedDamageCap` | 2.0 | Boss 专属增伤组合上限 |
 
-No new Scene-level fields; no new arrays/timers requiring separate teardown. All boss
-state lives on the boss object and dies with it (existing `boss.once("destroy")`,
-`enemies.js:730-737`).
+`enragedSummonMultiplier: 0.6` 保留为 cadence fallback，只在
+`frenzyEnabled=false` 时读取。
 
-#### 3.2.1 New/changed config with concrete initial values (`src/config/balance.js`, `boss.scp049`)
+### 3.3 普通召唤与狂乱召唤
 
-`enragedSummonMultiplier: 0.6` is **kept (deprecated fallback), not removed** — this is the
-Rev-3 rollback fix. It is read only on the `frenzyEnabled=false` branch (§3.2.1a). The old
-`summonInitialDelayMs`, `summonCooldownMs`, `summonCountMin/Max` continue to drive the
-`normal`-state trickle summon; the frenzy keys below drive the new explicit window. All
-timers use the `elapsedSurvivalMs` clock (pause-safe, per §3.4).
+| 路径 | 数量 | 单位 | 强度 | 半径 | 标记 |
+|---|---:|---|---|---:|---|
+| `summonBossMinions(boss)` | 10 | 感染职员 | 0.6× HP / 0.85× damage | 52 | `isBossMinion=true` |
+| `summonBossMinions(boss, { frenzy: true })` | 20 | 随机精英/无人机 | 1.0× HP / 1.0× damage | 190 | `isBossMinion=true` |
 
-| Key | Type | Initial value | Rationale |
-|---|---|---:|---|
-| `frenzyEnabled` | boolean | `true` | Master rollback flag. `true` → new frenzy window + `frenzyEnragedMultiplier`. `false` → original trickle summon + `enragedSummonMultiplier`, no frenzy at all (§3.2.1a). Because `enragedSummonMultiplier` is retained, `false` is a genuine, complete rollback |
-| `enragedSummonMultiplier` | number | `0.6` | **Deprecated fallback, retained.** Only read when `frenzyEnabled=false`; reproduces the original under-50%-HP faster-trickle behavior exactly. Not read on the shipping (`true`) path |
-| `frenzyFirstDelayMs` | number | `12000` | First frenzy ~12 s after the boss appears. Long enough for the player to read the normal chase + first trickle summon (`summonInitialDelayMs:5000`) before the first telegraphed window, so the mechanic is taught in a calm beat rather than at spawn |
-| `frenzyCooldownMs` | number | `14000` | Base gap between frenzy windows. Sits just above the existing `summonCooldownMs:11000` so a frenzy is a distinct punctuation, not overlapping the trickle summon each cycle; yields ~3–4 windows across a full-HP fight of the current 2500-HP boss |
-| `frenzyEnragedMultiplier` | number | `0.65` | Cadence scale applied to `frenzyCooldownMs` when `hpRatio <= enragedHpThreshold (0.5)` → ~9.1 s gap. Preserves the "gets more aggressive under half HP" feel that `enragedSummonMultiplier:0.6` used to give, now expressed through the visible frenzy rhythm |
-| `frenzyDurationMs` | number | `2500` | Root/exposed window length. Long enough to be a clear burst opportunity for all weapons (pistol included, §2.2) and to land the enlarged wave, short enough that the rooted boss is not a free kill |
-| `frenzySummonCountMin` | number | `3` | Lower bound of the frenzy wave. One above the normal `summonCountMin:2` so a frenzy visibly summons more than a trickle |
-| `frenzySummonCountMax` | number | `4` | Upper bound; one above normal `summonCountMax:3`. Still modest so the wave respects `maxActiveEnemies` and stays readable |
-| `exposedDamageMultiplier` | number | `1.35` | Bonus damage taken while `bossState==="frenzy"`. Rewards committing to the rooted boss without trivializing the 2500-HP pool; interaction with breacher 1.5× is capped in §3.2.3 |
+狂乱路径委托给 `summonBossFrenzyWave(boss, config)`，复用现有精英和无人机
+初始化逻辑。两个生成循环都在循环内部检查敌人上限；接近 230 时允许缩减实际生成数，
+不得溢出。
 
-#### 3.2.1a Rollback contract — the `frenzyEnabled` two-branch rule
+### 3.4 全局敌人复制
 
-`frenzyEnabled` is the single switch between the shipping mechanic and a complete rollback
-to original behavior. Both branches read only data that exists in config after this change,
-so the flag is a real toggle with no dead references.
+配置位于 `BALANCE.enemy.replication`：
 
-| Aspect | `frenzyEnabled = true` (shipping default) | `frenzyEnabled = false` (rollback) |
-|---|---|---|
-| Summoning | `normal` trickle summon **plus** the frenzy window's enlarged wave | Original trickle summon **only**; no frenzy window ever |
-| Under-50%-HP behavior | Shorter frenzy cadence via `frenzyEnragedMultiplier` (`nextFrenzyAtMs`) | Shorter trickle cadence via `enragedSummonMultiplier` (`nextSummonAtMs`) — identical to pre-change code |
-| `bossState` values reached | `normal` → `frenzy` → `normal` … → `dying` | `normal` → `dying` only (never enters `frenzy`) |
-| `exposedDamageMultiplier` | Applied during `frenzy` (capped, §3.2.3) | Never applied (no `frenzy` state) |
-| Frenzy tint | Applied/cleared per §3.2.4 | Never applied |
-| Config keys read | `frenzy*` keys + `exposedDamageMultiplier`/`exposedDamageCap` | `summonCooldownMs` + `enragedSummonMultiplier` (frenzy keys ignored) |
+| Key | 当前值 | 合同 |
+|---|---:|---|
+| `enabled` | true | v2 默认开启 |
+| `intervalMinMs` | 6000 | 最短复制间隔 |
+| `intervalMaxMs` | 9000 | 最长复制间隔 |
+| `maxTotalEnemies` | 230 | 活动敌人硬上限 |
 
-Rollback is therefore exact: with `frenzyEnabled=false` the boss fight is byte-for-behavior
-the pre-change SCP-049 (trickle summon + `enragedSummonMultiplier` enrage), because the
-deprecated key was retained rather than deleted.
+数据流：
 
+1. `initializeEnemyFromConfig` 为每个敌人写入随机 `nextReplicateAtMs`；
+2. `updateEnemies` 在移动和传送处理后调用 `tryReplicateEnemy`；
+3. inactive、dying 和 Boss 本体不复制；
+4. 每次尝试先安排下次 deadline，再检查上限，避免达到上限后每帧重试；
+5. `cloneEnemyAt` 在来源附近创建同类型普通敌人或精英；
+6. clone 获得完整配置生命和自己的下一次复制 deadline；
+7. Boss minion 的 clone 继续继承 `isBossMinion=true`。
 
+这是允许多代递归的压力系统，不是只复制一代的视觉效果。
 
-`summonBossMinions` gains an **optional options argument** so the frenzy path can request a
-larger wave without a second method. Signature and contract:
+### 3.5 武器交互
 
-```
-summonBossMinions(boss, options = {})
-  options.frenzy  : boolean  (default false)
-```
+| 武器 | Boss 交互 |
+|---|---|
+| 勤务手枪 | 不强制锁定 Boss；狂乱暴露窗口提供明确输出机会 |
+| 收容突破器 | Boss 阶段使用完整射程并优先 Boss；基础 Boss 增伤 1.5× |
+| 特斯拉 | Boss 阶段优先 Boss；链击可对 Boss 形成 overload |
 
-- When `options.frenzy` is falsy → **unchanged** current behavior: count =
-  `Between(summonCountMin, summonCountMax)`, using `minionHealthMultiplier` /
-  `minionDamageMultiplier`, ring radius 52, `maxActiveEnemies` cap, `isBossMinion=true`,
-  `playSound("bossSummon")`. This is exactly the existing call from the `normal` trickle.
-- When `options.frenzy` is `true` → count =
-  `Between(frenzySummonCountMin, frenzySummonCountMax)`; **all other behavior is
-  identical** (same base config, same scaling multipliers, same ring placement, same
-  `maxActiveEnemies` cap check inside the loop, same `isBossMinion=true`, same sound).
-- The `maxActiveEnemies` guard stays **inside** the spawn loop (`enemies.js:787-789`), so a
-  frenzy wave that would exceed the cap simply spawns fewer — no overflow (smoke row #12).
-- Callers: `normal` state calls `summonBossMinions(boss)` (unchanged); `enterFrenzy` calls
-  `summonBossMinions(boss, { frenzy: true })`.
+狂乱暴露倍率与突破器 1.5× 相乘后受 2.0× 上限约束：
 
-#### 3.2.3 `exposedDamageMultiplier` × breacher-1.5× stacking and cap
+- 普通状态，突破器：1.5×；
+- 普通状态，手枪/特斯拉：1.0×；
+- 狂乱状态，手枪/特斯拉：1.35×；
+- 狂乱状态，突破器：`1.5 × 1.35 = 2.025`，最终 clamp 为 2.0×。
 
-The two multipliers combine **multiplicatively**, then the boss-specific portion is
-**clamped to a hard cap of 2.0×** so a fully-exposed breacher shot cannot exceed double
-damage. Defined against the existing `getEnemyDamageTakenMultiplier` boss branch
-(`src/scene/combat.js:186-192`):
+### 3.6 Debug 合同
 
-- Non-boss enemies: unaffected (no `exposed`, no breacher-boss branch).
-- Boss, `normal`, breacher pellet → `1.5×` (unchanged).
-- Boss, `normal`, pistol/tesla → `1.0×` (unchanged).
-- Boss, `frenzy`, pistol/tesla → `exposedDamageMultiplier = 1.35×`.
-- Boss, `frenzy`, breacher pellet → `1.5 × 1.35 = 2.025×`, **clamped to 2.0×**.
+`src/config/constants.js` 当前明确设置 `DEBUG_MODE=true`，用于保留 `B` 键
+Boss 跳转。它属于开发测试决定，不代表正式 release 配置。
 
-Implementation shape (no signature change): compute
-`bossMultiplier = shotgunFactor * exposedFactor`, then
-`bossMultiplier = Math.min(bossMultiplier, BALANCE.boss.scp049.exposedDamageCap)` with
-`exposedDamageCap: 2.0` added to config. The cap key is listed here rather than in §3.2.1
-because it exists only to bound this interaction. Smoke row #6 verifies the breacher case
-lands at the 2.0× cap, not 2.025×.
+`B` 会立即把时间推进至 6:00、清场并生成 Boss。Boss 在玩家上方约 220px 出现，
+以 85 速度接近；静止的 100 HP 玩家会被五次 20 点接触伤害击败。因此 Debug smoke
+需要立即移动或按 `ESC`，这不是新状态机崩溃。
 
-#### 3.2.4 `handleBossDefeat` state + frenzy tint lifecycle
+## 4. 回退合同
 
-**`handleBossDefeat(boss)` (`src/scene/enemies.js:810-825`) — modified:**
+### 4.1 仅关闭狂乱
 
-- Sets `boss.bossState = "dying"` immediately after the existing `boss.isDying = true`
-  line. This makes the death state explicit in the state machine (§3.1) and, together with
-  the existing `if (!boss?.active || boss.isDying …) return;` guard in `updateBoss`
-  (`enemies.js:749`), guarantees no `frenzy`/`normal` transition can fire after defeat.
-- Calls `this.clearFrenzyTint(boss)` so a boss killed **mid-frenzy** does not play its
-  death effect while still wearing the frenzy tint. Pending frenzy timers
-  (`stateUntilMs`, `nextFrenzyAtMs`) need no explicit cancel — they become inert once
-  `updateBoss` early-returns on `isDying`.
+`frenzyEnabled=false` 只产生以下效果：
 
-**Frenzy tint lifecycle (single owner pair):**
+- Boss 不进入 `frenzy`；
+- 不出现 tint、暴露增伤和 20 单位狂乱波次；
+- 半血后恢复读取 `enragedSummonMultiplier` 的普通召唤 cadence；
+- 普通召唤仍为 10；
+- 全局敌人复制仍然开启。
 
-- `enterFrenzy(boss)` — applies the tint via `boss.setTint(<frenzy color>)` and records
-  nothing extra (Phaser tint lives on the sprite; no separate object to track).
-- `clearFrenzyTint(boss)` — *new, private helper (`enemies.js`)*: `boss.clearTint()` (guard
-  on `boss?.active`). Single method used by **both** `exitFrenzy` (normal window end) and
-  `handleBossDefeat` (death mid-frenzy).
-- `exitFrenzy(boss)` — calls `clearFrenzyTint(boss)`, sets `bossState="normal"`, computes
-  next `nextFrenzyAtMs`.
-- Restart/quit/game-over: the boss sprite is destroyed with the `enemies` group
-  (`clearCombatEntities`, `systems.js:173-179`), so no tint can survive a scene restart;
-  a fresh boss starts untinted at `spawnScp049Boss`. No Scene-level tint state exists.
+### 4.2 完整压力诊断回退
 
-Reuses only the existing Phaser `setTint`/`clearTint` on the boss sprite — no
-`AudioManager`/`UIManager` API and no new manager or manifest surface.
+需要隔离全部 Rev 4 压力时，必须同时设置：
 
-#### 3.2.5 Methods summary (`src/scene/enemies.js`, `src/scene/combat.js`)
-
-- `updateBoss()` — *modified.* Reads `this.bossEnemy`, `elapsedSurvivalMs`; mutates boss.
-  Branches on `frenzyEnabled` (two branches spelled out in §3.2.6). Update owner of
-  `bossState`, `stateUntilMs`, `nextFrenzyAtMs`.
-- `enterFrenzy(boss)` — *new, private.* Sets `bossState="frenzy"`,
-  `stateUntilMs = elapsedSurvivalMs + frenzyDurationMs`, applies frenzy tint, calls
-  `summonBossMinions(boss, { frenzy: true })`, plays `playSound("bossSummon")` + banner.
-  Called only from `updateBoss`.
-- `exitFrenzy(boss)` — *new, private.* Calls `clearFrenzyTint(boss)`, restores
-  `bossState="normal"`, sets `nextFrenzyAtMs = elapsedSurvivalMs + frenzyCooldownMs *
-  (hpRatio <= enragedHpThreshold ? frenzyEnragedMultiplier : 1)`.
-- `clearFrenzyTint(boss)` — *new, private.* `boss.clearTint()` (guarded). Shared by
-  `exitFrenzy` and `handleBossDefeat` (§3.2.4).
-- `summonBossMinions(boss, options)` — *modified.* Optional `options.frenzy` selects the
-  frenzy count range; all other behavior unchanged (§3.2.2).
-- `handleBossDefeat(boss)` — *modified.* Sets `bossState="dying"`, calls
-  `clearFrenzyTint(boss)` (§3.2.4); existing victory path unchanged.
-- `getEnemyDamageTakenMultiplier(enemy, …)` (`src/scene/combat.js`) — *modified.* Adds the
-  `frenzy` exposed factor and the 2.0× cap (§3.2.3). No signature change.
-
-No edits to `src/main.js`, `AudioManager`, `UIManager`, manifests, or persistence.
-Reuses existing `this.playSound("bossSummon")`, `showTopBanner`, and Phaser sprite tint.
-
-#### 3.2.6 `updateBoss()` two branches
-
-`updateBoss` reads `BALANCE.boss.scp049.frenzyEnabled` once per call and takes exactly one
-of two branches. Both keep the shared prefix that already exists today: the
-`active/isDying/isGameOver` early-return (`enemies.js:749`), the label reposition, and the
-`staggerUntilMs`-vs-`moveToObject` velocity logic (`enemies.js:757-761`). Only the summon /
-enrage section differs.
-
-**Branch A — `frenzyEnabled === true` (shipping):**
-
-```
-if (bossState === "frenzy") {
-  boss.body.setVelocity(0, 0)                      // root overrides chase
-  if (elapsedSurvivalMs >= stateUntilMs) exitFrenzy(boss)
-} else {                                            // bossState === "normal"
-  // existing trickle summon, unchanged:
-  if (elapsedSurvivalMs >= nextSummonAtMs) {
-    summonBossMinions(boss)
-    nextSummonAtMs += summonCooldownMs             // no enrage scale here
-  }
-  // frenzy entry:
-  if (elapsedSurvivalMs >= nextFrenzyAtMs) enterFrenzy(boss)
-}
+```js
+BALANCE.boss.scp049.frenzyEnabled = false;
+BALANCE.boss.scp049.summonCountMin = 2;
+BALANCE.boss.scp049.summonCountMax = 3;
+BALANCE.enemy.replication.enabled = false;
 ```
 
-Under-50%-HP enrage on this branch is applied by `exitFrenzy` when it sets the next
-`nextFrenzyAtMs` (uses `frenzyEnragedMultiplier`). `enragedSummonMultiplier` is **not** read.
+这只是一套诊断方法，不是默认产品方向。降低 10/20 波次或关闭复制需要新的平衡决定，
+不能再被当作“修正超范围实现”。
 
-**Branch B — `frenzyEnabled === false` (rollback, original behavior):**
+## 5. 文件范围与受保护边界
 
-```
-// bossState never leaves "normal"; enterFrenzy/exitFrenzy are never called
-const summonInterval =
-  hpRatio <= enragedHpThreshold
-    ? summonCooldownMs * enragedSummonMultiplier    // retained deprecated key
-    : summonCooldownMs
-if (elapsedSurvivalMs >= nextSummonAtMs) {
-  summonBossMinions(boss)                           // no options → trickle counts
-  nextSummonAtMs += summonInterval
-}
-```
+已实现文件：
 
-Branch B is line-for-line the current `updateBoss` summon block (`enemies.js:763-773`), so
-turning the flag off is a true rollback. `frenzy*` keys and `exposedDamageMultiplier` are
-never read on this branch, and `bossState` only ever holds `"normal"` → `"dying"`.
+- `src/config/balance.js`：复制、10/20 波次和狂乱配置；
+- `src/config/constants.js`：`DEBUG_MODE=true`；
+- `src/scene/combat.js`：暴露增伤与 2.0× cap；
+- `src/scene/enemies.js`：复制、clone、Boss 状态机和两类波次。
 
-### 3.3 Verification
+明确未修改：
 
-**Build (deterministic):**
+- `src/main.js`；
+- Preload、asset manifest 和 fallback；
+- `AudioManager`、`UIManager` 公共接口；
+- `package.json`、lockfile、入口和构建配置；
+- localStorage key、schema 和迁移规则；
+- 六分钟结构、胜负条件和 restart 语义。
+
+## 6. 验证合同
+
+基础命令：
 
 ```powershell
 npm run build
+git diff --check origin/dev/v2..HEAD
+git diff --check
+git status --short --branch
 ```
 
-Expected: Vite production build completes with exit code 0 and no new errors/warnings
-attributable to the boss files. A green build proves compilation only, not gameplay
-correctness (`AGENTS.md:58`).
+浏览器 smoke：
 
-**Manual browser smoke — no automation harness exists in this repo, so every row below
-is manual** (run `npm run dev`, use `DEBUG_MODE` key `B` where noted):
-
-| # | Scenario | Expected observation |
+| # | 场景 | 通过条件 |
 |---|---|---|
-| 1 | Two consecutive full runs to 6:00 | Boss spawns once each run; no leaked state/tint from run 1 into run 2 |
-| 2 | Debug `B` skip to boss | `endSurvivalPhase(true)` path spawns boss; frenzy cadence starts from spawn, not from 0:00 |
-| 3 | Pause/resume in `normal` | Physics + `elapsedSurvivalMs` freeze; frenzy timer does not advance while paused; resumes cleanly |
-| 4 | Pause/resume during `frenzy` | Root/exposed window resumes at the same remaining duration; no double-summon |
-| 5 | Pistol full fight | Boss killable; frenzy window gives pistol a usable exposure burst despite non-lock targeting |
-| 6 | Breacher full fight | 1.5× + `exposedDamageMultiplier` interaction matches the documented cap; stagger still zeroes movement |
-| 7 | Tesla full fight | Overload dump still targets boss; exposure applies to chained boss hits |
-| 8 | Victory | Boss defeat → single `triggerVictory`; no frenzy re-entry after `isDying` |
-| 9 | Defeat during frenzy | Player death still routes to `triggerGameOver`; boss root cleaned by `freezeForGameOver` |
-| 10 | Restart from victory and from defeat | `scene.restart` → title flow; boss fields reset; no residual `bossState`/tint |
-| 11 | localStorage | `scp-survivor-meta` still `{credits, perks}`; no boss data written; old saves load |
-| 12 | `maxActiveEnemies` under frenzy | Enlarged wave respects the cap; no summon overflow |
-| 13 | `frenzyEnabled=false` rollback | No frenzy window ever fires; boss never enters `frenzy` (no tint, no exposed damage); under 50% HP the trickle summon speeds up via `enragedSummonMultiplier` — behavior matches pre-change SCP-049 |
+| 1 | 连续两局到 6:00 | 每局只生成一个 Boss，无状态/tint 泄漏 |
+| 2 | `B` 跳转 | Boss 正确生成，狂乱 cadence 从生成时刻计算 |
+| 3 | normal 暂停/恢复 | Boss 与复制 deadline 不推进 |
+| 4 | frenzy 暂停/恢复 | 剩余狂乱时长保持，无重复波次 |
+| 5 | 手枪完整 Boss 战 | 可击败 Boss，暴露窗口可利用 |
+| 6 | 突破器完整 Boss 战 | 叠加增伤最终不超过 2.0× |
+| 7 | 特斯拉完整 Boss 战 | Boss overload 与暴露增伤正常 |
+| 8 | 胜利 | 只触发一次胜利和学分结算 |
+| 9 | 狂乱期间失败 | 正常进入失败结算并清场 |
+| 10 | 胜利/失败后 restart | 回到标题，无 Boss/clone 残留 |
+| 11 | localStorage | 仍为 `{credits, perks}`，旧数据可读 |
+| 12 | 普通召唤 | 请求 10 个弱化感染职员，上限处安全截断 |
+| 13 | 狂乱召唤 | 请求 20 个全强度混合单位，半径和标记正确 |
+| 14 | 长时间复制压力 | 多代复制不超过 230，帧率和可读性可接受 |
+| 15 | 仅关闭狂乱 | 10 单位普通波次和复制仍存在 |
+| 16 | 完整诊断回退 | 2–3 普通召唤、无狂乱、无复制 |
 
-### 3.4 Risk register
+## 7. 风险与集成门禁
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Frenzy timer drifts across pause (if `this.time.delayedCall` used) | Med | Med | Use `elapsedSurvivalMs` deadlines only (matches audited pause semantics) |
-| `exposedDamageMultiplier` stacks with 1.5× breacher → burst too high | Med | Med | Resolved: multiplicative then hard-capped at 2.0× via `exposedDamageCap` (§3.2.3); smoke row #6 verifies the cap |
-| Boss stuck rooted if frenzy exit missed | Low | High | `stateUntilMs` hard deadline in `updateBoss`; `dying` guard blocks re-entry |
-| Restart leaks tint/state | Low | Med | All state on boss object; `clearFrenzyTint` on exit/defeat; sprite dies with `enemies` group; re-init on spawn (§3.2.4) |
-| Pistol non-lock makes fight unfair without exposure | Med | Med | Frenzy window is the designed equalizer; smoke row #5 gates it |
-| Retiring `enragedSummonMultiplier` breaks the `frenzyEnabled=false` rollback | — | High | **Resolved (Rev 3):** key retained as deprecated fallback and read on the disabled branch (§3.2.1a, §3.2.6); smoke row #13 verifies true rollback |
-| `frenzyEnragedMultiplier` changes existing difficulty feel (enabled path) | Med | Low | Enrage feel preserved via `frenzyEnragedMultiplier:0.65` (§3.2.1); tune in `balance.js`; decision resolved in Rev 2 (§2.3) |
-| Shared-file scope creep (`main.js`/managers/manifest) | Low | High | Contract touches only `enemies.js`, `combat.js`, `balance.js`; none are shared-gate files |
+| 风险 | 等级 | 门禁 |
+|---|---|---|
+| 递归复制快速达到 230，造成帧率或可读性下降 | 高 | 必须完成长时间压力 smoke；230 是预算上限，不是性能通过证明 |
+| 20 个全强度精英/无人机形成不可规避重叠 | 高 | 三把武器分别完成 Boss 战，并验证狂乱环和 2.5 秒暴露窗口可读 |
+| 手枪不强制锁定 Boss | 中 | 手枪完整战必须证明暴露窗口可用 |
+| 暂停或 restart 泄漏状态 | 高 | normal/frenzy 暂停和连续 restart 必测 |
+| `frenzyEnabled=false` 被误解为全回退 | 中 | 审查时同时引用第 4 节完整回退方法 |
+| `DEBUG_MODE=true` 进入发布产物 | 中 | 当前保留；正式 release 前单独决定，不把当前构建称为 release-ready |
+| 玩法与 UI/Platform 接口冲突 | 低 | 当前未改受保护接口；未来表现需求单独申请 |
 
----
+## 8. Rev 4 验证记录与下一步
 
-## Scope, verification, and handoff for this planning wave
+已完成：
 
-- **This wave (Rev 3):** revision of the proposal document only, per Project Lead
-  review. Direction approved; writing `src/` is **not** yet approved.
-- **Files changed this wave:** this proposal only
-  (`docs/superpowers/plans/2026-07-10-v2-scp049-boss-proposal.md`).
-- **`src/` changes:** none. No push, no merge.
-- **Resolved this revision (Rev 3):** rollback-contract contradiction fixed —
-  `enragedSummonMultiplier: 0.6` retained as deprecated fallback (§2.3, §3.2.1);
-  `frenzyEnabled` two-branch rule (§3.2.1a); `updateBoss()` two branches spelled out
-  (§3.2.6); rollback smoke row #13 and updated risk register.
-- **Resolved earlier (Rev 2):** replace decision (§2.3, §3.1); config values + rationale
-  (§3.2.1); `summonBossMinions` frenzy interface (§3.2.2); exposed × breacher stacking +
-  2.0× cap (§3.2.3); `handleBossDefeat` `bossState="dying"` + frenzy tint lifecycle (§3.2.4).
-- **Verification run this wave:** documentation only; no build/gameplay run was required
-  or performed for a docs-only change. The build/smoke matrix in §3.3 is the *proposed*
-  verification for the future implementation wave.
-- **Requested next action:** Project Lead re-review of the revised Option C contract
-  before any `src/` work begins.
+- `npm run build`：退出码 0；存在既有 bundle-size warning；
+- `git diff --check origin/dev/v2..HEAD`：退出码 0；
+- worktree `git diff --check`：退出码 0；
+- 浏览器验证标题 → 武器选择 → 开始任务 → `B` 跳 Boss；
+- Boss 正确生成，HUD 更新；
+- Boss 出现后立即 `ESC` 可在 100/100 HP 打开暂停界面；
+- 浏览器控制台未观察到 warning/error；
+- 静止测试确认五次 20 点接触伤害会导致正常失败结算。
+
+尚未完成、因此不得声称玩法已全面通过：
+
+- 三把武器的完整 Boss 战；
+- 实际 10/20 波次数量、混合类型与 190px 环的逐项观察；
+- 达到或接近 230 敌人的持续性能测试；
+- 狂乱期间胜利/失败；
+- 连续两次 restart；
+- persistence 和完整诊断回退。
+
+Rev 4 文档提交后，下一步是完成这些 gameplay smoke，再决定是否允许
+`dev/v2` push 和进入 `main` 集成队列。
