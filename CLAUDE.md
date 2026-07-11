@@ -1,48 +1,59 @@
-# Claude Code 执行入口
+# Claude Code 项目入口
 
-`AGENTS.md` 是本仓库所有 Agent 的最高协作政策。本文件只规定 Claude Code 的具体执行方式，不重复定义统一规则；两者冲突时，以 `AGENTS.md` 为准，除非用户给出更新的直接指令。
+Claude Code 必须同时遵守：
+
+1. 用户的最新直接指令；
+2. `AGENTS.md` 的项目方向、权限边界和 GPT 审查标准；
+3. 当前分支对应的 `docs/agents/*.md`；
+4. 适用的 Superpowers skill。
+
+项目规则优先于 Superpowers 的通用流程。Claude 不得用“skill 要求”突破分支职责、共享文件门禁或 Git 权限。
 
 ## 开始任务
 
-在进行任何分析、计划、命令或修改前：
+执行任何分析或修改前：
 
-1. 完整读取 `AGENTS.md`。
-2. 执行其中规定的启动检查，确认当前分支、worktree 和 Git 状态。
-3. 按分支路由读取对应指南及其要求的权威文档。
-4. 确认任务属于当前分支职责；否则保持只读并报告 Cursor Lead。
-5. 按 `AGENTS.md` 的六个判断问题，将任务归类为 Level 0、Level 1 或 Level 2。
+```powershell
+Get-Location
+git branch --show-current
+git status --short --branch
+git worktree list
+```
 
-Claude Code 是日常执行 Agent，不是外部 GPT，也不得暗示自己代表或已经调用 ChatGPT 5.6。没有真实跨软件接口时，外部审查只能由 Claude 生成精简审查包，再由用户手动转发。
+随后完整读取 `AGENTS.md`、当前分支指南、指南要求的权威文档，以及当前已批准计划。分支未知或 worktree 意外不干净时保持只读并报告。
 
-## 分级执行行为
+## 使用 Superpowers
 
-### Level 0
+需求设计、计划、实施、调试、代码审查、worktree 隔离和分支收尾，优先调用对应的 Superpowers skill，不在本文件中复制其详细步骤。
 
-直接完成分析、实现、测试、内部审查、commit 和阶段报告。普通 Bug、小型功能、局部 UI、已有设计下的补全、构建错误、测试和文档工作不应升级给 GPT。
+主 Agent 负责自动判断串行或并行、安排子 Agent、复核结果并组织修复；修改相同文件、共享接口或存在依赖的任务必须串行。不要要求用户手动维护多个 Agent 窗口，也不要重复讨论权威文档中已经确认的决定。
 
-### Level 1
+## 外部 GPT 判断
 
-继续执行任务，并用简短说明记录值得用户了解的取舍。除非用户要求，否则不要生成 GPT 审查包或长篇项目报告。
+任务开始时按 `AGENTS.md` 判断 Level 0、Level 1 或 Level 2：
 
-### Level 2
+- Level 0：使用本地 Agent 与 Superpowers 完成开发和验证。
+- Level 1：继续执行，在报告中简短说明取舍。
+- Level 2：暂停不可逆或大范围实施，继续安全的分析与测试，并生成 `AGENTS.md` 规定的精简审查包。
 
-暂停不可逆、大范围或会锁定重大方向的实施，立即说明触发了 `AGENTS.md` 中的哪项条件。继续完成只读分析、复现、测试、影响范围确认和备选方案整理，然后按统一模板生成不超过 800 字的 GPT 审查包。
+Claude Code 不是外部 ChatGPT 5.6。没有真实接口时不得声称已经调用 GPT；用户返回 GPT 意见后，必须先用仓库事实和测试验证。
 
-Level 2 不是停止所有工作的理由。能够安全回退、不会扩大风险且有助于决策的准备工作应继续完成。
+## 构建与验证
 
-## 与 Cursor Lead 协作
+最低基础检查为：
 
-- 接受 Cursor Lead 分配的任务、分支和验收标准，不自行切换职责或把任务转交给外部 GPT。
-- 发现跨分支依赖、共享文件冲突、重大方案分歧或测试与审查结论冲突时，向 Cursor Lead 升级。
-- 子 Agent 必须遵守与主 Agent 相同的启动、分级、分支和验证规则；主 Agent 对子 Agent 的结果负复核责任。
-- `refactor/ui-foundation` 的维护必须由 Cursor Lead 临时指定，不得把它当作自由开发分支。
+```powershell
+npm run build
+git diff --check
+git status --short --branch
+```
 
-## 处理外部 GPT 回复
+此外必须运行与变更直接相关的测试或 smoke。玩法改动检查实际游玩、胜负、暂停、restart 和持久化；UI/Art 检查目标页面、交互、viewport、资源 key 和控制台；客户端改动检查受影响平台的启动、生命周期、离线、权限和打包。没有执行的项目必须明确写“未测试”。
 
-用户转回 GPT 意见后，先根据真实代码、文档、Git diff 和测试验证其中的假设，再指出缺失上下文。只把验证成立的建议拆成具体、可测试的小任务，并在实施前检查分支边界和已有决策。GPT 意见与仓库事实冲突时，以仓库事实和测试为准，并明确告诉用户；不得跳过本地验证。
+## Git 与交接
 
-## 报告和 Git 边界
-
-使用 `AGENTS.md` 规定的 800 字以内阶段报告格式，并包含实施交接所需的分支、HEAD、commit、文件、契约、验证、风险和最终 Git 状态。
-
-日常 commit 不需要外部 GPT 审查，但 merge、push、删除、历史重写、发布和跨 worktree 修改仍需要 Cursor Lead 或项目所有者对该具体操作的明确授权。不得因任务看起来已经完成而自行推断授权。
+- 只修改当前 worktree 中属于当前分支职责的文件。
+- 不覆盖、stash、移动、删除或重置用户及其他 Agent 的修改。
+- 日常 commit 必须范围明确，并记录验证结果。
+- merge、push、历史重写、分支或 worktree 删除、release 和发布需要用户或主 Agent 对具体操作的明确授权。
+- 完成报告应简短列出分支、HEAD、commit、修改文件、验证结果、风险、下一步和 GPT 等级。
