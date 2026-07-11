@@ -11,6 +11,10 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import {
+  cloneEnemyAt as cloneEnemyForScene,
+  tryReplicateEnemy as tryReplicateEnemyForScene
+} from "./enemyReplication.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -358,52 +362,15 @@ export const enemiesMixin = {
 
 
   tryReplicateEnemy(enemy) {
-    if (!enemy.active || enemy.isDying || enemy.isBoss) {
-      return;
-    }
-    if ((enemy.nextReplicateAtMs ?? 0) > this.elapsedSurvivalMs) {
-      return;
-    }
-    // Schedule the next clone regardless, so a capped-out field still spaces
-    // out its attempts instead of retrying every frame.
-    enemy.nextReplicateAtMs =
-      this.elapsedSurvivalMs +
-      Phaser.Math.Between(
-        BALANCE.enemy.replication.intervalMinMs,
-        BALANCE.enemy.replication.intervalMaxMs
-      );
-
-    if (this.enemies.getLength() >= BALANCE.enemy.replication.maxTotalEnemies) {
-      return;
-    }
-
-    const offsetX = Phaser.Math.Between(-24, 24);
-    const offsetY = Phaser.Math.Between(-24, 24);
-    const spawnX = Phaser.Math.Clamp(enemy.x + offsetX, 24, WORLD_WIDTH - 24);
-    const spawnY = Phaser.Math.Clamp(enemy.y + offsetY, 24, WORLD_HEIGHT - 24);
-    const clone = this.cloneEnemyAt(enemy, spawnX, spawnY);
-    if (clone && enemy.isBossMinion) {
-      clone.isBossMinion = true;
-    }
+    return tryReplicateEnemyForScene(this, enemy, BALANCE, Phaser.Math, {
+      width: WORLD_WIDTH,
+      height: WORLD_HEIGHT
+    });
   },
 
 
   cloneEnemyAt(source, x, y) {
-    const scaling = { healthMultiplier: 1, damageMultiplier: 1 };
-
-    if (source.isElite && source.eliteType) {
-      // biomass clones must not keep splitting into children on death, but a
-      // straight elite clone is fine; spawnEliteAtEdge sets canSplit for biomass.
-      return this.spawnEliteAtEdge(source.eliteType, scaling, { x, y });
-    }
-
-    const config = BALANCE.enemy.types[source.enemyType];
-    if (!config) {
-      return null;
-    }
-    const clone = this.enemies.create(x, y, config.textureKey);
-    this.initializeEnemyFromConfig(clone, config, scaling, false);
-    return clone;
+    return cloneEnemyForScene(this, source, x, y, BALANCE);
   },
 
 
