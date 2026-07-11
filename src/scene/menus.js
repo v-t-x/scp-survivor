@@ -519,8 +519,8 @@ export const menusMixin = {
     this.startMissionButton.setFillStyle(
       canStart
         ? this.weaponSelectButtonHovered
-          ? THEME.border.focus
-          : THEME.signal.info
+          ? THEME.signal.info
+          : THEME.surface.raised
         : THEME.surface.raised,
       1
     );
