@@ -46,6 +46,51 @@ export const THEME = {
     }
   },
 
+  surface: {
+    facility: 0x080c16,
+    panel: 0x141c2f,
+    raised: 0x243049,
+    overlay: 0x000000
+  },
+
+  text: {
+    primary: "#e2e8ff",
+    secondary: "#c5d2ee",
+    muted: "#8fa2c8",
+    critical: "#ff8a8a",
+    contained: "#a7f3d0",
+    onButton: "#ffffff"
+  },
+
+  signal: {
+    info: 0x6f91d8,
+    warning: 0xffdf9a,
+    danger: 0xff6b6b,
+    contained: 0x54d67b,
+    anomaly: 0xc8a0ff
+  },
+
+  border: {
+    default: 0x40557f,
+    focus: 0x6f91d8,
+    warning: 0xffb347,
+    critical: 0xff6b6b
+  },
+
+  motion: {
+    stableMs: 120,
+    warningMs: 800,
+    anomalyJitterPx: 3,
+    criticalBannerMs: 3200
+  },
+
+  font: {
+    display: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+    body: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
+    mono: 'Consolas, "Courier New", monospace',
+    label: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif'
+  },
+
   // Font sizes as used in Phaser text styles.
   fontSize: {
     stats: "18px",
