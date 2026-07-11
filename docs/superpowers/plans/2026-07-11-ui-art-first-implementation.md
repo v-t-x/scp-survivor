@@ -204,4 +204,3 @@ npm run build
 - [ ] **步骤 2：交付报告**
 
 报告三个 commit、文件范围、实际 build 与 smoke 结果、控制台情况、未测试路径和最终 `git status`。不得自行合并。
-
