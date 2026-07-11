@@ -8,9 +8,11 @@
 >
 > **初始审计基线：**`12e13d3`
 >
-> **Rev 4 实现基线：**`60be275`
+> **Rev 4 代码验证基线：**`935369e`
 >
-> **实现 commits：**`70786b5`、`72cdae5`、`60be275`
+> **实现 commits：**`70786b5`、`72cdae5`、`60be275`、`01b4ccf`、`935369e`
+>
+> **合同文档 commit：**`ed0aa63`
 > **来源计划：**`docs/superpowers/plans/2026-07-10-v2-scp049-boss-planning.md`
 
 本提案现在描述已经确认的产品意图和真实实现，不再把当前 `src/` 变更标记为
@@ -186,7 +188,10 @@ BALANCE.enemy.replication.enabled = false;
 - `src/config/balance.js`：复制、10/20 波次和狂乱配置；
 - `src/config/constants.js`：`DEBUG_MODE=true`；
 - `src/scene/combat.js`：暴露增伤与 2.0× cap；
-- `src/scene/enemies.js`：复制、clone、Boss 状态机和两类波次。
+- `src/scene/enemies.js`：复制调度、Boss 状态机和两类波次；
+- `src/scene/enemyReplication.js`：普通、精英与生物质子体的递归复制合同；
+- `src/scene/bossRules.js`：波次、状态动作与 Boss 增伤纯规则；
+- `test/enemy-replication.test.js`、`test/boss-rules.test.js`：递归复制和 Boss 压力合同回归测试。
 
 明确未修改：
 
@@ -246,6 +251,7 @@ git status --short --branch
 已完成：
 
 - `npm run build`：退出码 0；存在既有 bundle-size warning；
+- `node --test`：11/11 通过，覆盖两代生物质子体复制、Boss minion 标记传播、230 单一上限、10/20 波次、190px 半径、状态 deadline、完整回退与 2.0× cap；
 - `git diff --check origin/dev/v2..HEAD`：退出码 0；
 - worktree `git diff --check`：退出码 0；
 - 浏览器验证标题 → 武器选择 → 开始任务 → `B` 跳 Boss；
@@ -253,8 +259,9 @@ git status --short --branch
 - Boss 出现后立即 `ESC` 可在 100/100 HP 打开暂停界面；
 - 浏览器控制台未观察到 warning/error；
 - 静止测试确认五次 20 点接触伤害会导致正常失败结算。
+- 项目所有者完成手动试玩并反馈未发现问题；该结论作为定性 gameplay smoke 与体验验收，不代表已经获得 230 敌人场景的量化 FPS 基准。
 
-尚未完成、因此不得声称玩法已全面通过：
+仍未形成量化或逐项留档、因此不得扩大验证结论：
 
 - 三把武器的完整 Boss 战；
 - 实际 10/20 波次数量、混合类型与 190px 环的逐项观察；
@@ -263,5 +270,6 @@ git status --short --branch
 - 连续两次 restart；
 - persistence 和完整诊断回退。
 
-Rev 4 文档提交后，下一步是完成这些 gameplay smoke，再决定是否允许
-`dev/v2` push 和进入 `main` 集成队列。
+项目所有者已接受当前手动试玩结果，自动化合同测试与独立代码复审也已通过，因此允许
+`dev/v2` 进入 push 和 `main` 集成队列。上述未量化项目继续作为已知验证边界保留，不能在后续报告中表述为
+“已完成 230 敌人性能基准”或“所有逐项 smoke 均有记录”。
