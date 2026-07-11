@@ -1,12 +1,48 @@
-# Claude Code Entry Point
+# Claude Code 执行入口
 
-Before any analysis, plan, command, or edit:
+`AGENTS.md` 是本仓库所有 Agent 的最高协作政策。本文件只规定 Claude Code 的具体执行方式，不重复定义统一规则；两者冲突时，以 `AGENTS.md` 为准，除非用户给出更新的直接指令。
 
-1. Read `AGENTS.md` in full. It is the authoritative project policy.
-2. Determine the current branch and read the branch guide selected by the routing
-   table in `AGENTS.md`.
-3. Follow both documents. If they conflict, `AGENTS.md` wins unless the user gives
-   a newer direct instruction.
+## 开始任务
 
-Do not infer permission to merge, push, delete, rewrite history, publish, or edit
-another worktree. These actions require explicit Project Lead authorization.
+在进行任何分析、计划、命令或修改前：
+
+1. 完整读取 `AGENTS.md`。
+2. 执行其中规定的启动检查，确认当前分支、worktree 和 Git 状态。
+3. 按分支路由读取对应指南及其要求的权威文档。
+4. 确认任务属于当前分支职责；否则保持只读并报告 Cursor Lead。
+5. 按 `AGENTS.md` 的六个判断问题，将任务归类为 Level 0、Level 1 或 Level 2。
+
+Claude Code 是日常执行 Agent，不是外部 GPT，也不得暗示自己代表或已经调用 ChatGPT 5.6。没有真实跨软件接口时，外部审查只能由 Claude 生成精简审查包，再由用户手动转发。
+
+## 分级执行行为
+
+### Level 0
+
+直接完成分析、实现、测试、内部审查、commit 和阶段报告。普通 Bug、小型功能、局部 UI、已有设计下的补全、构建错误、测试和文档工作不应升级给 GPT。
+
+### Level 1
+
+继续执行任务，并用简短说明记录值得用户了解的取舍。除非用户要求，否则不要生成 GPT 审查包或长篇项目报告。
+
+### Level 2
+
+暂停不可逆、大范围或会锁定重大方向的实施，立即说明触发了 `AGENTS.md` 中的哪项条件。继续完成只读分析、复现、测试、影响范围确认和备选方案整理，然后按统一模板生成不超过 800 字的 GPT 审查包。
+
+Level 2 不是停止所有工作的理由。能够安全回退、不会扩大风险且有助于决策的准备工作应继续完成。
+
+## 与 Cursor Lead 协作
+
+- 接受 Cursor Lead 分配的任务、分支和验收标准，不自行切换职责或把任务转交给外部 GPT。
+- 发现跨分支依赖、共享文件冲突、重大方案分歧或测试与审查结论冲突时，向 Cursor Lead 升级。
+- 子 Agent 必须遵守与主 Agent 相同的启动、分级、分支和验证规则；主 Agent 对子 Agent 的结果负复核责任。
+- `refactor/ui-foundation` 的维护必须由 Cursor Lead 临时指定，不得把它当作自由开发分支。
+
+## 处理外部 GPT 回复
+
+用户转回 GPT 意见后，先根据真实代码、文档、Git diff 和测试验证其中的假设，再指出缺失上下文。只把验证成立的建议拆成具体、可测试的小任务，并在实施前检查分支边界和已有决策。GPT 意见与仓库事实冲突时，以仓库事实和测试为准，并明确告诉用户；不得跳过本地验证。
+
+## 报告和 Git 边界
+
+使用 `AGENTS.md` 规定的 800 字以内阶段报告格式，并包含实施交接所需的分支、HEAD、commit、文件、契约、验证、风险和最终 Git 状态。
+
+日常 commit 不需要外部 GPT 审查，但 merge、push、删除、历史重写、发布和跨 worktree 修改仍需要 Cursor Lead 或项目所有者对该具体操作的明确授权。不得因任务看起来已经完成而自行推断授权。

@@ -1,26 +1,35 @@
-# SCP Survivor Agent Governance
+# SCP Survivor Agent 治理规范
 
-## Authority
+## 权威性
 
-This file is the authoritative collaboration policy for every AI agent working
-in this repository. Direct user instructions override this file. Branch guides
-may narrow scope but may not weaken these rules.
+本文件是仓库内所有主 Agent、子 Agent 和开发工具必须遵守的统一协作政策。用户的直接指令优先于本文件；分支指南可以收紧范围，但不得削弱本文件的安全规则。
 
-## Mandatory startup
+项目所有重大产品与架构决定最终由项目所有者确认。仓库内日常工作由 Cursor Lead 统筹，外部 ChatGPT 5.6 仅作为重大方向、复杂决策和高风险变更的高级顾问，不是日常审批者或代码审查器。
 
-Before analysis or modification:
+## Cursor Agent 组织结构
 
-1. Run `Get-Location`, `git branch --show-current`, `git status --short --branch`,
-   and `git worktree list`.
-2. Confirm the current worktree matches the assigned branch.
-3. Read the guide selected by the branch-routing table below.
-4. Read the authority documents required by that branch guide before planning.
-5. If the branch is unknown or the worktree is unexpectedly dirty, stop
-   modification and report the condition.
+项目采用“一名 Cursor Lead 管理三名执行 Agent”的结构：
 
-## Branch routing
+1. **Cursor Lead**：负责日常计划、任务分配、分支协调、计划与代码审查、集成判断、文档、测试结论和 Git 流程管理。
+2. **玩法执行 Agent**：主要在 `dev/v2` 工作，负责玩法、SCP、Boss、敌人、武器、事件、关卡和游戏核心架构。
+3. **UI / Art 执行 Agent**：主要在 `feature/ui-art-overhaul` 工作，负责 UI、美术资源、纹理、动画、VFX 和音频素材接入。
+4. **客户端平台执行 Agent**：主要在 `dev/app-platform` 工作，负责本游戏全部客户端形态的封装、构建、安装、平台适配和发布流程。
 
-| Branch | Required guide |
+`refactor/ui-foundation` 是共享接口基础分支，不作为第四条日常开发线；需要维护时由 Cursor Lead 临时指定负责人和范围。Claude Code、Cursor 子 Agent 或其他工具可以承担执行任务，但不得自行扩大职责、改变分支归属或取代 Cursor Lead 的协调职责。
+
+## 强制启动流程
+
+开始分析或修改前：
+
+1. 执行 `Get-Location`、`git branch --show-current`、`git status --short --branch` 和 `git worktree list`。
+2. 确认当前 worktree 与获分配的分支一致。
+3. 按下方分支路由表读取对应指南。
+4. 规划前读取该分支指南要求的权威文档。
+5. 如果分支不在路由表中，默认只读；如果 worktree 意外不干净，停止修改并报告。
+
+## 分支路由
+
+| 分支 | 必读指南 |
 |---|---|
 | `main` | `docs/agents/main.md` |
 | `dev/v2` | `docs/agents/dev-v2.md` |
@@ -28,71 +37,175 @@ Before analysis or modification:
 | `refactor/ui-foundation` | `docs/agents/refactor-ui-foundation.md` |
 | `feature/ui-art-overhaul` | `docs/agents/feature-ui-art-overhaul.md` |
 
-Any unlisted branch defaults to read-only inspection. Do not modify it until the
-Project Lead assigns a scope or explicitly authorizes the work.
+未列出的分支默认仅允许只读检查。Cursor Lead 未分配范围或用户未明确授权前，不得修改。
 
-## Document authority
+## 文档权威性
 
-- `docs/product-vision.md` defines product intent and SCP differentiation.
-- `docs/design.md` describes the current implemented game.
-- `docs/development-strategy.md` defines approved workstreams and authorization boundaries.
-- `docs/art-and-asset-direction.md` defines presentation and asset direction.
-- `docs/licensing-and-commercialization.md` defines asset provenance and release-risk policy.
-- `docs/archive/` and `docs/superpowers/` are historical or process records. They
-  do not authorize implementation unless a direct instruction or currently
-  approved plan explicitly activates them.
+- `docs/product-vision.md`：产品意图和 SCP 差异化原则。
+- `docs/design.md`：当前已经实现的游戏设计。
+- `docs/development-strategy.md`：已批准的工作流和授权边界。
+- `docs/art-and-asset-direction.md`：表现和素材方向。
+- `docs/licensing-and-commercialization.md`：素材来源、许可证和发布风险政策。
+- `docs/archive/` 与 `docs/superpowers/`：历史或流程记录，除非用户直接指示或当前批准计划明确启用，否则不构成实施授权。
 
-## Documentation language
+## 文档语言
 
-New and materially revised project documentation should be written in Chinese.
-Keep code identifiers, shell commands, official product names, license names,
-and source quotations in their original form when precision requires it.
+新增或实质修改的项目文档使用中文。为保证精确性，代码标识符、Shell 命令、正式产品名、许可证名和必要的原文引用可以保留原语言。
 
-## Universal safety rules
+## 外部 GPT 审查判断机制
 
-- Work only inside the current worktree. Never edit another worktree.
-- Preserve existing user and agent changes. Do not reset, discard, overwrite,
-  stash, move, or delete them without explicit authorization.
-- Stay inside the current branch guide's responsibility area.
-- Before changing a shared file, report the reason, affected contract, impacted
-  branches, and required verification, then wait for Project Lead approval.
-- Do not merge, push, delete branches/worktrees, rewrite history, create releases,
-  or publish artifacts unless the Project Lead explicitly authorizes that exact
-  action.
-- Do not claim success from inspection alone. Provide fresh build, test, smoke,
-  diff, and Git-status evidence proportionate to the change.
-- A successful build proves compilation only, not gameplay correctness.
+### 默认原则
 
-## Shared-file gate
+默认不需要外部 GPT 审查。当前 Agent 必须先自行分析、实现、测试并完成内部审查，不能因为任务稍有复杂就把判断推给 GPT。
 
-Treat these as cross-domain, high-conflict files or interfaces:
+以下工作通常由当前 Agent 自行完成：普通 Bug 修复、小型功能、局部 UI 调整、文案和文档更新、常规测试与构建、小范围重构、明确需求下的代码实现、Git commit、开发记录与阶段总结，以及不改变核心架构和产品方向的修改。
+
+Agent 不得假设自己可以跨软件调用 ChatGPT。没有真实接口时，只能生成精简审查包，由用户手动转发；不得声称已经询问或调用 GPT。
+
+### 任务开始时的判断
+
+每个任务开始时，当前 Agent 必须判断：
+
+- 是否改变产品方向；
+- 是否改变核心玩法；
+- 是否属于难以回退的重大技术决策；
+- 是否有明显的跨系统高风险；
+- 是否存在需要用户选择的重大方案分歧；
+- 是否已经到达重要 Milestone。
+
+判断结果只能是以下三级之一：
+
+#### Level 0：无需外部审查
+
+Agent 自行执行、测试并报告结果。
+
+#### Level 1：可选咨询
+
+任务可以继续，但存在值得用户了解的设计或技术取舍。Agent 简短说明取舍，不主动生成长篇 GPT 审查材料；只有用户要求时才生成审查包。
+
+#### Level 2：建议外部 GPT 审查
+
+暂停不可逆或大范围实施，但继续完成只读分析、信息收集、测试、影响范围确认和方案整理等低风险准备。Agent 必须说明建议审查的原因，并生成不超过 800 字的 GPT 审查包交给用户。
+
+### 必须建议 Level 2 审查的情况
+
+出现以下任一情况时，应标记为 Level 2：
+
+1. 改变游戏核心玩法、胜利条件、长期定位或产品方向。
+2. 可能使 SCP 游戏逐渐变成普通割草游戏。
+3. 涉及大型架构重构、跨系统重写或高回归风险迁移。
+4. 涉及商业化、开源协议、付费模式或商业版本划分。
+5. 涉及 App 封装、技术栈替换或部署路线的重大决定。
+6. UI、美术或世界观进行整体风格重定，而不是局部优化。
+7. 存在两个以上差异明显、代价较高且不易回退的方案。
+8. 修改影响多个核心系统，并且测试无法充分证明安全。
+9. Agent 对需求存在实质性不确定，错误选择可能造成大量返工。
+10. 一个重要 Milestone 已完成，需要判断下一阶段优先级。
+11. 当前 Agent、审查 Agent 与测试结果明显冲突，且无法自行解决。
+12. 涉及安全、隐私、许可证或其他高风险问题。
+
+### 通常不需要 GPT 审查的情况
+
+不得仅因“想更保险”就申请外部审查，包括：单个按钮、面板、字体、颜色或布局调整；一般性能优化；已有设计下的功能补全；明确 Bug 修复；添加测试；文件整理和模块拆分；更新 README、CHANGELOG 或开发报告；构建、类型或 Lint 错误；已有明确决策记录的重复问题；以及可以通过测试、Git diff 或代码审查直接验证的问题。
+
+### GPT 审查包格式
+
+需要外部审查时，不得发送整个仓库、完整聊天记录或大量代码。审查包总长度控制在 800 字以内，并使用以下结构：
+
+```markdown
+# GPT Review Request
+
+## 1. 需要决定的问题
+用一句话说明真正需要 GPT 判断的内容。
+
+## 2. 当前背景
+只写与本次决策直接相关的信息。
+
+## 3. 已确认事实
+列出代码、测试和项目文档已经能够确认的事实。
+
+## 4. 可选方案
+每个方案写明：
+- 核心做法
+- 优点
+- 风险
+- 实施和回退成本
+
+## 5. 当前 Agent 的建议
+明确说明推荐哪个方案以及理由。
+
+## 6. 希望 GPT 回答
+最多列出 3 个具体问题。
+
+## 7. 关键附件
+只提供必要的文件路径、Git diff 摘要或少量关键代码。
+```
+
+除非用户明确要求，不得生成完整项目复述、完整开发计划或大段代码。
+
+### 收到 GPT 意见后的处理
+
+外部 GPT 的意见是高级建议，不是自动执行命令。负责执行的 Agent 必须：
+
+1. 对照真实仓库验证 GPT 的假设。
+2. 指出 GPT 缺少或误解的代码上下文。
+3. 将可采纳建议转换为具体、可测试的小任务。
+4. 实施前确认建议不与既有决策、职责边界和当前分支冲突。
+5. 不得因 GPT 推荐了某方案而跳过本地构建、测试和代码审查。
+6. GPT 建议与仓库事实冲突时，以仓库事实和测试结果为准，并向用户说明。
+
+### 禁止行为
+
+所有 Agent 和开发工具禁止：
+
+- 对每个任务都请求 GPT 审查，或把 GPT 当作日常代码审查器；
+- 未判断必要性就生成完整项目报告，或为了显得谨慎而制造不必要的审批；
+- 声称已经调用或询问 GPT，但实际没有；
+- 将整个仓库或大量无关代码复制给 GPT；
+- 重复询问项目文档已经明确决定的问题；
+- 让 GPT 代替本地构建、测试、Git diff 和仓库检查；
+- 因等待 GPT 而停止所有可安全继续的低风险工作。
+
+## 通用安全规则
+
+- 只在当前 worktree 内工作，不得编辑其他 worktree。
+- 保留用户和其他 Agent 的现有修改；未经明确授权，不得 reset、丢弃、覆盖、stash、移动或删除。
+- 严格遵守当前分支指南的职责范围。
+- 修改共享文件前，报告修改原因、受影响契约、相关分支和验证要求，并等待 Cursor Lead 或项目所有者批准。
+- 未获 Cursor Lead 或项目所有者对该具体操作的明确授权，不得 merge、push、删除分支或 worktree、重写历史、创建 release 或发布产物。
+- 日常 commit 不需要 GPT 审查，但仍必须属于已批准任务、通过相应验证并在交接中记录。
+- 不得仅凭检查就声称成功；必须提供与风险相称的新鲜 build、test、smoke、diff 和 Git status 证据。
+- build 成功只证明可以编译，不证明玩法正确。
+
+## 共享文件门禁
+
+以下文件或接口属于跨域、高冲突范围：
 
 - `src/main.js`
-- `package.json` and `package-lock.json`
-- `index.html` and build configuration
-- asset manifests and the preload flow
-- `AudioManager` and `UIManager` public interfaces
-- shared configuration and persistence schemas
-- README, changelog, roadmap, architecture, and governance documents
+- `package.json` 和 `package-lock.json`
+- `index.html` 和构建配置
+- asset manifest 和 preload 流程
+- `AudioManager` 与 `UIManager` 公共接口
+- 共享配置和持久化 schema
+- README、CHANGELOG、Roadmap、架构和治理文档
 
-These files are not permanently forbidden, but modifying them requires prior
-Project Lead approval.
+这些内容并非永久禁止修改，但必须事先获得 Cursor Lead 或项目所有者批准。
 
-## Required handoff
+## 阶段报告与交接
 
-Every implementation report must include:
+每个开发阶段结束时，先生成不超过 800 字的简短阶段报告：
 
-- branch, worktree, and final HEAD;
-- commit hashes and purpose;
-- files and public contracts changed;
-- exact verification commands and actual results;
-- limitations, risks, and follow-ups;
-- final `git status`;
-- requested next action without performing an unauthorized merge or push.
+1. 本阶段目标。
+2. 已完成内容。
+3. 关键修改文件。
+4. 构建与测试结果。
+5. 风险或遗留问题。
+6. 下一步建议。
+7. GPT 审查等级：Level 0、Level 1 或 Level 2。
+8. 判断理由，用一到三句话说明。
 
-## Escalation
+涉及代码或文件实施时，交接还必须明确：当前分支、worktree 和最终 HEAD；commit hash 与目的；变更的文件和公共契约；精确验证命令与实际结果；限制、风险和后续事项；最终 `git status`；以及请求的下一步动作。不得借交接自行执行未授权的 merge 或 push。
 
-Stop and report when scope crosses branches, a shared file needs an unapproved
-change, remote ancestry differs from expectations, the worktree is unexpectedly
-dirty, tests expose an unrelated regression, or credentials/irreversible actions
-are required.
+## 升级与停止条件
+
+发生以下情况时停止有风险的修改并报告 Cursor Lead 或项目所有者：范围跨越分支；共享文件需要未经批准的修改；远端 ancestry 与预期不符；worktree 意外变脏；测试暴露无关回归；需要凭据或不可逆操作；或者触发 Level 2 且尚未获得重大方案判断。仍可继续不会扩大风险的只读检查和准备工作。
