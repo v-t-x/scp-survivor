@@ -11,45 +11,50 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { THEME } from "../ui/theme.js";
 
 // Domain mixin: hud. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const hudMixin = {
 
   createUI() {
     this.statsText = this.add.text(14, 12, "", {
-      fontSize: "18px",
-      color: "#e2e8ff"
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.stats,
+      color: THEME.text.primary
     });
     this.statsText.setDepth(45);
     this.statsText.setScrollFactor(0);
 
     this.levelText = this.add.text(14, 40, "", {
-      fontSize: "18px",
-      color: "#a7f3d0"
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.level,
+      color: THEME.text.contained
     });
     this.levelText.setDepth(45);
     this.levelText.setScrollFactor(0);
 
-    this.xpBarBackground = this.add.rectangle(15, 72, 250, 14, 0x223344, 1);
+    this.xpBarBackground = this.add.rectangle(15, 72, 250, 14, THEME.surface.raised, 1);
     this.xpBarBackground.setOrigin(0, 0);
     this.xpBarBackground.setDepth(45);
     this.xpBarBackground.setScrollFactor(0);
 
-    this.xpBarFill = this.add.rectangle(16, 73, 248, 12, 0x54d67b, 1);
+    this.xpBarFill = this.add.rectangle(16, 73, 248, 12, THEME.signal.contained, 1);
     this.xpBarFill.setOrigin(0, 0);
     this.xpBarFill.setDepth(46);
     this.xpBarFill.setScrollFactor(0);
 
     this.xpText = this.add.text(272, 67, "", {
-      fontSize: "16px",
-      color: "#e2e8ff"
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.xp,
+      color: THEME.text.primary
     });
     this.xpText.setDepth(45);
     this.xpText.setScrollFactor(0);
 
     this.muteText = this.add.text(GAME_WIDTH - 14, 14, "", {
-      fontSize: "14px",
-      color: "#d5d5ff"
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.mute,
+      color: THEME.text.secondary
     });
     this.muteText.setOrigin(1, 0);
     this.muteText.setDepth(45);
@@ -57,19 +62,20 @@ export const hudMixin = {
     this.updateMuteText();
 
     // Pause button (top-right, below the mute readout). Also bound to ESC.
-    this.pauseButton = this.add.rectangle(GAME_WIDTH - 20, 44, 96, 30, 0x243049, 0.9);
+    this.pauseButton = this.add.rectangle(GAME_WIDTH - 20, 44, 96, 30, THEME.surface.raised, 0.9);
     this.pauseButton.setOrigin(1, 0);
-    this.pauseButton.setStrokeStyle(1, 0x5f78b0);
+    this.pauseButton.setStrokeStyle(1, THEME.border.default);
     this.pauseButton.setDepth(45);
     this.pauseButton.setScrollFactor(0);
     this.pauseButton.setInteractive({ useHandCursor: true });
-    this.pauseButton.on("pointerover", () => this.pauseButton.setFillStyle(0x33436a, 0.95));
-    this.pauseButton.on("pointerout", () => this.pauseButton.setFillStyle(0x243049, 0.9));
+    this.pauseButton.on("pointerover", () => this.pauseButton.setFillStyle(THEME.border.default, 0.95));
+    this.pauseButton.on("pointerout", () => this.pauseButton.setFillStyle(THEME.surface.raised, 0.9));
     this.pauseButton.on("pointerdown", () => this.togglePause());
 
     this.pauseButtonLabel = this.add.text(GAME_WIDTH - 68, 49, "暂停 (ESC)", {
-      fontSize: "13px",
-      color: "#dfe8ff"
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.pauseLabel,
+      color: THEME.text.onButton
     });
     this.pauseButtonLabel.setOrigin(0.5, 0);
     this.pauseButtonLabel.setDepth(46);
@@ -79,16 +85,18 @@ export const hudMixin = {
     this.pickupRadiusIndicator.setDepth(4);
 
     this.weaponHudText = this.add.text(14, 98, "", {
-      fontSize: "14px",
-      color: "#cbd8ff",
-      lineSpacing: 3
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.weaponHud,
+      color: THEME.text.secondary,
+      lineSpacing: THEME.spacing.weaponHudLineSpacing
     });
     this.weaponHudText.setDepth(45);
     this.weaponHudText.setScrollFactor(0);
 
     this.phaseText = this.add.text(14, 148, "", {
-      fontSize: "14px",
-      color: "#ffdf9a"
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.phase,
+      color: THEME.color.text.phase
     });
     this.phaseText.setDepth(45);
     this.phaseText.setScrollFactor(0);
@@ -97,16 +105,18 @@ export const hudMixin = {
     this.eventBannerContainer.setDepth(58);
     this.eventBannerContainer.setScrollFactor(0);
     this.eventBannerContainer.setVisible(false);
-    this.eventBannerBg = this.add.rectangle(GAME_WIDTH / 2, 30, 640, 52, 0x000000, 0.78);
-    this.eventBannerBg.setStrokeStyle(2, 0x5f7cb8);
+    this.eventBannerBg = this.add.rectangle(GAME_WIDTH / 2, 30, 640, 52, THEME.surface.overlay, 0.78);
+    this.eventBannerBg.setStrokeStyle(2, THEME.border.warning);
     this.eventBannerTitle = this.add.text(GAME_WIDTH / 2, 20, "", {
-      fontSize: "18px",
-      color: "#fff2be"
+      fontFamily: THEME.font.display,
+      fontSize: THEME.fontSize.bannerTitle,
+      color: THEME.color.text.bannerTitle
     });
     this.eventBannerTitle.setOrigin(0.5);
     this.eventBannerDetail = this.add.text(GAME_WIDTH / 2, 38, "", {
-      fontSize: "13px",
-      color: "#d8e6ff"
+      fontFamily: THEME.font.body,
+      fontSize: THEME.fontSize.bannerDetail,
+      color: THEME.text.secondary
     });
     this.eventBannerDetail.setOrigin(0.5);
     this.eventBannerContainer.add([
@@ -264,6 +274,10 @@ export const hudMixin = {
 
     this.statsText.setText(
       `生命：${Math.floor(this.health)} / ${this.maxHealth}   时间：${elapsedSeconds.toFixed(1)}秒   击杀：${this.killCount}`
+    );
+    const healthRatio = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
+    this.statsText.setColor(
+      healthRatio < 0.35 ? THEME.text.critical : THEME.text.primary
     );
     this.levelText.setText(`等级：${this.level}`);
 
