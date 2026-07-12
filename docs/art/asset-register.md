@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批静态正式素材的真实生产信息。九项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录首批静态正式素材的真实生产信息。12 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
@@ -157,10 +157,68 @@ Constraints: exactly one isolated character; uniform green background without gr
 Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front elevation, eye-level view, 3D render, pseudo-3D, isometric diamond scene, photorealism, smooth painting, chibi, giant bodybuilder proportions, extra limbs, multiple characters, UI frame
 ```
 
+## Task 2 武器图标登记
+
+以下三项由主流程生成并交接。工具未公开具体模型名，故不推断模型或许可证；三项均未使用第三方图像输入。`Admission` 仍为静态门禁候选，商业发布前必须复核服务条款、输出权利与项目许可义务。
+
+| Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
+|---|---|---|---|---|---|---|---|---|---|
+| weapon-pistol-icon | PNG | `assets/art/weapons/pistol.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P10](#p10-weapon-pistol-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(9,9,55,55)`，21 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+| weapon-breacher-icon | PNG | `assets/art/weapons/breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P11](#p11-weapon-breacher-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,14,60,50)`，19 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+| weapon-tesla-icon | PNG | `assets/art/weapons/tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P12](#p12-weapon-tesla-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,10,60,54)`，32 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+
+### P10 weapon-pistol-icon
+
+```text
+Use case: stylized-concept
+Asset type: production weapon selection icon for a 2D industrial-horror Phaser game, logical 64 by 64 pixels
+Style/medium: authentic detailed 2D pixel art on an explicit coarse pixel grid, broad deliberate clusters, maximum 24 colors, no micro-noise
+Composition: exactly one isolated weapon, centered diagonally from lower-left to upper-right, fills about 48 by 28 logical pixels with generous padding, instantly readable at 64 by 64
+Lighting/mood: cold overhead-left facility light, tactical Foundation-like equipment, worn professional metal
+Color palette: coal black, graphite, steel grey, cold white, muted amber; restrained cold cyan only for electrical components
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00
+Constraints: uniform green background without gradient shadow texture floor glow or reflection; no green on weapon; hard opaque pixel edges, no antialiasing or semitransparent edge; no text, number, logo, watermark, ammo, hands, character, UI border or pedestal
+Avoid: 3D render, product photo, pseudo-3D showcase, isometric scene, smooth painting, chibi toy gun, extra weapons, muzzle flash, animation sheet
+Primary request: compact duty semi-automatic pistol icon
+Subject: one practical short-slide tactical pistol with clear barrel/slide, trigger guard and textured dark grip; restrained cold-white slide highlight and tiny amber chamber indicator
+```
+
+### P11 weapon-breacher-icon
+
+```text
+Use case: stylized-concept
+Asset type: production weapon selection icon for a 2D industrial-horror Phaser game, logical 64 by 64 pixels
+Style/medium: authentic detailed 2D pixel art on an explicit coarse pixel grid, broad deliberate clusters, maximum 24 colors, no micro-noise
+Composition: exactly one isolated weapon, centered diagonally from lower-left to upper-right, fills about 48 by 28 logical pixels with generous padding, instantly readable at 64 by 64
+Lighting/mood: cold overhead-left facility light, tactical Foundation-like equipment, worn professional metal
+Color palette: coal black, graphite, steel grey, cold white, muted amber; restrained cold cyan only for electrical components
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00
+Constraints: uniform green background without gradient shadow texture floor glow or reflection; no green on weapon; hard opaque pixel edges, no antialiasing or semitransparent edge; no text, number, logo, watermark, ammo, hands, character, UI border or pedestal
+Avoid: 3D render, product photo, pseudo-3D showcase, isometric scene, smooth painting, chibi toy gun, extra weapons, muzzle flash, animation sheet
+Primary request: compact breaching shotgun icon
+Subject: one short-barrel pump-action breacher shotgun with thick muzzle, tubular magazine, pump fore-end and compact stock; heavier silhouette than the pistol, no shell or blast
+```
+
+### P12 weapon-tesla-icon
+
+```text
+Use case: stylized-concept
+Asset type: production weapon selection icon for a 2D industrial-horror Phaser game, logical 64 by 64 pixels
+Style/medium: authentic detailed 2D pixel art on an explicit coarse pixel grid, broad deliberate clusters, maximum 24 colors, no micro-noise
+Composition: exactly one isolated weapon, centered diagonally from lower-left to upper-right, fills about 48 by 28 logical pixels with generous padding, instantly readable at 64 by 64
+Lighting/mood: cold overhead-left facility light, tactical Foundation-like equipment, worn professional metal
+Color palette: coal black, graphite, steel grey, cold white, muted amber; restrained cold cyan only for electrical components
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00
+Constraints: uniform green background without gradient shadow texture floor glow or reflection; no green on weapon; hard opaque pixel edges, no antialiasing or semitransparent edge; no text, number, logo, watermark, ammo, hands, character, UI border or pedestal
+Avoid: 3D render, product photo, pseudo-3D showcase, isometric scene, smooth painting, chibi toy gun, extra weapons, muzzle flash, animation sheet
+Primary request: experimental Tesla launcher icon
+Subject: one compact industrial electrical launcher with twin exposed copper induction coils, central steel emitter fork, insulated grip, cable housing and two tiny cold-cyan charge cells; unmistakably electrical but still a handheld weapon
+```
+
 ## 准入备注
 
-- 九项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
+- 12 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
 - `facility-floor` 为不透明 32×32；自动测试逐像素验证上下与左右边缘相等。
-- 其余八项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
+- 其余 11 项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
 - AI 输出不是自动准入。Task 3 的真实 Phaser 接入和 Task 4 的 960×540 静态成品感门禁通过前，所有条目仍是候选。

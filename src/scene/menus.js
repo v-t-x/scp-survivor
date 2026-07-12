@@ -11,6 +11,8 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { TEXTURES } from "../assets/manifest.js";
+import { createFacilityMenuBackdrop } from "../art/menuBackdrop.js";
 import { THEME } from "../ui/theme.js";
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
@@ -24,9 +26,7 @@ export const menusMixin = {
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
-    const bg = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, THEME.surface.facility, 1);
-    bg.setDepth(10);
-    this.startScreenObjects.push(bg);
+    createFacilityMenuBackdrop(this, this.startScreenObjects, 7);
 
     const title = this.add.text(cx, cy - 130, "SCP：幸存者", {
       fontFamily: THEME.font.display,
@@ -141,6 +141,7 @@ export const menusMixin = {
     this.weaponSelectUiObjects = [];
     this.weaponSelectHoveredCardId = null;
     this.weaponSelectButtonHovered = false;
+    createFacilityMenuBackdrop(this, this.weaponSelectUiObjects, 0);
 
     const cardWidth = 250;
     const cardHeight = 318;
@@ -197,7 +198,7 @@ export const menusMixin = {
     const options = [
       {
         id: "pistol",
-        symbol: "■",
+        textureKey: TEXTURES.weaponPistolIcon,
         role: "可靠的中远距离单体武器",
         difficulty: { label: "简单", color: "#7FE29A" },
         stats: [
@@ -208,7 +209,7 @@ export const menusMixin = {
       },
       {
         id: "shotgun",
-        symbol: "▲",
+        textureKey: TEXTURES.weaponBreacherIcon,
         role: "近距离爆发、击退与控场",
         difficulty: { label: "中等", color: "#FFD166" },
         stats: [
@@ -219,7 +220,7 @@ export const menusMixin = {
       },
       {
         id: "tesla",
-        symbol: "≈",
+        textureKey: TEXTURES.weaponTeslaIcon,
         role: "对密集敌群造成链式伤害",
         difficulty: { label: "中等", color: "#FFD166" },
         stats: [
@@ -256,13 +257,9 @@ export const menusMixin = {
         this.refreshWeaponSelectionVisuals();
       });
 
-      const symbolText = this.add.text(cardX, cardY - 124, option.symbol, {
-        fontFamily: THEME.font.display,
-        fontSize: "36px",
-        color: THEME.text.secondary
-      });
-      symbolText.setOrigin(0.5);
-      symbolText.setDepth(21);
+      const weaponIcon = this.add.image(cardX, cardY - 122, option.textureKey).setDisplaySize(64, 64);
+      weaponIcon.setOrigin(0.5);
+      weaponIcon.setDepth(21);
 
       const nameText = this.add.text(cardX, cardY - 68, BALANCE.weapons[option.id].name, {
         fontFamily: THEME.font.display,
@@ -359,7 +356,7 @@ export const menusMixin = {
         cardBg,
         divider,
         cardHitArea,
-        symbolText,
+        weaponIcon,
         nameText,
         roleText,
         difficultyBadge,

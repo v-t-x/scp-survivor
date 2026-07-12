@@ -5,17 +5,25 @@ import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 import { IMAGE_ASSETS, TEXTURES } from "../src/assets/manifest.js";
 
-const expected = new Map([
-  [TEXTURES.facilityFloor, [32, 32]],
-  [TEXTURES.facilityWall, [64, 64]],
-  [TEXTURES.facilityDoor, [64, 64]],
-  [TEXTURES.facilityConsole, [64, 64]],
-  [TEXTURES.facilityVent, [32, 32]],
-  [TEXTURES.facilityDecal, [32, 32]],
-  [TEXTURES.player, [48, 48]],
-  [TEXTURES.enemyInfected, [48, 48]],
-  [TEXTURES.enemyScp049, [64, 80]]
-]);
+const approvedImageAssets = [
+  { key: "facility-floor", path: "assets/art/facility/floor.png", size: [32, 32] },
+  { key: "facility-wall", path: "assets/art/facility/wall.png", size: [64, 64] },
+  { key: "facility-door", path: "assets/art/facility/door.png", size: [64, 64] },
+  { key: "facility-console", path: "assets/art/facility/console.png", size: [64, 64] },
+  { key: "facility-vent", path: "assets/art/facility/vent.png", size: [32, 32] },
+  { key: "facility-decal", path: "assets/art/facility/decal.png", size: [32, 32] },
+  { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
+  { key: "enemy-infected", path: "assets/art/characters/infected-staff.png", size: [48, 48] },
+  { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
+  { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [64, 64] },
+  { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [64, 64] },
+  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [64, 64] }
+];
+
+const expected = new Map(approvedImageAssets.map(({ key, size }) => [key, size]));
+const expectedImageAssetPaths = new Map(
+  approvedImageAssets.map(({ key, path }) => [key, path])
+);
 
 function readPngSize(buffer) {
   assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
@@ -86,7 +94,7 @@ function decodeRgbaPng(buffer) {
 }
 
 function assertApprovedStaticImageAssets(assets) {
-  assert.equal(assets.length, 9);
+  assert.equal(assets.length, 12);
   assert.equal(
     new Set(assets.map(({ key }) => key)).size,
     assets.length,
@@ -94,27 +102,21 @@ function assertApprovedStaticImageAssets(assets) {
   );
   assert.deepEqual(
     new Map(assets.map(({ key, path }) => [key, path])),
-    new Map([
-      [TEXTURES.facilityFloor, "assets/art/facility/floor.png"],
-      [TEXTURES.facilityWall, "assets/art/facility/wall.png"],
-      [TEXTURES.facilityDoor, "assets/art/facility/door.png"],
-      [TEXTURES.facilityConsole, "assets/art/facility/console.png"],
-      [TEXTURES.facilityVent, "assets/art/facility/vent.png"],
-      [TEXTURES.facilityDecal, "assets/art/facility/decal.png"],
-      [TEXTURES.player, "assets/art/characters/player.png"],
-      [TEXTURES.enemyInfected, "assets/art/characters/infected-staff.png"],
-      [TEXTURES.enemyScp049, "assets/art/characters/scp-049.png"]
-    ])
+    expectedImageAssetPaths
   );
 }
 
 test("production manifest declares the approved static vertical slice", () => {
+  assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
+  assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
+  assert.equal(TEXTURES.weaponTeslaIcon, "weapon-tesla-icon");
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
 test("production manifest contract rejects duplicate texture keys", () => {
-  const duplicateAssets = IMAGE_ASSETS.map((asset, index) =>
-    index === 1 ? { ...asset, key: IMAGE_ASSETS[0].key } : asset
+  const approvedAssets = [...expectedImageAssetPaths].map(([key, path]) => ({ key, path }));
+  const duplicateAssets = approvedAssets.map((asset, index) =>
+    index === 1 ? { ...asset, key: approvedAssets[0].key } : asset
   );
 
   assert.throws(
@@ -124,7 +126,7 @@ test("production manifest contract rejects duplicate texture keys", () => {
 });
 
 test("production PNGs exist at their exact approved dimensions", async () => {
-  for (const { key, path } of IMAGE_ASSETS) {
+  for (const [key, path] of expectedImageAssetPaths) {
     const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
     await access(absolute);
     assert.deepEqual(readPngSize(await readFile(absolute)), expected.get(key), key);
@@ -132,7 +134,7 @@ test("production PNGs exist at their exact approved dimensions", async () => {
 });
 
 test("production PNGs use a limited hard-edged RGBA palette", async () => {
-  for (const { key, path } of IMAGE_ASSETS) {
+  for (const [key, path] of expectedImageAssetPaths) {
     const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
     const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
     const colors = new Set();
@@ -147,7 +149,7 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
     assert.ok(colors.size <= 32, `${key} exceeds the 32-color production palette`);
     assert.ok([...alphaValues].every((alpha) => alpha === 0 || alpha === 255), `${key} has soft alpha`);
 
-    if (key === TEXTURES.facilityFloor) {
+    if (key === "facility-floor") {
       assert.deepEqual(alphaValues, new Set([255]), "floor must be fully opaque");
       const pixel = (x, y) => pixels.subarray((y * width + x) * 4, (y * width + x + 1) * 4);
       for (let y = 0; y < height; y += 1) assert.deepEqual(pixel(0, y), pixel(width - 1, y));

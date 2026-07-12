@@ -26,6 +26,9 @@ export const TEXTURES = {
   facilityConsole: "facility-console",
   facilityVent: "facility-vent",
   facilityDecal: "facility-decal",
+  weaponPistolIcon: "weapon-pistol-icon",
+  weaponBreacherIcon: "weapon-breacher-icon",
+  weaponTeslaIcon: "weapon-tesla-icon",
   bullet: "bullet-circle",
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
@@ -45,7 +48,10 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.facilityDecal, path: "assets/art/facility/decal.png" },
   { key: TEXTURES.player, path: "assets/art/characters/player.png" },
   { key: TEXTURES.enemyInfected, path: "assets/art/characters/infected-staff.png" },
-  { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" }
+  { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" },
+  { key: TEXTURES.weaponPistolIcon, path: "assets/art/weapons/pistol.png" },
+  { key: TEXTURES.weaponBreacherIcon, path: "assets/art/weapons/breacher.png" },
+  { key: TEXTURES.weaponTeslaIcon, path: "assets/art/weapons/tesla.png" }
 ];
 
 // Real spritesheet / texture-atlas assets. Empty at this stage.

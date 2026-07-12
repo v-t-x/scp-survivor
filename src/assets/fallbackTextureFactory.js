@@ -87,6 +87,56 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.facilityDecal, 32, 32);
   });
 
+  ensureTexture(scene, TEXTURES.weaponPistolIcon, () => {
+    graphics.clear();
+    graphics.fillStyle(0x202832, 1);
+    graphics.fillRect(10, 24, 38, 12);
+    graphics.fillRect(15, 20, 25, 5);
+    graphics.fillRect(30, 34, 10, 17);
+    graphics.fillStyle(0x667585, 1);
+    graphics.fillRect(13, 26, 29, 3);
+    graphics.fillRect(33, 37, 4, 12);
+    graphics.fillStyle(0xd6dde4, 1);
+    graphics.fillRect(17, 22, 14, 2);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(39, 29, 3, 3);
+    graphics.generateTexture(TEXTURES.weaponPistolIcon, 64, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.weaponBreacherIcon, () => {
+    graphics.clear();
+    graphics.fillStyle(0x1c242d, 1);
+    graphics.fillRect(5, 27, 49, 11);
+    graphics.fillRect(14, 38, 15, 8);
+    graphics.fillRect(7, 36, 10, 7);
+    graphics.fillStyle(0x697887, 1);
+    graphics.fillRect(9, 29, 42, 3);
+    graphics.fillRect(28, 34, 16, 5);
+    graphics.fillStyle(0xcbd5de, 1);
+    graphics.fillRect(45, 28, 9, 8);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(22, 30, 3, 3);
+    graphics.generateTexture(TEXTURES.weaponBreacherIcon, 64, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.weaponTeslaIcon, () => {
+    graphics.clear();
+    graphics.fillStyle(0x202832, 1);
+    graphics.fillRect(15, 26, 31, 14);
+    graphics.fillRect(25, 39, 11, 14);
+    graphics.fillStyle(0x70808f, 1);
+    graphics.fillRect(19, 29, 23, 4);
+    graphics.fillRect(28, 42, 4, 8);
+    graphics.lineStyle(3, 0xc18443, 1);
+    graphics.strokeCircle(21, 33, 9);
+    graphics.strokeCircle(40, 33, 9);
+    graphics.fillStyle(0x77d8e8, 1);
+    graphics.fillRect(18, 31, 5, 4);
+    graphics.fillRect(38, 31, 5, 4);
+    graphics.fillRect(45, 31, 6, 3);
+    graphics.generateTexture(TEXTURES.weaponTeslaIcon, 64, 64);
+  });
+
   ensureTexture(scene, TEXTURES.player, () => {
     graphics.clear();
     graphics.fillStyle(0x3f82ff, 1);
