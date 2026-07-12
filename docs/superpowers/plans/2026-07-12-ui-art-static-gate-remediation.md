@@ -166,4 +166,3 @@ Run: `node --test && npm run build && git diff --check 2172c6d..HEAD`
 - [ ] **Step 4: 整分支审查与最终状态**
 
 请求 whole-branch review；修复全部 Critical/Important；最终工作树只保留任务开始前 `.superpowers/brainstorm/`。
-
