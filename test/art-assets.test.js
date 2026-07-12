@@ -1,6 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { access, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { IMAGE_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+
+const expected = new Map([
+  [TEXTURES.facilityFloor, [32, 32]],
+  [TEXTURES.facilityWall, [64, 64]],
+  [TEXTURES.facilityDoor, [64, 64]],
+  [TEXTURES.facilityConsole, [64, 64]],
+  [TEXTURES.facilityVent, [32, 32]],
+  [TEXTURES.facilityDecal, [32, 32]],
+  [TEXTURES.player, [48, 48]],
+  [TEXTURES.enemyInfected, [48, 48]],
+  [TEXTURES.enemyScp049, [64, 80]]
+]);
+
+function readPngSize(buffer) {
+  assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
+  assert.equal(buffer.subarray(12, 16).toString("ascii"), "IHDR");
+  return [buffer.readUInt32BE(16), buffer.readUInt32BE(20)];
+}
 
 function assertApprovedStaticImageAssets(assets) {
   assert.equal(assets.length, 9);
@@ -38,4 +58,12 @@ test("production manifest contract rejects duplicate texture keys", () => {
     () => assertApprovedStaticImageAssets(duplicateAssets),
     /duplicate texture keys detected/
   );
+});
+
+test("production PNGs exist at their exact approved dimensions", async () => {
+  for (const { key, path } of IMAGE_ASSETS) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    await access(absolute);
+    assert.deepEqual(readPngSize(await readFile(absolute)), expected.get(key), key);
+  }
 });
