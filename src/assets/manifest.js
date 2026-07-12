@@ -4,10 +4,8 @@
 // the TEXTURES key constants below (never raw strings), so renaming an asset or
 // swapping a procedural fallback for a real sprite only touches this file.
 //
-// Current stage: no real image/audio files exist yet. IMAGE_ASSETS and
-// AUDIO_ASSETS are intentionally empty; every texture is produced procedurally
-// by src/assets/fallbackTextureFactory.js. When real art arrives, add entries
-// here and the loader in PreloadScene will prefer them over the fallback.
+// Approved formal art has priority. PreloadScene loads any declared real assets
+// first, then src/assets/fallbackTextureFactory.js fills only the missing keys.
 
 // Stable texture keys. Gameplay imports these instead of hard-coding strings.
 // The string values match the keys the game already used, so nothing that reads
@@ -22,6 +20,12 @@ export const TEXTURES = {
   eliteBiomass: "elite-biomass",
   biomassChild: "biomass-child",
   enemyScp049: "enemy-scp049",
+  facilityFloor: "facility-floor",
+  facilityWall: "facility-wall",
+  facilityDoor: "facility-door",
+  facilityConsole: "facility-console",
+  facilityVent: "facility-vent",
+  facilityDecal: "facility-decal",
   bullet: "bullet-circle",
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
@@ -30,9 +34,19 @@ export const TEXTURES = {
   powerOutageLight: "power-outage-light"
 };
 
-// Real image assets to preload, e.g. { key: TEXTURES.player, path: "assets/player.png" }.
-// Empty for now — everything falls back to procedural generation.
-export const IMAGE_ASSETS = [];
+// Real image assets to preload. The loader will prefer these over fallback
+// textures and will leave the procedural texture in place if the file is absent.
+export const IMAGE_ASSETS = [
+  { key: TEXTURES.facilityFloor, path: "assets/art/facility/floor.png" },
+  { key: TEXTURES.facilityWall, path: "assets/art/facility/wall.png" },
+  { key: TEXTURES.facilityDoor, path: "assets/art/facility/door.png" },
+  { key: TEXTURES.facilityConsole, path: "assets/art/facility/console.png" },
+  { key: TEXTURES.facilityVent, path: "assets/art/facility/vent.png" },
+  { key: TEXTURES.facilityDecal, path: "assets/art/facility/decal.png" },
+  { key: TEXTURES.player, path: "assets/art/characters/player.png" },
+  { key: TEXTURES.enemyInfected, path: "assets/art/characters/infected-staff.png" },
+  { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" }
+];
 
 // Real spritesheet / texture-atlas assets. Empty at this stage.
 export const SPRITESHEET_ASSETS = [];
