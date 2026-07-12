@@ -14,6 +14,7 @@ import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.j
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createFacilityRoomVisuals } from "../art/facilityRoom.js";
+import { CHARACTER_DISPLAY_SCALE } from "../art/presentationRules.js";
 
 // Domain mixin: world. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const worldMixin = {
@@ -30,7 +31,7 @@ export const worldMixin = {
 
 
   createArenaDecoration() {
-    createFacilityRoomVisuals(this, WORLD_WIDTH, WORLD_HEIGHT);
+    this.facilityVisuals = createFacilityRoomVisuals(this, WORLD_WIDTH, WORLD_HEIGHT);
 
     const border = this.add.graphics();
     border.lineStyle(3, 0x3a4664, 1);
@@ -47,6 +48,7 @@ export const worldMixin = {
     );
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(24, 24);
+    this.player.setScale(CHARACTER_DISPLAY_SCALE.player);
     this.player.setDepth(6);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
   },

@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { getOutagePresentation } from "../art/presentationRules.js";
 
 // Domain mixin: timeline. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const timelineMixin = {
@@ -241,19 +242,27 @@ export const timelineMixin = {
       this.outageVisualStrength = Math.max(0, this.outageVisualStrength - 0.07);
     }
 
+    const presentation = getOutagePresentation(
+      this.outageVisualStrength,
+      this.elapsedSurvivalMs
+    );
+    const facilityVisuals = this.facilityVisuals ?? [];
+
     if (this.outageVisualStrength <= 0) {
       this.outageDarknessRt.setVisible(false);
       this.outageDarknessRt.clear();
-      if (this.arenaGrid) {
-        this.arenaGrid.setAlpha(1);
+      for (const visual of facilityVisuals) {
+        if (visual.active) {
+          visual.setAlpha(presentation.facilityAlpha);
+          visual.clearTint();
+        }
       }
       return;
     }
 
     this.outageDarknessRt.setVisible(true);
     this.outageDarknessRt.clear();
-    const outsideAlpha = 0.96 * this.outageVisualStrength;
-    this.outageDarknessRt.fill(0x000000, outsideAlpha);
+    this.outageDarknessRt.fill(0x000000, presentation.darknessAlpha);
     // Render texture is screen-space (scrollFactor 0); convert the player's
     // world position into screen space so the light stays on the player.
     const cam = this.cameras.main;
@@ -263,11 +272,11 @@ export const timelineMixin = {
     );
     this.outageDarknessRt.erase(this.outageLightSprite);
 
-    if (this.arenaGrid) {
-      const flickerAlpha = 0.45 + Math.sin(this.elapsedSurvivalMs * 0.08) * 0.22;
-      this.arenaGrid.setAlpha(
-        Phaser.Math.Clamp(flickerAlpha, 0.2, 0.75) * this.outageVisualStrength
-      );
+    for (const visual of facilityVisuals) {
+      if (visual.active) {
+        visual.setAlpha(presentation.facilityAlpha);
+        visual.setTint(presentation.facilityTint);
+      }
     }
   },
 
