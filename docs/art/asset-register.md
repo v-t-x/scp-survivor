@@ -4,15 +4,15 @@
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
-| facility-floor | PNG | `assets/art/facility/floor.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P1](#p1-facility-floor)；无图像输入 | 从生成的重复面板中裁取单元；nearest 缩至 32×32；强制首末行列一致以保证无缝；保持全不透明 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| facility-wall | PNG | `assets/art/facility/wall.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P2](#p2-facility-wall)；无图像输入 | 官方 `remove_chroma_key.py` 去底/去绿边；裁切；nearest 缩放；alpha 二值化；置入 64×64 画布 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| facility-door | PNG | `assets/art/facility/door.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P3](#p3-facility-door)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 64×64 画布 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| facility-console | PNG | `assets/art/facility/console.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P4](#p4-facility-console)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 64×64 画布 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| facility-vent | PNG | `assets/art/facility/vent.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P5](#p5-facility-vent)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 32×32 画布 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| facility-decal | PNG | `assets/art/facility/decal.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P6](#p6-facility-decal)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 32×32 画布 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| player | PNG | `assets/art/characters/player.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P7](#p7-player)；无图像输入 | 首版因正视长比例被拒；第二版去色键、裁切、nearest 缩放、alpha 二值化；脚底对齐 48×48 画布 y=47 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| infected-staff | PNG | `assets/art/characters/infected-staff.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P8](#p8-infected-staff)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；脚底对齐 48×48 画布 y=47 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
-| scp-049 | PNG | `assets/art/characters/scp-049.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P9](#p9-scp-049)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；脚底对齐 64×80 画布 y=79 | SCP-049 衍生视觉；合并/发布须满足项目文档所述 CC BY-SA 3.0 署名与相同方式共享要求并再次复核；未使用第三方图像输入 | 条件候选；商业发布与分发方式须先完成许可复核 | 静态门禁候选 |
+| facility-floor | PNG | `assets/art/facility/floor.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P1](#p1-facility-floor)；无图像输入 | 从生成的重复面板中裁取单元；nearest 缩至 32×32；强制首末行列一致；转 RGBA；无抖动量化到共享 32 色板；保持全不透明 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| facility-wall | PNG | `assets/art/facility/wall.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P2](#p2-facility-wall)；无图像输入 | 官方 `remove_chroma_key.py` 去底/去绿边；裁切；nearest 缩放；alpha 二值化；置入 64×64 画布；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| facility-door | PNG | `assets/art/facility/door.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P3](#p3-facility-door)；无图像输入 | 首版因正面立面被拒；重生成高俯视浅带门；去色键、裁切、nearest 缩放、alpha 二值化；纵向 nearest 拉伸到 20px 保持小尺寸可读；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| facility-console | PNG | `assets/art/facility/console.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P4](#p4-facility-console)；无图像输入 | 首版因正面机柜被拒；重生成顶部平面主导设备；去色键、裁切、nearest 缩放、alpha 二值化；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| facility-vent | PNG | `assets/art/facility/vent.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P5](#p5-facility-vent)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 32×32 画布；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| facility-decal | PNG | `assets/art/facility/decal.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P6](#p6-facility-decal)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；置入 32×32 画布；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| player | PNG | `assets/art/characters/player.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P7](#p7-player)；无图像输入 | 首版因正视长比例被拒；第二版去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=46；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| infected-staff | PNG | `assets/art/characters/infected-staff.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P8](#p8-infected-staff)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=46；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 |
+| scp-049 | PNG | `assets/art/characters/scp-049.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P9](#p9-scp-049)；无图像输入 | 前两版因正面立绘/错误冠饰被拒；第三版重生成高俯视素布兜帽；去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=78；共享色板量化 | SCP-049 衍生视觉；合并/发布须满足项目文档所述 CC BY-SA 3.0 署名与相同方式共享要求并再次复核；未使用第三方图像输入 | 条件候选；商业发布与分发方式须先完成许可复核 | 静态门禁候选 |
 
 ## 原始提示
 
@@ -52,30 +52,32 @@ Avoid: 3D render, pseudo-3D, isometric diamond wall, perspective corridor, photo
 
 ```text
 Use case: stylized-concept
-Asset type: modular security door sprite for a 2D top-down Phaser game, logical 64 by 64 pixels
-Primary request: one sealed industrial containment blast door viewed from high orthographic overhead camera, matching a coal-black and dirty-grey facility wall
-Subject: heavy rectangular steel double door, center seam, reinforced ribs, small cold-white status strip and restrained amber-red warning lamps, no text
-Composition: square module, door spans left to right and is readable as a doorway embedded in a top-down perimeter wall, short visible front face but no isometric geometry
-Lighting/mood: overhead-left cold facility light, professional containment pressure
-Style/medium: authentic modern detailed 2D pixel game asset on a coarse explicit pixel grid, hard square pixel clusters, limited palette, no smooth painting.
-Scene/backdrop: perfectly flat solid chroma-key green #00ff00 around the isolated object.
-Constraints: one isolated object; uniform #00ff00 background with no gradient shadow texture floor glow or reflection; no green on object; hard opaque pixels only, no antialiasing or semitransparent edge; no readable text, number, logo or watermark.
-Avoid: 3D render, pseudo-3D, isometric diamond view, photorealism, smooth illustration, perspective room, multiple objects, UI frame.
+Asset type: orthographic north-wall security door module for a top-down 2D Phaser game, logical 64 by 64 pixels
+Primary request: a sealed sliding containment door seen from almost directly overhead as part of the north perimeter wall
+Subject: horizontal steel threshold and two sliding door leaves compressed into a shallow band, center seam, top cap, rails, restrained amber-red status lamps; only the top surfaces and a very short inner wall face are visible
+Composition: the entire door is a wide horizontal strip about 58 logical pixels wide and 20 to 26 pixels tall, centered in a square transparent canvas; left and right ends align with a horizontal wall module
+Camera: 80-degree overhead orthographic plan view; absolutely no full upright door panel
+Color palette intent: coal black, graphite, steel grey, cold white, muted amber and restrained red, maximum 24 colors
+Style/medium: authentic modern detailed 2D pixel game asset on an explicit coarse pixel grid with broad deliberate color clusters and no micro-noise.
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00.
+Constraints: one isolated object; uniform green background with no gradient shadow texture floor glow or reflection; no green on object; no text logo watermark; hard opaque pixel edges.
+Avoid: front elevation, eye-level view, 3D render, pseudo-3D, isometric diamond scene, photorealism, smooth painting, tiny noisy highlights, UI frame.
 ```
 
 ### P4 facility-console
 
 ```text
 Use case: stylized-concept
-Asset type: floor-mounted control console sprite for a 2D top-down Phaser game, logical 64 by 64 pixels
-Primary request: one compact Foundation-like facility control console seen from a high orthographic overhead camera
-Subject: angled steel operator terminal with dark inactive screen, hard keypad blocks without characters, cables, one amber status light and one restrained red fault light; readable silhouette at small size
-Composition: centered object with compact near-square footprint and generous padding, top surface visible due to high camera, clear ground contact
-Lighting/mood: cold overhead-left facility light, industrial horror, unpowered equipment
-Style/medium: authentic modern detailed 2D pixel game asset on a coarse explicit pixel grid, hard square pixel clusters, limited palette, no smooth painting.
-Scene/backdrop: perfectly flat solid chroma-key green #00ff00 around the isolated object.
-Constraints: one isolated object; uniform #00ff00 background with no gradient shadow texture floor glow or reflection; no green on object; hard opaque pixels only, no antialiasing or semitransparent edge; no readable text, number, logo or watermark.
-Avoid: 3D render, pseudo-3D, isometric diamond view, photorealism, smooth illustration, perspective room, multiple objects, UI frame.
+Asset type: top-down floor control console for a 2D Phaser game, logical 64 by 64 pixels
+Primary request: one compact facility operator console seen almost directly from above
+Subject: low floor-mounted desk footprint with a dark recessed screen surface, blocky keypad, two cables and amber/red status pixels; the top plane is dominant and the front face is only a 2-pixel dark lip
+Composition: compact near-square footprint about 42 by 34 logical pixels, centered with transparent padding, no upright cabinet
+Camera: 75-degree overhead orthographic plan view
+Color palette intent: coal black, dirty steel grey, cold white, muted amber and restrained red, maximum 24 colors
+Style/medium: authentic modern detailed 2D pixel game asset on an explicit coarse pixel grid with broad deliberate color clusters and no micro-noise.
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00.
+Constraints: one isolated object; uniform green background with no gradient shadow texture floor glow or reflection; no green on object; no text logo watermark; hard opaque pixel edges.
+Avoid: front elevation, eye-level view, 3D render, pseudo-3D, isometric diamond scene, photorealism, smooth painting, tiny noisy highlights, UI frame.
 ```
 
 ### P5 facility-vent
@@ -143,21 +145,22 @@ Avoid: 3D render, pseudo-3D, isometric diamond view, front-facing paper doll, lo
 
 ```text
 Use case: stylized-concept
-Asset type: production boss sprite master for a 2D top-down Phaser game, logical 64 by 80 pixels
-Primary request: SCP-049-inspired plague doctor boss, tall narrow threatening silhouette, facing screen-down
-Subject: one very tall plague doctor with long coal-black coat, unmistakable ivory bird-beak mask visible from the high camera, dark hood, leather gloves, one slim cane held at the side; two arms, two legs; serious horror, no exposed face
-Composition detail: occupy a narrow tall 64 by 80 logical canvas while preserving a visible beaked mask, shoulder cape, coat tails and foot contact
-Lighting/mood: overhead-left cold facility light, muted ivory mask, restrained dark crimson lining, industrial containment horror
-Style/medium: authentic modern detailed 2D pixel sprite art on a coarse explicit pixel grid, hard square pixel clusters, limited palette, no smooth painting.
-Composition: true top-down action-game view with restrained three-quarter body view, high overhead camera pitched about 60 degrees downward, screen-down facing, one isolated full-body sprite, centered with generous padding and a clear horizontal foot contact line.
-Scene/backdrop: perfectly flat solid chroma-key green #00ff00.
-Constraints: uniform #00ff00 background without gradient shadow texture glow floor or reflection; no #00ff00 on subject; hard opaque pixels only; no antialiasing, semitransparent edge, text, logo or watermark.
-Avoid: 3D render, pseudo-3D, isometric diamond view, front-facing paper doll, low camera, photorealism, smooth illustration, chibi, cute style, oversized head, extra limbs, multiple characters, animation sheet, UI frame.
+Asset type: SCP-049 plague doctor boss sprite for a top-down 2D Phaser action game, logical 64 by 80 pixels
+Primary request: one hooded plague doctor viewed from a high overhead camera, facing screen-down
+Subject: plain black cloth hood with the top of the hood visible, ivory bird-beak mask projecting toward bottom of screen, broad dark shoulders, foreshortened torso, long black coat spreading into two tails, short partly hidden legs, one simple dark cane; no crown, no hat ornament, no gold headpiece, no royal clothing
+Composition: compact high-angle silhouette approximately 42 logical pixels wide by 58 high inside a 64 by 80 canvas, centered, feet share one line; beak and coat remain unmistakable
+Camera: orthographic action-game view pitched 65 degrees downward; crown of the head means the top surface of the plain cloth hood, not a royal crown; restrained three-quarter body view, not standing front portrait
+Style/medium: authentic modern detailed 2D pixel sprite on explicit coarse grid, broad deliberate color clusters, maximum 24 colors, no micro-noise
+Color palette: coal black, graphite, muted crimson lining, dark leather brown, ivory mask
+Scene/backdrop: perfectly flat solid chroma-key green #00ff00
+Constraints: exactly one isolated character; uniform green background without gradient shadow texture floor glow reflection; no green on subject; no antialiasing semitransparent edge text logo watermark; one head two arms two legs
+Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front elevation, eye-level view, 3D render, pseudo-3D, isometric diamond scene, photorealism, smooth painting, chibi, giant bodybuilder proportions, extra limbs, multiple characters, UI frame
 ```
 
 ## 准入备注
 
-- `facility-floor` 为不透明 32×32；代码级尺寸测试和像素边界检查负责阻止误提交透明或非无缝版本。
-- 其余八项均为 RGBA，透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
+- 九项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
+- `facility-floor` 为不透明 32×32；自动测试逐像素验证上下与左右边缘相等。
+- 其余八项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
 - AI 输出不是自动准入。Task 3 的真实 Phaser 接入和 Task 4 的 960×540 静态成品感门禁通过前，所有条目仍是候选。
