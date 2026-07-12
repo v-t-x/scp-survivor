@@ -24,6 +24,69 @@ function ensureTexture(scene, key, draw) {
 export function generateFallbackTextures(scene) {
   const graphics = scene.add.graphics();
 
+  ensureTexture(scene, TEXTURES.facilityFloor, () => {
+    graphics.clear();
+    graphics.fillStyle(0x151b24, 1);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.lineStyle(1, 0x202a36, 1);
+    graphics.strokeRect(0, 0, 31, 31);
+    graphics.generateTexture(TEXTURES.facilityFloor, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityWall, () => {
+    graphics.clear();
+    graphics.fillStyle(0x303b4b, 1);
+    graphics.fillRect(0, 0, 64, 64);
+    graphics.lineStyle(3, 0x596779, 1);
+    graphics.strokeRect(1, 1, 62, 62);
+    graphics.generateTexture(TEXTURES.facilityWall, 64, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityDoor, () => {
+    graphics.clear();
+    graphics.fillStyle(0x495363, 1);
+    graphics.fillRect(0, 0, 64, 64);
+    graphics.fillStyle(0x222a35, 1);
+    graphics.fillRect(29, 0, 6, 64);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(8, 30, 48, 4);
+    graphics.generateTexture(TEXTURES.facilityDoor, 64, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityConsole, () => {
+    graphics.clear();
+    graphics.fillStyle(0x303b4b, 1);
+    graphics.fillRect(0, 0, 64, 64);
+    graphics.fillStyle(0x1b2430, 1);
+    graphics.fillRect(8, 8, 48, 30);
+    graphics.fillStyle(0x68d9bc, 1);
+    graphics.fillRect(13, 13, 38, 12);
+    graphics.fillStyle(0x788596, 1);
+    graphics.fillRect(12, 46, 40, 10);
+    graphics.generateTexture(TEXTURES.facilityConsole, 64, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityVent, () => {
+    graphics.clear();
+    graphics.fillStyle(0x3d4857, 1);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.lineStyle(2, 0x151b24, 1);
+    for (let y = 5; y < 32; y += 6) {
+      graphics.lineBetween(4, y, 28, y);
+    }
+    graphics.generateTexture(TEXTURES.facilityVent, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityDecal, () => {
+    graphics.clear();
+    graphics.fillStyle(0x812f35, 0.7);
+    graphics.fillCircle(16, 16, 12);
+    graphics.fillStyle(0x411b22, 0.9);
+    graphics.fillCircle(13, 14, 5);
+    graphics.fillCircle(20, 20, 4);
+    graphics.generateTexture(TEXTURES.facilityDecal, 32, 32);
+  });
+
   ensureTexture(scene, TEXTURES.player, () => {
     graphics.clear();
     graphics.fillStyle(0x3f82ff, 1);

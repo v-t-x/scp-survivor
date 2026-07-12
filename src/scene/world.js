@@ -12,6 +12,8 @@ import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
+import { TEXTURES } from "../assets/manifest.js";
+import { createFacilityRoomVisuals } from "../art/facilityRoom.js";
 
 // Domain mixin: world. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const worldMixin = {
@@ -28,22 +30,12 @@ export const worldMixin = {
 
 
   createArenaDecoration() {
+    createFacilityRoomVisuals(this, WORLD_WIDTH, WORLD_HEIGHT);
+
     const border = this.add.graphics();
     border.lineStyle(3, 0x3a4664, 1);
     border.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.arenaBorder = border;
-
-    const grid = this.add.graphics();
-    grid.lineStyle(1, 0x191f2b, 0.45);
-    this.arenaGrid = grid;
-
-    const cell = 48;
-    for (let x = cell; x < WORLD_WIDTH; x += cell) {
-      grid.lineBetween(x, 0, x, WORLD_HEIGHT);
-    }
-    for (let y = cell; y < WORLD_HEIGHT; y += cell) {
-      grid.lineBetween(0, y, WORLD_WIDTH, y);
-    }
   },
 
 
@@ -51,7 +43,7 @@ export const worldMixin = {
     this.player = this.physics.add.image(
       WORLD_WIDTH / 2,
       WORLD_HEIGHT / 2,
-      "player-rect"
+      TEXTURES.player
     );
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(24, 24);
