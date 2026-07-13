@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
   CHARACTER_DISPLAY_SCALE,
   applyDisplayScalePreservingBody,
+  centerCircularBody,
   getOutagePresentation,
   resetFacilityPresentation
 } from "../src/art/presentationRules.js";
@@ -95,6 +96,42 @@ test("display scaling preserves rectangular and circular physics geometry", () =
   );
 });
 
+test("circular bodies stay centered for production and fallback character textures", () => {
+  const cases = [
+    { width: 48, height: 48, radius: 10, expected: [10, 14, 14] },
+    { width: 20, height: 20, radius: 10, expected: [10, 0, 0] },
+    { width: 64, height: 80, radius: 18, expected: [18, 14, 22] },
+    { width: 36, height: 36, radius: 18, expected: [18, 0, 0] }
+  ];
+
+  for (const { width, height, radius, expected } of cases) {
+    const calls = [];
+    const gameObject = {
+      width,
+      height,
+      setCircle(...args) {
+        calls.push(args);
+        return this;
+      }
+    };
+
+    assert.equal(centerCircularBody(gameObject, radius), gameObject);
+    assert.deepEqual(calls, [expected]);
+  }
+});
+
+test("infected staff centers its circle without changing crawler collision offsets", async () => {
+  const enemies = await readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8");
+  const circleBranch = enemies.slice(
+    enemies.indexOf('if (config.bodyShape === "circle")'),
+    enemies.indexOf('} else if (config.bodyShape === "box")')
+  );
+
+  assert.match(circleBranch, /config\.type === "infectedStaff"/);
+  assert.match(circleBranch, /centerCircularBody\(enemy, config\.bodyRadius\)/);
+  assert.match(circleBranch, /enemy\.setCircle\(config\.bodyRadius\)/);
+});
+
 test("facility presentation reset clears outage tint and alpha", () => {
   const activeVisual = {
     active: true,
@@ -122,9 +159,9 @@ test("opening character integration preserves body configuration contracts", asy
     readFile(new URL("../src/main.js", import.meta.url), "utf8")
   ]);
   assert.match(world, /this\.player\.body\.setSize\(24, 24\)/);
-  assert.match(enemies, /enemy\.setCircle\(config\.bodyRadius\)/);
+  assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
-  assert.match(enemies, /boss\.setCircle\(18\)/);
+  assert.match(enemies, /centerCircularBody\(boss, 18\)/);
   assert.doesNotMatch(`${world}\n${enemies}`, /body\.setOffset/);
   assert.match(main, /syncCharacterPresentation\(this\)/);
 });

@@ -4,6 +4,14 @@ export const CHARACTER_DISPLAY_SCALE = {
   scp049: 1.2
 };
 
+export function centerCircularBody(gameObject, radius) {
+  return gameObject.setCircle(
+    radius,
+    (gameObject.width - radius * 2) / 2,
+    (gameObject.height - radius * 2) / 2
+  );
+}
+
 export function applyDisplayScalePreservingBody(gameObject, scale) {
   const body = gameObject.body;
   if (!body) {

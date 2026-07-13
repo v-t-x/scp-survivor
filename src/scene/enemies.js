@@ -18,6 +18,7 @@ import {
 import { getBossUpdateActions, getBossWavePlan } from "./bossRules.js";
 import {
   applyDisplayScalePreservingBody,
+  centerCircularBody,
   CHARACTER_DISPLAY_SCALE
 } from "../art/presentationRules.js";
 import { resolveCharacterTexture } from "../art/characterPresentation.js";
@@ -259,10 +260,14 @@ export const enemiesMixin = {
       Phaser.Math.Between(
         BALANCE.enemy.replication.intervalMinMs,
         BALANCE.enemy.replication.intervalMaxMs
-      );
+    );
 
     if (config.bodyShape === "circle") {
-      enemy.setCircle(config.bodyRadius);
+      if (config.type === "infectedStaff") {
+        centerCircularBody(enemy, config.bodyRadius);
+      } else {
+        enemy.setCircle(config.bodyRadius);
+      }
     } else if (config.bodyShape === "box") {
       enemy.body.setSize(config.bodySize, config.bodySize);
     } else {
@@ -746,7 +751,7 @@ export const enemiesMixin = {
     boss.maxHealth = config.health;
     boss.health = config.health;
     boss.xpReward = 0;
-    boss.setCircle(18);
+    centerCircularBody(boss, 18);
     applyDisplayScalePreservingBody(boss, CHARACTER_DISPLAY_SCALE.scp049);
     boss.setDepth(12);
     boss.setCollideWorldBounds(true);

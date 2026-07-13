@@ -242,9 +242,10 @@ test("player and enemy creation retain the approved physics geometry and order",
   assert.ok(creation < collide && collide < body && body < scale);
 
   assert.match(world, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
+  assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.setCircle\(config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
-  assert.match(enemies, /boss\.setCircle\(18\)/);
+  assert.match(enemies, /centerCircularBody\(boss, 18\)/);
   assert.doesNotMatch(enemies, /body\.setOffset/);
 });
 
