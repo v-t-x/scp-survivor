@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { IMAGE_ASSETS, TEXTURES } from "../src/assets/manifest.js";
 import { createTitleBackdrop } from "../src/art/titleBackdrop.js";
+import { THEME } from "../src/ui/theme.js";
 
 function makeDisplayObject() {
   return {
@@ -110,25 +111,11 @@ test("title backdrop owns gradient, gate focus and every tween idempotently", ()
   assert.equal(tweens.length, 3);
   assert.deepEqual(cleanup, controller.objects);
   const gradientCommands = controller.objects[1].commands;
-  const gradientFillRects = gradientCommands.filter(([type]) => type === "fillRect");
-  const gradientFillStyles = gradientCommands.filter(([type]) => type === "fillStyle");
-  assert.equal(gradientFillRects.length, 12);
-  assert.equal(gradientFillStyles.length, 12);
-  const gradientSegments = gradientFillRects.map((command, index) => ({
-    geometry: command.slice(1),
-    alpha: gradientFillStyles[index][2]
-  }));
-  assert.deepEqual(
-    gradientSegments.map(({ geometry }) => geometry),
-    Array.from({ length: 12 }, (_, index) => [index * 48, 0, 52, 540])
-  );
-  const expectedAlphas = Array.from({ length: 12 }, (_, index) => Math.max(0.08, 0.82 - index * 0.065));
-  gradientSegments.forEach(({ alpha }, index) => {
-    assert.ok(Math.abs(alpha - expectedAlphas[index]) < 1e-12);
-  });
-  assert.equal(gradientSegments[0].geometry[0], 0);
-  assert.equal(gradientSegments.at(-1).geometry[0], 528);
-  assert.ok(gradientSegments.every(({ alpha }, index) => index === 0 || alpha < gradientSegments[index - 1].alpha));
+  const expectedGradientCommands = Array.from({ length: 12 }, (_, index) => [
+    ["fillStyle", THEME.title.scrim, Math.max(0.08, 0.82 - index * 0.065)],
+    ["fillRect", index * 48, 0, 52, 540]
+  ]).flat();
+  assert.deepEqual(gradientCommands, expectedGradientCommands);
   assert.deepEqual(
     controller.objects[3].commands.filter(([type]) => type === "strokeRect"),
     [
