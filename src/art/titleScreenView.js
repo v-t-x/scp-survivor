@@ -48,6 +48,7 @@ export function createTitleAction(scene, targetArray, options) {
   }).setOrigin(0, 0.5);
   const signal = scene.add.graphics();
   const hitArea = scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0);
+  hitArea.alpha = 1;
   const accent = scene.add.rectangle(x + 4, y + 8, 3, height - 16, THEME.title.alarm, 0.9).setOrigin(0, 0);
   const objects = [frame, main, detail, index, signal, hitArea];
   objects.push(accent);
@@ -137,13 +138,14 @@ export function createTitleScreenView(scene, targetArray, options) {
   }).setOrigin(1, 0.5);
   const bottomObjects = register(targetArray, [bottom, topLine, controls, powerLamp, dangerLamp, status, creditsText], depth);
 
-  for (const object of [...titleObjects, ...missionObjects, ...action.objects]) object.alpha = 0;
+  const actionVisualObjects = action.objects.filter((object) => object !== action.hitArea);
+  for (const object of [...titleObjects, ...missionObjects, ...actionVisualObjects]) object.alpha = 0;
   for (const object of titleObjects) object.x -= 16;
   for (const object of missionObjects) object.x -= 12;
   const tweens = [
     scene.tweens.add({ targets: titleObjects, x: "+=16", alpha: 1, duration: 360, ease: "Sine.Out" }),
     scene.tweens.add({ targets: missionObjects, x: "+=12", alpha: 1, delay: 120, duration: 320, ease: "Sine.Out" }),
-    scene.tweens.add({ targets: action.objects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out" })
+    scene.tweens.add({ targets: actionVisualObjects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out" })
   ];
   let stopped = false;
   const objects = [...titleObjects, ...missionObjects, ...action.objects, ...bottomObjects];

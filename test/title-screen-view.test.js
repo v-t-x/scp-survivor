@@ -159,10 +159,12 @@ test("credits formatting is finite and title view owns the approved information 
   assert.deepEqual(missionTween.config, {
     targets: scene.created.slice(5, 7), x: "+=12", alpha: 1, delay: 120, duration: 320, ease: "Sine.Out"
   });
+  const actionVisualObjects = view.action.objects.filter((object) => object !== view.action.hitArea);
   assert.deepEqual(actionTween.config, {
-    targets: view.action.objects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out"
+    targets: actionVisualObjects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out"
   });
-  assert.equal(view.action.hitArea.alpha, 0);
+  assert.equal(view.action.hitArea.alpha, 1);
+  assert.ok(actionVisualObjects.every(({ alpha }) => alpha === 0));
   view.action.hitArea.handlers.get("pointerup")();
   assert.equal(activations, 1);
   assert.deepEqual(cleanup, scene.created);
