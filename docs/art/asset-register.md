@@ -167,6 +167,26 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | weapon-breacher-icon | PNG | `assets/art/weapons/breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P11](#p11-weapon-breacher-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,14,60,50)`，19 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
 | weapon-tesla-icon | PNG | `assets/art/weapons/tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P12](#p12-weapon-tesla-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,10,60,54)`，32 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
 
+## Opening Task 1 计划素材
+
+以下条目仅锁定开局视觉合同所需的素材槽位；精确素材生成前，工具、日期、提示/来源、人工修改、权利基础与商业使用状态均保持空白。
+
+| Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
+|---|---|---|---|---|---|---|---|---|---|
+| title-facility-backdrop | PNG | `assets/art/menus/title-facility-backdrop.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| armory-rack-backdrop | PNG | `assets/art/menus/armory-rack-backdrop.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| facility-service-floor | PNG | `assets/art/facility/service-floor.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| facility-observation-window | PNG | `assets/art/facility/observation-window.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| facility-pipe-bank | PNG | `assets/art/facility/pipe-bank.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| player-opening-sheet | PNG | `assets/art/characters/player-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| infected-opening-sheet | PNG | `assets/art/characters/infected-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| weapon-pistol-illustration | PNG（96×96） | `assets/art/weapons/pistol-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| weapon-breacher-illustration | PNG（96×96） | `assets/art/weapons/breacher-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| weapon-tesla-illustration | PNG（96×96） | `assets/art/weapons/tesla-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+
+开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
+
 ### P10 weapon-pistol-icon
 
 ```text
