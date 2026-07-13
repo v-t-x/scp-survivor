@@ -16,7 +16,10 @@ import {
   tryReplicateEnemy as tryReplicateEnemyForScene
 } from "./enemyReplication.js";
 import { getBossUpdateActions, getBossWavePlan } from "./bossRules.js";
-import { CHARACTER_DISPLAY_SCALE } from "../art/presentationRules.js";
+import {
+  applyDisplayScalePreservingBody,
+  CHARACTER_DISPLAY_SCALE
+} from "../art/presentationRules.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -265,7 +268,7 @@ export const enemiesMixin = {
     }
 
     if (config.type === "infectedStaff") {
-      enemy.setScale(CHARACTER_DISPLAY_SCALE.infectedStaff);
+      applyDisplayScalePreservingBody(enemy, CHARACTER_DISPLAY_SCALE.infectedStaff);
     }
 
     if (config.type === "drone") {
@@ -742,7 +745,7 @@ export const enemiesMixin = {
     boss.health = config.health;
     boss.xpReward = 0;
     boss.setCircle(18);
-    boss.setScale(CHARACTER_DISPLAY_SCALE.scp049);
+    applyDisplayScalePreservingBody(boss, CHARACTER_DISPLAY_SCALE.scp049);
     boss.setDepth(12);
     boss.setCollideWorldBounds(true);
     // Immovable so its own summoned minions cannot shove it around.

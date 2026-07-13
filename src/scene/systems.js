@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { resetFacilityPresentation } from "../art/presentationRules.js";
 
 // Domain mixin: systems. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const systemsMixin = {
@@ -189,6 +190,7 @@ export const systemsMixin = {
       this.outageDarknessRt.clear();
       this.outageDarknessRt.setVisible(false);
     }
+    resetFacilityPresentation(this.facilityVisuals);
     if (this.eventBannerContainer) {
       this.eventBannerContainer.setVisible(false);
     }

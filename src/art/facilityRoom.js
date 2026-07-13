@@ -3,7 +3,16 @@ import { TEXTURES } from "../assets/manifest.js";
 const NEAREST_FILTER = 1;
 
 export function getFacilityRoomLayout(width, height) {
+  const centerX = width / 2;
+  const centerY = height / 2;
+
   return [
+    { key: TEXTURES.facilityWall, x: centerX - 320, y: centerY - 224, depth: -10 },
+    { key: TEXTURES.facilityDoor, x: centerX - 256, y: centerY - 224, depth: -8 },
+    { key: TEXTURES.facilityWall, x: centerX - 224, y: centerY - 224, depth: -10 },
+    { key: TEXTURES.facilityConsole, x: centerX + 320, y: centerY - 160, depth: -8 },
+    { key: TEXTURES.facilityVent, x: centerX - 256, y: centerY + 160, depth: -9 },
+    { key: TEXTURES.facilityDecal, x: centerX + 256, y: centerY + 160, depth: -7 },
     { key: TEXTURES.facilityDoor, x: width / 2, y: 96, depth: -8 },
     { key: TEXTURES.facilityDoor, x: width / 2, y: height - 96, depth: -8 },
     { key: TEXTURES.facilityConsole, x: 160, y: 192, depth: -8 },

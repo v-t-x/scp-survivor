@@ -11,7 +11,10 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
-import { getOutagePresentation } from "../art/presentationRules.js";
+import {
+  getOutagePresentation,
+  resetFacilityPresentation
+} from "../art/presentationRules.js";
 
 // Domain mixin: timeline. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const timelineMixin = {
@@ -251,12 +254,7 @@ export const timelineMixin = {
     if (this.outageVisualStrength <= 0) {
       this.outageDarknessRt.setVisible(false);
       this.outageDarknessRt.clear();
-      for (const visual of facilityVisuals) {
-        if (visual.active) {
-          visual.setAlpha(presentation.facilityAlpha);
-          visual.clearTint();
-        }
-      }
+      resetFacilityPresentation(facilityVisuals);
       return;
     }
 
