@@ -58,12 +58,19 @@ test("title screen declares a dedicated production backdrop", () => {
   ));
 });
 
-test("title screen uses the tactical terminal instead of a rectangle button", async () => {
+test("title screen delegates presentation and keeps the existing mission transition", async () => {
   const source = await readFile(new URL("../src/scene/menus.js", import.meta.url), "utf8");
-  const method = source.slice(source.indexOf("createStartScreen()"), source.indexOf("beginFromStartScreen()"));
-  assert.match(method, /createTitleBackdrop/);
-  assert.match(method, /createTerminalButton/);
-  assert.doesNotMatch(method, /startButton\s*=\s*this\.add\.rectangle/);
+  const method = source.slice(source.indexOf("createStartScreen()"), source.indexOf("beginFromStartScreen() {"));
+  assert.match(method, /createTitleBackdrop\(this, this\.startScreenObjects, 7\)/);
+  assert.match(method, /createTitleScreenView\(this, this\.startScreenObjects, \{/);
+  assert.match(method, /credits:\s*this\.meta\.credits/);
+  assert.match(method, /onActivate:\s*\(\)\s*=>\s*this\.beginFromStartScreen\(\)/);
+  assert.doesNotMatch(method, /this\.add\.text|createTerminalButton|createStatusLamp/);
+
+  const destroyMethod = source.slice(source.indexOf("destroyStartScreen() {"), source.indexOf("createWeaponSelectionScreen() {"));
+  assert.match(destroyMethod, /this\.titleScreenController\?\.stop\(\)/);
+  assert.match(destroyMethod, /this\.titleBackdropController\?\.stop\(\)/);
+  assert.match(destroyMethod, /object\.destroy\(\)/);
 });
 
 test("title backdrop owns gradient, gate focus and every tween idempotently", () => {

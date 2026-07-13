@@ -12,9 +12,10 @@ import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createTitleBackdrop } from "../art/titleBackdrop.js";
+import { createTitleScreenView } from "../art/titleScreenView.js";
 import { createArmorySlot } from "../art/weaponSelectionView.js";
 import { THEME } from "../ui/theme.js";
-import { createStatusLamp, createTerminalButton } from "../ui/tacticalUi.js";
+import { createTerminalButton } from "../ui/tacticalUi.js";
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const menusMixin = {
@@ -23,107 +24,12 @@ export const menusMixin = {
     this.setGameplayHudVisible(false);
     this.cameras.main.setBackgroundColor(THEME.surface.facility);
     this.startScreenObjects = [];
-
     this.titleBackdropController = createTitleBackdrop(this, this.startScreenObjects, 7);
-
-    const facilityCode = this.add.text(72, 62, "SITE-CN-██ / 安保终端 03", {
-      fontFamily: THEME.font.mono,
-      fontSize: "14px",
-      color: THEME.text.muted
-    });
-    facilityCode.setOrigin(0, 0.5);
-    facilityCode.setDepth(11);
-    this.startScreenObjects.push(facilityCode);
-
-    const alertLevel = this.add.text(72, 86, "警戒等级：收容失效", {
-      fontFamily: THEME.font.label,
-      fontSize: "16px",
-      color: THEME.text.critical
-    });
-    alertLevel.setOrigin(0, 0.5);
-    alertLevel.setDepth(11);
-    this.startScreenObjects.push(alertLevel);
-
-    const title = this.add.text(72, 116, "SCP：幸存者", {
-      fontFamily: THEME.font.display,
-      fontSize: "52px",
-      fontStyle: "bold",
-      color: THEME.text.primary
-    });
-    title.setShadow(0, 3, "#04070e", 8, false, true);
-    title.setOrigin(0, 0.5);
-    title.setDepth(11);
-    this.startScreenObjects.push(title);
-
-    const objective = this.add.text(
-      72,
-      176,
-      "目标：穿越失控设施并完成 SCP-049 再收容。",
-      {
-        fontFamily: THEME.font.body,
-        fontSize: "18px",
-        color: THEME.text.secondary
-      }
-    );
-    objective.setOrigin(0, 0.5);
-    objective.setDepth(11);
-    this.startScreenObjects.push(objective);
-
-    const hint = this.add.text(
-      72,
-      216,
-      "WASD 移动  /  空格 闪避  /  TAB 构建  /  ESC 暂停  /  M 静音",
-      {
-        fontFamily: THEME.font.label,
-        fontSize: "15px",
-        color: THEME.text.muted
-      }
-    );
-    hint.setOrigin(0, 0.5);
-    hint.setDepth(11);
-    this.startScreenObjects.push(hint);
-
-    const startButton = createTerminalButton(this, {
-      x: 72,
-      y: 322,
-      width: 316,
-      height: 60,
-      text: "开始行动",
-      depth: 11,
+    this.titleScreenController = createTitleScreenView(this, this.startScreenObjects, {
+      credits: this.meta.credits,
+      depth: 20,
       onActivate: () => this.beginFromStartScreen()
     });
-    this.startScreenObjects.push(...startButton.objects);
-
-    const powerLamp = createStatusLamp(this, { x: 80, y: 412, state: "contained", depth: 11 });
-    const containmentLamp = createStatusLamp(this, { x: 210, y: 412, state: "danger", depth: 11 });
-    this.startScreenObjects.push(...powerLamp.objects, ...containmentLamp.objects);
-
-    const facilityStatus = this.add.text(94, 412, "电力在线       收容失效", {
-      fontFamily: THEME.font.label,
-      fontSize: "13px",
-      color: THEME.text.contained
-    });
-    facilityStatus.setOrigin(0, 0.5);
-    facilityStatus.setDepth(11);
-    this.startScreenObjects.push(facilityStatus);
-
-    const creditsHint = this.add.text(
-      72,
-      452,
-      `累计学分：${this.meta.credits}（进入后可在解锁商店消费）`,
-      {
-        fontFamily: THEME.font.label,
-        fontSize: "15px",
-        color: THEME.text.secondary
-      }
-    );
-    creditsHint.setOrigin(0, 0.5);
-    creditsHint.setDepth(11);
-    this.startScreenObjects.push(creditsHint);
-
-    for (const object of this.startScreenObjects) {
-      object.setScrollFactor?.(0);
-    }
   },
 
 
@@ -134,6 +40,8 @@ export const menusMixin = {
 
 
   destroyStartScreen() {
+    this.titleScreenController?.stop();
+    this.titleScreenController = null;
     this.titleBackdropController?.stop();
     this.titleBackdropController = null;
     if (!this.startScreenObjects) {

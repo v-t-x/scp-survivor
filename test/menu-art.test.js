@@ -90,6 +90,7 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
     /createTitleBackdrop\(this, this\.startScreenObjects, 7\)/,
     "title menu must use its dedicated production facility backdrop"
   );
+  assert.match(source, /createTitleScreenView\(this, this\.startScreenObjects, \{/);
   assert.match(
     source,
     /this\.add\.image\(GAME_WIDTH \/ 2, GAME_HEIGHT \/ 2, TEXTURES\.armoryRackBackdrop\)/,
