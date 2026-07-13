@@ -137,6 +137,60 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.facilityDecal, 32, 32);
   });
 
+  ensureTexture(scene, TEXTURES.facilityServiceFloor, () => {
+    graphics.clear();
+    graphics.fillStyle(0x202a36, 1);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.fillStyle(0x35475a, 1);
+    graphics.fillRect(0, 5, 32, 7);
+    graphics.fillRect(0, 20, 32, 7);
+    graphics.lineStyle(1, 0x596779, 1);
+    graphics.lineBetween(0, 0, 31, 0);
+    graphics.lineBetween(0, 31, 31, 31);
+    graphics.generateTexture(TEXTURES.facilityServiceFloor, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityHazardStripe, () => {
+    graphics.clear();
+    graphics.fillStyle(0x242930, 1);
+    graphics.fillRect(0, 0, 32, 32);
+    graphics.fillStyle(0xb27d2e, 1);
+    for (let y = -24; y < 32; y += 16) {
+      graphics.fillTriangle(0, y + 8, 0, y + 16, 32, y - 16);
+      graphics.fillTriangle(0, y + 16, 32, y - 16, 32, y - 8);
+    }
+    graphics.generateTexture(TEXTURES.facilityHazardStripe, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityObservationWindow, () => {
+    graphics.clear();
+    graphics.fillStyle(0x303b4b, 1);
+    graphics.fillRect(2, 7, 92, 50);
+    graphics.fillStyle(0x071424, 1);
+    graphics.fillRect(10, 14, 76, 34);
+    graphics.lineStyle(2, 0x788596, 1);
+    graphics.strokeRect(2, 7, 91, 49);
+    graphics.fillStyle(0x68d9bc, 1);
+    graphics.fillRect(6, 27, 3, 8);
+    graphics.fillRect(87, 27, 3, 8);
+    graphics.generateTexture(TEXTURES.facilityObservationWindow, 96, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityPipeBank, () => {
+    graphics.clear();
+    graphics.fillStyle(0x222a35, 1);
+    graphics.fillRect(3, 7, 90, 50);
+    for (const y of [16, 31, 46]) {
+      graphics.fillStyle(0x667585, 1);
+      graphics.fillRect(7, y - 4, 82, 8);
+      graphics.fillStyle(0xaeb9c2, 1);
+      graphics.fillRect(9, y - 3, 78, 2);
+    }
+    graphics.fillStyle(0xb27d2e, 1);
+    graphics.fillRect(44, 26, 8, 10);
+    graphics.generateTexture(TEXTURES.facilityPipeBank, 96, 64);
+  });
+
   ensureTexture(scene, TEXTURES.weaponPistolIcon, () => {
     graphics.clear();
     graphics.fillStyle(0x202832, 1);

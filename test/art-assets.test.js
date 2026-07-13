@@ -12,6 +12,10 @@ const approvedImageAssets = [
   { key: "facility-console", path: "assets/art/facility/console.png", size: [64, 64] },
   { key: "facility-vent", path: "assets/art/facility/vent.png", size: [32, 32] },
   { key: "facility-decal", path: "assets/art/facility/decal.png", size: [32, 32] },
+  { key: "facility-service-floor", path: "assets/art/facility/service-floor.png", size: [32, 32] },
+  { key: "facility-hazard-stripe", path: "assets/art/facility/hazard-stripe.png", size: [32, 32] },
+  { key: "facility-observation-window", path: "assets/art/facility/observation-window.png", size: [96, 64] },
+  { key: "facility-pipe-bank", path: "assets/art/facility/pipe-bank.png", size: [96, 64] },
   { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
   { key: "enemy-infected", path: "assets/art/characters/infected-staff.png", size: [48, 48] },
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
@@ -96,7 +100,7 @@ function decodeRgbaPng(buffer) {
 }
 
 function assertApprovedStaticImageAssets(assets) {
-  assert.equal(assets.length, 14);
+  assert.equal(assets.length, 18);
   assert.equal(
     new Set(assets.map(({ key }) => key)).size,
     assets.length,
@@ -113,6 +117,10 @@ test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
   assert.equal(TEXTURES.weaponTeslaIcon, "weapon-tesla-icon");
   assert.equal(TEXTURES.armoryRackBackdrop, "armory-rack-backdrop");
+  assert.equal(TEXTURES.facilityServiceFloor, "facility-service-floor");
+  assert.equal(TEXTURES.facilityHazardStripe, "facility-hazard-stripe");
+  assert.equal(TEXTURES.facilityObservationWindow, "facility-observation-window");
+  assert.equal(TEXTURES.facilityPipeBank, "facility-pipe-bank");
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
@@ -152,11 +160,15 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
     assert.ok(colors.size <= 32, `${key} exceeds the 32-color production palette`);
     assert.ok([...alphaValues].every((alpha) => alpha === 0 || alpha === 255), `${key} has soft alpha`);
 
-    if (key === "facility-floor") {
-      assert.deepEqual(alphaValues, new Set([255]), "floor must be fully opaque");
+    if (["facility-floor", "facility-service-floor", "facility-hazard-stripe"].includes(key)) {
+      assert.deepEqual(alphaValues, new Set([255]), `${key} must be fully opaque`);
       const pixel = (x, y) => pixels.subarray((y * width + x) * 4, (y * width + x + 1) * 4);
       for (let y = 0; y < height; y += 1) assert.deepEqual(pixel(0, y), pixel(width - 1, y));
       for (let x = 0; x < width; x += 1) assert.deepEqual(pixel(x, 0), pixel(x, height - 1));
+    }
+
+    if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
+      assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
     }
   }
 });
