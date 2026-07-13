@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
@@ -149,6 +150,69 @@ function getVisibleFootY(framePixels) {
   return footY;
 }
 
+function getAlphaBounds(framePixels) {
+  let minX = 48;
+  let minY = 48;
+  let maxX = -1;
+  let maxY = -1;
+  for (let offset = 0; offset < framePixels.length; offset += 4) {
+    if (framePixels[offset + 3] !== 255) continue;
+    const pixelIndex = offset / 4;
+    const x = pixelIndex % 48;
+    const y = Math.floor(pixelIndex / 48);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+  assert.ok(maxX >= minX && maxY >= minY, "character frame cannot be empty");
+  return { minX, minY, maxX, maxY };
+}
+
+function normalizeFrameByAlphaBoundsAndFeet(framePixels) {
+  const { minX, minY, maxX, maxY } = getAlphaBounds(framePixels);
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  const targetX = Math.floor((48 - width) / 2);
+  const targetY = 48 - height;
+  const normalized = Buffer.alloc(48 * 48 * 4);
+
+  for (let sourceY = minY; sourceY <= maxY; sourceY += 1) {
+    for (let sourceX = minX; sourceX <= maxX; sourceX += 1) {
+      const sourceOffset = (sourceY * 48 + sourceX) * 4;
+      const destinationX = targetX + sourceX - minX;
+      const destinationY = targetY + sourceY - minY;
+      const destinationOffset = (destinationY * 48 + destinationX) * 4;
+      framePixels.copy(normalized, destinationOffset, sourceOffset, sourceOffset + 4);
+    }
+  }
+  return normalized;
+}
+
+function getNormalizedFrameHash(framePixels) {
+  return createHash("sha256")
+    .update(normalizeFrameByAlphaBoundsAndFeet(framePixels))
+    .digest("hex");
+}
+
+function getChangedVisiblePixelRatio(firstFrame, secondFrame) {
+  const first = normalizeFrameByAlphaBoundsAndFeet(firstFrame);
+  const second = normalizeFrameByAlphaBoundsAndFeet(secondFrame);
+  let changedPixels = 0;
+  let visibleUnionPixels = 0;
+  for (let offset = 0; offset < first.length; offset += 4) {
+    const firstVisible = first[offset + 3] === 255;
+    const secondVisible = second[offset + 3] === 255;
+    if (!firstVisible && !secondVisible) continue;
+    visibleUnionPixels += 1;
+    if (!first.subarray(offset, offset + 4).equals(second.subarray(offset, offset + 4))) {
+      changedPixels += 1;
+    }
+  }
+  assert.ok(visibleUnionPixels > 0, "character frame pair cannot be empty");
+  return changedPixels / visibleUnionPixels;
+}
+
 test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
@@ -251,16 +315,28 @@ test("opening character sheets are exact RGBA 48-frame production assets", async
         for (let column = start; column <= end; column += 1) {
           frames.push(getFramePixels(pixels, width, row * 12 + column));
         }
-        assert.ok(
-          new Set(frames.map((frame) => frame.toString("base64"))).size >= 2,
-          `${key} ${motion} row ${row} cannot repeat one frame`
+        assert.equal(
+          new Set(frames.map(getNormalizedFrameHash)).size,
+          frames.length,
+          `${key} ${motion} row ${row} must contain ${frames.length}/${frames.length} translation-normalized unique poses`
         );
         const footYs = frames.map(getVisibleFootY);
         assert.ok(footYs.every((value) => value >= 0), `${key} ${motion} row ${row} has an empty frame`);
         assert.ok(
-          Math.max(...footYs) - Math.min(...footYs) <= 1,
-          `${key} ${motion} row ${row} foot anchor drifts more than one pixel`
+          footYs.every((value) => value === 44),
+          `${key} ${motion} row ${row} feet must remain at y=44`
         );
+        for (let frameIndex = 0; frameIndex < frames.length; frameIndex += 1) {
+          const nextFrameIndex = (frameIndex + 1) % frames.length;
+          const changedPixelRatio = getChangedVisiblePixelRatio(
+            frames[frameIndex],
+            frames[nextFrameIndex]
+          );
+          assert.ok(
+            changedPixelRatio >= 0.04,
+            `${key} ${motion} row ${row} frames ${frameIndex}->${nextFrameIndex} changed-pixel ratio ${changedPixelRatio.toFixed(4)} is below 0.0400`
+          );
+        }
       }
     }
   }

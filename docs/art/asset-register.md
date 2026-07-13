@@ -179,8 +179,8 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P19](#p19-facility-hazard-stripe)；仅文本输入 | 原图 1254×1254 RGB；中心正方形裁切；nearest 精确缩至 32×32；MEDIANCUT 无抖动量化为 32 色；复制首行/列到末行/列形成逐像素闭合边界；转 8-bit RGBA，alpha 固定 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
 | facility-observation-window | PNG | `assets/art/facility/observation-window.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P20](#p20-facility-observation-window)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,13,94,51)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
 | facility-pipe-bank | PNG | `assets/art/facility/pipe-bank.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P21](#p21-facility-pipe-bank)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,16,94,48)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
-| player-opening-sheet | PNG spritesheet | `assets/art/characters/player-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ bundled Python/Pillow 12.2.0 | 2026-07-13 | [P22](#p22-player-opening-sheet)；仅文本输入；原始输出 `C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-3d058fc0-8885-4f0b-9121-627db2e44d05.png`，工作副本 `.superpowers/sdd/opening-task-6-sources/player-grid-raw.png` | 1254×1254 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化；按 4×3 单元提取 idle/move/hit 源姿势并按 alpha bbox 裁切；nearest 等比缩入每帧最大 40×42 内容区；以源姿势和 ±1px 横移/1–2px 高度变化组装每方向 idle 4 / move 6 / hit 2，脚底固定 y=44；整张 sheet MEDIANCUT 无抖动量化为 32 个可见色；输出 576×192、48 帧、8-bit RGBA、alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求，若复核产生要求则补充 | 候选；商业发布前复核 | 开局动画候选 |
-| infected-opening-sheet | PNG spritesheet | `assets/art/characters/infected-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ bundled Python/Pillow 12.2.0 | 2026-07-13 | [P23](#p23-infected-opening-sheet-first-attempt-no-output) 首次调用卡住且无输出；[P24](#p24-infected-opening-sheet-successful-source) 为实际源；仅文本输入；原始输出 `C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-d4c287ef-366b-4f0f-983a-7e1b93fa44fe.png`，工作副本 `.superpowers/sdd/opening-task-6-sources/infected-grid-raw.png` | 1254×1254 RGB；使用与 player 完全相同的官方去色键、alpha 二值化、4×3 源姿势提取、nearest 缩放、逐帧组装和整 sheet MEDIANCUT 无抖动量化流程；脚底固定 y=44；输出 576×192、48 帧、8-bit RGBA、32 个可见色、alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求，若复核产生要求则补充 | 候选；商业发布前复核 | 开局动画候选 |
+| player-opening-sheet | PNG spritesheet | `assets/art/characters/player-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ Node.js nearest/binary-alpha assembly | 2026-07-13 | 原概念源 [P22](#p22-player-opening-sheet)；补帧 [P25](#p25-player-idle-hit-remediation-source)；两次 walk 调用 [P26](#p26-player-walk-remediation-attempt-no-output)、[P29](#p29-player-walk-remediation-retry-no-output) 均无输出 | 补帧原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-1edce71f-7d84-477f-94c5-36e33f44ebaa.png`；以绿幕距离/绿色优势生成 binary alpha；4×6 alpha bbox 提取；idle 使用新源列 0–3，move 使用原源 idle/move 与新源列 0–3 共 6 个真实姿势，hit 使用新源列 4–5；nearest 等比缩入 40×42、渲染后脚底对齐 y=44；映射到原 player sheet 的 32 色 palette；输出 576×192、8-bit RGBA、alpha 0/255。工作源见 `.superpowers/sdd/opening-task-6-fix-sources/` | 项目定制生成；唯一 reference 为原项目定制生成源板；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求 | 候选；商业发布前复核 | 开局动画候选（真实动作帧修复） |
+| infected-opening-sheet | PNG spritesheet | `assets/art/characters/infected-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ Node.js nearest/binary-alpha assembly | 2026-07-13 | 原概念源 [P24](#p24-infected-opening-sheet-successful-source)；补帧 [P27](#p27-infected-idle-hit-remediation-source)、[P28](#p28-infected-walk-remediation-source) | idle/hit 原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-b6192a8e-30e2-472e-9424-22cb24026894.png`；walk 原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-4bb36632-a0dd-46e3-99d3-9127e6ac047a.png`；binary alpha 与 4×6 alpha bbox 提取；idle 列 0–3 / walk 列 0–5 / hit 列 4–5；nearest 等比缩入 40×42、脚底 y=44；映射到原 infected sheet 的 32 色 palette；输出 576×192、8-bit RGBA、alpha 0/255。工作源见 `.superpowers/sdd/opening-task-6-fix-sources/` | 项目定制生成；唯一 reference 为原项目定制生成源板；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求 | 候选；商业发布前复核 | 开局动画候选（真实动作帧修复） |
 
 ### P13 title-facility-backdrop
 
@@ -354,6 +354,103 @@ Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background.
 Constraints: no #00ff00 in the character; no shadows, gradients, floor, reflections, text, labels, logos, watermark, extra characters, props, gore, or scenery; crisp opaque edges; every pose distinct and direction unambiguous.
 Avoid: chibi, oversized head, zombie caricature, excess blood, 3D, isometric, side-view, smooth painting, soft transparency, duplicated poses.
 ```
+
+### P25 player-idle-hit-remediation-source
+
+Reference：`C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-3d058fc0-8885-4f0b-9121-627db2e44d05.png`。输出：`C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-1edce71f-7d84-477f-94c5-36e33f44ebaa.png`。
+
+```text
+Use case: stylized-concept
+Asset type: additional source pose board for a production 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Input images: Image 1 is the sole character identity, uniform, gear, palette, orthographic viewpoint, and pixel-art style reference.
+Primary request: Generate exactly 24 isolated poses of the SAME Foundation tactical survivor from Image 1, arranged as a precise 4-row by 6-column grid.
+Rows from top to bottom: natively drawn facing down toward viewer; facing left; facing right; facing up away from viewer. Do not create left/right rows by mirroring.
+Columns 1-4: four genuinely articulated idle phases. Pose 1 balanced low-ready stance; pose 2 weight shifted onto one leg with the opposite knee relaxed and shoulders subtly counter-rotated; pose 3 weight shifted to the other leg with weapon and elbows changing relative positions; pose 4 alert breath/scanning stance with distinct knee, shoulder, elbow, and weapon placement. Columns 5-6: two genuinely different hit recoil poses, one torso twisting and weapon arm pulling inward, the other shoulders recoiling back with the free arm and legs bracing differently.
+Subject invariants: preserve the exact same adult realistic-proportion survivor identity, dark navy protective suit, compact chest rig, pale shoulder insignia without readable text, black boots, hair, face, equipment, and compact firearm from Image 1. Weapon points consistently in the row's facing direction except during the two recoil poses.
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited steel-blue/graphite palette, crisp opaque edges, no antialiasing.
+Composition/framing: exact evenly spaced 4x6 grid, one complete full-body character per cell, identical character scale, generous uniform separation and padding, stable foot baseline within each row, no cell borders.
+Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background for local removal.
+Constraints: all 24 poses must have visibly different limb articulation after translation alignment; change knees, boot separation/angle, shoulders, elbows, hands, weapon relation, and torso angle—not whole-body position, bob, scale, mirroring, recolor, or one-pixel noise alone. No #00ff00 in character; no shadows, gradients, texture, floor, reflections, text, labels, numbers, logos, watermark, extra characters, props, muzzle flash, blood, or scenery.
+Avoid: duplicated poses, translation-only copies, vertical bob-only frames, scaled copies, mirrored direction rows, chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency.
+```
+
+### P26 player-walk-remediation-attempt-no-output
+
+Reference 同 P25。调用超过 5 分钟无输出后终止，未生成源文件。
+
+```text
+Use case: stylized-concept
+Asset type: six-phase walk-cycle source pose board for a production 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Input images: Image 1 is the sole character identity, uniform, gear, palette, orthographic viewpoint, and pixel-art style reference.
+Primary request: Generate exactly 24 isolated poses of the SAME Foundation tactical survivor from Image 1, arranged as a precise 4-row by 6-column grid.
+Rows from top to bottom: natively drawn facing down toward viewer; facing left; facing right; facing up away from viewer. Do not create left/right rows by mirroring.
+Columns 1-6 are one coherent looping tactical walk cycle with six genuinely articulated gait phases: left-foot contact, left-foot load, passing pose, right-foot contact, right-foot load, opposite passing pose. Across the cycle, knees bend and exchange depth, boot spacing and angles change, hips and shoulders counter-rotate subtly, elbows and held weapon shift naturally with the stride, and the final-to-first transition loops cleanly. The survivor remains combat-ready rather than sprinting.
+Subject invariants: preserve the exact same adult realistic-proportion survivor identity, dark navy protective suit, compact chest rig, pale shoulder insignia without readable text, black boots, hair, face, equipment, and compact firearm from Image 1. Weapon points consistently in the row's facing direction.
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited steel-blue/graphite palette, crisp opaque edges, no antialiasing.
+Composition/framing: exact evenly spaced 4x6 grid, one complete full-body character per cell, identical character scale, generous uniform separation and padding, stable foot baseline within each row, no cell borders.
+Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background for local removal.
+Constraints: every neighboring phase and phase 6 back to phase 1 must remain visibly different after translation alignment; real changes must affect legs, boots, knees, hips, shoulders, elbows, hands, and weapon relation—not whole-body translation, vertical bob, scaling, mirroring, recolor, or one-pixel noise alone. No #00ff00 in character; no shadows, gradients, texture, floor, reflections, text, labels, numbers, logos, watermark, extra characters, props, muzzle flash, blood, or scenery.
+Avoid: duplicated poses, translation-only copies, vertical bob-only frames, scaled copies, mirrored direction rows, chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency.
+```
+
+### P27 infected-idle-hit-remediation-source
+
+Reference：`C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-d4c287ef-366b-4f0f-983a-7e1b93fa44fe.png`。输出：`C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-b6192a8e-30e2-472e-9424-22cb24026894.png`。
+
+```text
+Use case: stylized-concept
+Asset type: additional source pose board for a production 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Input images: Image 1 is the sole character identity, uniform, asymmetry, palette, orthographic viewpoint, and pixel-art style reference.
+Primary request: Generate exactly 24 isolated poses of the SAME infected Foundation maintenance worker from Image 1, arranged as a precise 4-row by 6-column grid.
+Rows from top to bottom: natively drawn facing down toward viewer; facing left; facing right; facing up away from viewer. Do not create left/right rows by mirroring.
+Columns 1-4: four genuinely articulated tense idle phases. Pose 1 uneven slouch with one shoulder low; pose 2 weight sinks onto the wounded-side leg while the opposite knee and elbow change; pose 3 weight shifts to the other leg with head, shoulders, hands, and boot angles changed; pose 4 an unstable sway with distinct torso twist, arm hang, knee bend, and foot spacing. Columns 5-6: two genuinely different hit recoil poses, one folding sideways with arms reacting asymmetrically, the other twisting backward with legs bracing in a different configuration.
+Subject invariants: preserve the exact same adult realistic-proportion infected worker identity, torn grey-blue maintenance uniform, dark work boots, utility belt, hair, facial damage, asymmetric diseased posture, restrained dark dried blood only on one sleeve and collar, and all equipment from Image 1.
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited grey-blue/graphite/restrained dark-red palette, crisp opaque edges, no antialiasing.
+Composition/framing: exact evenly spaced 4x6 grid, one complete full-body character per cell, identical character scale, generous uniform separation and padding, stable foot baseline within each row, no cell borders.
+Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background for local removal.
+Constraints: all 24 poses must have visibly different limb articulation after translation alignment; change knees, boot separation/angle, hips, shoulders, elbows, hands, head angle, and torso bend—not whole-body position, bob, scale, mirroring, recolor, or one-pixel noise alone. No #00ff00 in character; no shadows, gradients, texture, floor, reflections, text, labels, numbers, logos, watermark, extra characters, props, gore, exposed organs, or scenery.
+Avoid: duplicated poses, translation-only copies, vertical bob-only frames, scaled copies, mirrored direction rows, zombie caricature, excessive blood, chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency.
+```
+
+### P28 infected-walk-remediation-source
+
+Reference 同 P27。输出：`C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-4bb36632-a0dd-46e3-99d3-9127e6ac047a.png`。
+
+```text
+Use case: stylized-concept
+Asset type: six-phase walk-cycle source pose board for a production 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Input images: Image 1 is the sole character identity, uniform, asymmetry, palette, orthographic viewpoint, and pixel-art style reference.
+Primary request: Generate exactly 24 isolated poses of the SAME infected Foundation maintenance worker from Image 1 in a precise 4-row by 6-column grid.
+Rows top to bottom: natively drawn facing down; facing left; facing right; facing up. Never mirror a direction row.
+Columns 1-6: one coherent looping six-phase lurching walk cycle: left-foot contact, left-side load, passing pose, right-foot contact, right-side load, opposite passing pose. Make all phases genuinely articulated: alternating knee bend and depth, boot spacing and angle, uneven hip shift, asymmetric shoulder counter-rotation, head lag, elbow and hand swing, and changing torso bend. Phase 6 must loop naturally to phase 1.
+Subject invariants: preserve the same adult realistic-proportion infected worker identity, torn grey-blue maintenance uniform, dark boots, utility belt, hair, facial damage, asymmetric diseased posture, restrained dark dried blood only on one sleeve and collar, and equipment from Image 1.
+Style/medium: detailed orthographic top-down 2D pixel art, hard deliberate pixel clusters, limited grey-blue/graphite/dark-red palette, crisp opaque edges, no antialiasing.
+Composition/framing: exact evenly spaced 4x6 grid, one full-body character per cell, identical scale, generous separation, stable foot baseline, no borders.
+Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background.
+Constraints: every adjacent phase and phase 6 back to phase 1 must differ after translation alignment through real limb and torso articulation; never use whole-body translation, vertical bob, scaling, mirroring, recolor, or one-pixel noise alone. No #00ff00 in subject; no shadows, gradients, floor, reflections, text, labels, logos, watermark, extra characters, props, gore, exposed organs, or scenery.
+Avoid: duplicate poses, translation copies, bob-only frames, scaled copies, mirrored rows, zombie caricature, excessive blood, chibi, 3D, isometric, side-view, smooth painting, soft transparency.
+```
+
+### P29 player-walk-remediation-retry-no-output
+
+Reference 同 P25。缩短 prompt 后再次调用，超过 5 分钟仍无输出并终止，未生成源文件。
+
+```text
+Use case: stylized-concept
+Asset type: six-phase walk-cycle source pose board for a 48x48 top-down pixel-art game spritesheet
+Input images: Image 1 is the sole identity/style reference.
+Primary request: exactly 24 isolated poses of the SAME Foundation tactical survivor from Image 1, in an exact 4-row by 6-column grid.
+Rows top-to-bottom: natively drawn facing down, left, right, up; never mirror a direction row. Columns 1-6: a coherent looping tactical walk cycle: left contact, left load, passing, right contact, right load, opposite passing.
+Every phase must use real articulation: alternate knees and boot depth/spacing/angle, hip and shoulder counter-rotation, elbow/hand changes, and subtle firearm shift while remaining combat-ready. Frame 6 loops naturally to frame 1.
+Preserve exactly: adult proportions and identity, dark navy protective suit, compact chest rig, pale shoulder insignia without readable text, black boots, hair, face, all gear, and compact firearm pointing in row direction.
+Style: detailed orthographic top-down 2D pixel art, hard coarse pixel clusters, limited steel-blue/graphite palette, crisp opaque edges, no antialiasing.
+Composition: evenly spaced 4x6 grid, one full body per cell, identical scale, generous separation, stable foot baseline, no borders.
+Backdrop: perfectly flat uniform #00ff00 chroma key.
+Constraints: adjacent phases and 6-to-1 remain visibly different after translation alignment; no translation-only, bob-only, scaling, mirroring, recolor, or one-pixel-noise variants. No green in subject, shadows, gradients, floor, reflection, text, labels, logos, watermark, extra characters, props, muzzle flash, blood, or scenery.
+Avoid: duplicates, chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency.
+```
+
+修复组装说明：built-in 输出先复制至 `.superpowers/sdd/opening-task-6-fix-sources/`。官方 `remove_chroma_key.py` 因当前 worktree 无可用 Python runtime 未能执行；未切换 CLI 或模型。实际使用项目临时 Node.js 组装脚本按四角绿幕色计算 RGB 距离（≤120）并要求绿色通道分别高于红、蓝 55，直接生成 alpha 0/255；随后按 alpha bbox 提取姿势、nearest 端点保持缩放、渲染后仅作脚底 y=44 对齐，并映射至对应旧 sheet 的 32 色 palette。该过程不绘制替代角色、不制造平移动作。独立审计脚本未导入生产测试函数；所有方向达到 idle 4/4、move 6/6、hit 2/2 normalized unique，最小循环相邻 changed-pixel ratio 为 0.8045。
 
 开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
 
