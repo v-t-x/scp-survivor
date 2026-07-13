@@ -135,10 +135,11 @@ test("credits formatting is finite and title view owns the approved information 
 
   const scene = screenSceneStub();
   const cleanup = [];
+  let activations = 0;
   const view = createTitleScreenView(scene, cleanup, {
     credits: 585,
     depth: 20,
-    onActivate() {}
+    onActivate() { activations += 1; }
   });
   const texts = scene.created.filter(({ type }) => type === "text").map(({ text }) => text);
   assert.ok(texts.includes("SITE-CN-03 // CONTAINMENT INCIDENT"));
@@ -151,7 +152,21 @@ test("credits formatting is finite and title view owns the approved information 
   const creditsText = scene.created.find(({ type, text }) => type === "text" && text === "累计学分 585");
   assert.equal(creditsText.style.fixedWidth, 180);
   assert.equal(scene.tweens.created.length, 3);
-  assert.deepEqual(cleanup, view.objects);
+  const [titleTween, missionTween, actionTween] = scene.tweens.created;
+  assert.deepEqual(titleTween.config, {
+    targets: scene.created.slice(0, 5), x: "+=16", alpha: 1, duration: 360, ease: "Sine.Out"
+  });
+  assert.deepEqual(missionTween.config, {
+    targets: scene.created.slice(5, 7), x: "+=12", alpha: 1, delay: 120, duration: 320, ease: "Sine.Out"
+  });
+  assert.deepEqual(actionTween.config, {
+    targets: view.action.objects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out"
+  });
+  assert.equal(view.action.hitArea.alpha, 0);
+  view.action.hitArea.handlers.get("pointerup")();
+  assert.equal(activations, 1);
+  assert.deepEqual(cleanup, scene.created);
+  assert.deepEqual(view.objects, scene.created);
   view.stop();
   view.stop();
   assert.ok(scene.tweens.created.every((tween) => tween.stopCount === 1));
