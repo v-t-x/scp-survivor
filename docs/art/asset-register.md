@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批正式素材的真实生产信息。20 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录首批正式素材的真实生产信息。23 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -502,9 +502,57 @@ Primary request: experimental Tesla launcher icon
 Subject: one compact industrial electrical launcher with twin exposed copper induction coils, central steel emitter fork, insulated grip, cable housing and two tiny cold-cyan charge cells; unmistakably electrical but still a handheld weapon
 ```
 
+## Task 2 肩载火控模块八方向 sheet
+
+三张 sheet 均使用 OpenAI built-in `image_gen` 单独生成，工具未暴露具体模型名；没有调用 CLI/API fallback。每次只使用同武器现有项目图标作为唯一图像参考，没有使用 SCP Wiki、素材包、用户截图或其他第三方图像。built-in 输出均为带浅灰棋盘底的 8-bit RGB PNG，因此没有把源文件直接当成透明成品。
+
+确定性规范化统一执行：按 `floor(frame × sourceWidth / 8)` 切分八个原生方向单元；移除 `min(R,G,B) >= 230` 且 `max(R,G,B) - min(R,G,B) <= 4` 的中性棋盘像素；逐格计算 alpha bbox；同一 sheet 取八格最大 bbox 计算单一 scale，使用 nearest-neighbor 缩入最长边 80px；每格水平中心对齐并把可见 bbox（含 pivot collar）底部统一放到 `y=84`，其余区域透明；输出 alpha 仅 `{0,255}`；以确定性加权最远点初始化和 6 次加权聚类生成最多 32 色调色板，无抖动；编码为精确 768×96、8-bit RGBA PNG。没有镜像、旋转、复制其他方向或运行时旋转。
+
+| Asset | Type | Path | Tool/model | Date | Reference and built-in output | Per-frame normalization | License/right basis | Commercial-use status | Admission | Final contract | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| weapon-rig-pistol | PNG spritesheet | `assets/art/weapons/rig-pistol.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P30](#p30-weapon-rig-pistol)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\pistol.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-b8069f2b-e74a-4b3a-bd75-b03a4a4e5365.png` | 源 1774×887 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 192×232、222×226、193×235、173×234、173×229、222×230、180×235、185×226；统一 nearest scale `0.3404`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
+| weapon-rig-breacher | PNG spritesheet | `assets/art/weapons/rig-breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P31](#p31-weapon-rig-breacher)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\breacher.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-d4d7f1a9-e2dc-4378-9486-16b167773813.png` | 源 2172×724 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 237×176、272×176、217×180、246×176、228×173、225×177、207×180、237×176；统一 nearest scale `0.2941`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
+| weapon-rig-tesla | PNG spritesheet | `assets/art/weapons/rig-tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P32](#p32-weapon-rig-tesla)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\tesla.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-9644ee8b-5b53-42c8-9530-b3152dc47c5d.png` | 源 2172×724 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 246×190、272×190、221×192、247×191、251×190、252×192、138×190、231×192；统一 nearest scale `0.2941`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
+
+### P30 weapon-rig-pistol
+
+```text
+Use case: stylized-concept
+Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
+Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
+Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
+Subject: compact pistol module with sockets for five parallel channels.
+Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
+Avoid: scenery, text, soft blur, wrong perspective, unrecognizable pistol identity, human, logo, watermark, extra objects.
+```
+
+### P31 weapon-rig-breacher
+
+```text
+Use case: stylized-concept
+Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
+Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
+Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
+Subject: compact breacher module with a hydraulic recoil sleeve and box-feed interface.
+Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
+Avoid: scenery, text, soft blur, wrong perspective, unrecognizable breacher identity, human, logo, watermark, extra objects.
+```
+
+### P32 weapon-rig-tesla
+
+```text
+Use case: stylized-concept
+Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
+Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
+Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
+Subject: compact Tesla module with twin coils and eight small node lights.
+Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
+Avoid: scenery, text, soft blur, wrong perspective, unrecognizable Tesla identity, human, logo, watermark, extra objects.
+```
+
 ## 准入备注
 
-- 20 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
+- 23 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
 - `facility-floor`、`facility-service-floor`、`facility-hazard-stripe`、标题背景与军械库背景保持全不透明；三张地面 tile 另由自动测试逐像素验证上下与左右边缘相等。
 - 其余 15 项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
