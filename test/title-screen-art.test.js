@@ -6,12 +6,44 @@ import { createTitleBackdrop } from "../src/art/titleBackdrop.js";
 
 function makeDisplayObject() {
   return {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    commands: [],
     setDepth(depth) {
       this.depth = depth;
       return this;
     },
     setScrollFactor(value) {
       this.scrollFactor = value;
+      return this;
+    },
+    setScale(value) {
+      this.scale = value;
+      return this;
+    },
+    setOrigin(...value) {
+      this.origin = value;
+      return this;
+    },
+    clear() {
+      this.commands = [];
+      return this;
+    },
+    fillStyle(...args) {
+      this.commands.push(["fillStyle", ...args]);
+      return this;
+    },
+    fillRect(...args) {
+      this.commands.push(["fillRect", ...args]);
+      return this;
+    },
+    lineStyle(...args) {
+      this.commands.push(["lineStyle", ...args]);
+      return this;
+    },
+    strokeRect(...args) {
+      this.commands.push(["strokeRect", ...args]);
       return this;
     }
   };
@@ -33,13 +65,17 @@ test("title screen uses the tactical terminal instead of a rectangle button", as
   assert.doesNotMatch(method, /startButton\s*=\s*this\.add\.rectangle/);
 });
 
-test("title backdrop owns screen-fixed layers and stops its tween", () => {
+test("title backdrop owns gradient, gate focus and every tween idempotently", () => {
   const calls = [];
-  const tween = { stopped: false, stop() { this.stopped = true; } };
+  const tweens = [];
   const scene = {
     add: {
       image(...args) {
         calls.push({ type: "image", args });
+        return makeDisplayObject();
+      },
+      graphics(...args) {
+        calls.push({ type: "graphics", args });
         return makeDisplayObject();
       },
       rectangle(...args) {
@@ -49,11 +85,16 @@ test("title backdrop owns screen-fixed layers and stops its tween", () => {
       circle(...args) {
         calls.push({ type: "circle", args });
         return makeDisplayObject();
+      },
+      text(...args) {
+        calls.push({ type: "text", args });
+        return makeDisplayObject();
       }
     },
     tweens: {
       add(config) {
-        calls.push({ type: "tween", config });
+        const tween = { config, stopCount: 0, stop() { this.stopCount += 1; } };
+        tweens.push(tween);
         return tween;
       }
     }
@@ -62,13 +103,14 @@ test("title backdrop owns screen-fixed layers and stops its tween", () => {
 
   const controller = createTitleBackdrop(scene, cleanup, 7);
 
-  assert.equal(controller.objects.length, 4);
-  assert.deepEqual(cleanup, controller.objects);
-  assert.deepEqual(calls[0], {
-    type: "image",
-    args: [480, 270, TEXTURES.titleFacilityBackdrop]
-  });
-  for (const object of controller.objects) assert.equal(object.scrollFactor, 0);
+  assert.equal(calls[0].type, "image");
+  assert.deepEqual(calls[0].args, [480, 270, TEXTURES.titleFacilityBackdrop]);
+  assert.equal(calls.filter(({ type }) => type === "graphics").length, 2);
+  assert.equal(calls.some(({ type, args }) => type === "rectangle" && args[2] === 440 && args[3] === 540), false);
+  assert.equal(tweens.length, 3);
+  assert.equal(cleanup.length, controller.objects.length);
+  assert.ok(controller.objects.every((object) => object.scrollFactor === 0));
   controller.stop();
-  assert.equal(tween.stopped, true);
+  controller.stop();
+  assert.ok(tweens.every((tween) => tween.stopCount === 1));
 });
