@@ -44,6 +44,25 @@ export const THEME = {
     }
   },
 
+  terminal: {
+    panelFill: 0x0b1119,
+    panelRaised: 0x141f2c,
+    frame: 0x53677d,
+    frameFocus: 0x8da6c2,
+    scanline: 0x9db7c9,
+    contained: 0x6fd6b4,
+    warning: 0xd2a34b,
+    danger: 0xb9474f,
+    disabled: 0x48525d
+  },
+
+  layout: {
+    cornerCut: 8,
+    panelPadding: 12,
+    buttonHeight: 56,
+    labelGap: 8
+  },
+
   surface: {
     facility: 0x080c16,
     panel: 0x141c2f,
