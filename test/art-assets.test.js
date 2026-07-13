@@ -195,23 +195,87 @@ function getNormalizedFrameHash(framePixels) {
     .digest("hex");
 }
 
-function getChangedVisiblePixelRatio(firstFrame, secondFrame) {
+function getFramePairDifferenceRatios(firstFrame, secondFrame) {
   const first = normalizeFrameByAlphaBoundsAndFeet(firstFrame);
   const second = normalizeFrameByAlphaBoundsAndFeet(secondFrame);
   let changedPixels = 0;
+  let changedAlphaShapePixels = 0;
   let visibleUnionPixels = 0;
   for (let offset = 0; offset < first.length; offset += 4) {
     const firstVisible = first[offset + 3] === 255;
     const secondVisible = second[offset + 3] === 255;
     if (!firstVisible && !secondVisible) continue;
     visibleUnionPixels += 1;
+    if (firstVisible !== secondVisible) changedAlphaShapePixels += 1;
     if (!first.subarray(offset, offset + 4).equals(second.subarray(offset, offset + 4))) {
       changedPixels += 1;
     }
   }
   assert.ok(visibleUnionPixels > 0, "character frame pair cannot be empty");
-  return changedPixels / visibleUnionPixels;
+  return {
+    changedPixelRatio: changedPixels / visibleUnionPixels,
+    alphaShapeDifferenceRatio: changedAlphaShapePixels / visibleUnionPixels
+  };
 }
+
+function assertMeaningfullyDifferentFramePairs(frames, context) {
+  for (let firstIndex = 0; firstIndex < frames.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < frames.length; secondIndex += 1) {
+      const {
+        changedPixelRatio,
+        alphaShapeDifferenceRatio
+      } = getFramePairDifferenceRatios(frames[firstIndex], frames[secondIndex]);
+      assert.ok(
+        changedPixelRatio >= 0.04,
+        `${context} frames ${firstIndex}<->${secondIndex} changed-pixel ratio ${changedPixelRatio.toFixed(4)} is below 0.0400`
+      );
+      assert.ok(
+        alphaShapeDifferenceRatio >= 0.04,
+        `${context} frames ${firstIndex}<->${secondIndex} alpha-shape difference ratio ${alphaShapeDifferenceRatio.toFixed(4)} is below 0.0400`
+      );
+    }
+  }
+}
+
+function createAdversarialFrame({ hollowCenter = false, color = [42, 86, 118] } = {}) {
+  const frame = Buffer.alloc(48 * 48 * 4);
+  for (let y = 24; y <= 43; y += 1) {
+    for (let x = 18; x <= 29; x += 1) {
+      if (hollowCenter && x >= 20 && x <= 27 && y >= 28 && y <= 35) continue;
+      const offset = (y * 48 + x) * 4;
+      frame.set([...color, 255], offset);
+    }
+  }
+  return frame;
+}
+
+test("character frame gate rejects a non-adjacent copy with one changed visible pixel", () => {
+  const original = createAdversarialFrame();
+  const interveningPose = createAdversarialFrame({ hollowCenter: true });
+  const nearDuplicate = Buffer.from(original);
+  nearDuplicate.set([210, 60, 45, 255], (30 * 48 + 20) * 4);
+
+  assert.throws(
+    () => assertMeaningfullyDifferentFramePairs(
+      [original, interveningPose, nearDuplicate],
+      "adversarial idle row 0"
+    ),
+    /adversarial idle row 0 frames 0<->2 changed-pixel ratio .* is below 0\.0400/
+  );
+});
+
+test("character frame gate rejects recoloring without alpha-shape motion", () => {
+  const original = createAdversarialFrame();
+  const recoloredCopy = createAdversarialFrame({ color: [220, 90, 55] });
+
+  assert.throws(
+    () => assertMeaningfullyDifferentFramePairs(
+      [original, recoloredCopy],
+      "recolor move row 0"
+    ),
+    /recolor move row 0 frames 0<->1 alpha-shape difference ratio 0\.0000 is below 0\.0400/
+  );
+});
 
 test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
@@ -326,17 +390,7 @@ test("opening character sheets are exact RGBA 48-frame production assets", async
           footYs.every((value) => value === 44),
           `${key} ${motion} row ${row} feet must remain at y=44`
         );
-        for (let frameIndex = 0; frameIndex < frames.length; frameIndex += 1) {
-          const nextFrameIndex = (frameIndex + 1) % frames.length;
-          const changedPixelRatio = getChangedVisiblePixelRatio(
-            frames[frameIndex],
-            frames[nextFrameIndex]
-          );
-          assert.ok(
-            changedPixelRatio >= 0.04,
-            `${key} ${motion} row ${row} frames ${frameIndex}->${nextFrameIndex} changed-pixel ratio ${changedPixelRatio.toFixed(4)} is below 0.0400`
-          );
-        }
+        assertMeaningfullyDifferentFramePairs(frames, `${key} ${motion} row ${row}`);
       }
     }
   }
