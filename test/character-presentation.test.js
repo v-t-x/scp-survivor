@@ -44,7 +44,9 @@ function createSprite({
   velocity = { x: 0, y: 0 },
   presentationFacing = "down",
   presentationHitUntilMs = 0,
-  isTinted = false
+  isTinted = false,
+  scaleX = 1,
+  scaleY = 1
 }) {
   const played = [];
   const sprite = {
@@ -66,7 +68,14 @@ function createSprite({
     presentationFacing,
     presentationHitUntilMs,
     isTinted,
+    scaleX,
+    scaleY,
+    flipX: false,
     anims: { currentAnim: null },
+    setFlipX(value) {
+      this.flipX = value;
+      return this;
+    },
     play(key) {
       played.push(key);
       this.anims.currentAnim = { key };
@@ -140,6 +149,16 @@ test("animation registration is complete, frame-exact and idempotent", () => {
     start: 16,
     end: 21
   });
+  assert.deepEqual(
+    byKey.get("player-move-right").frames,
+    byKey.get("player-move-left").frames,
+    "right-facing player animation should mirror the full-size left-facing row"
+  );
+  assert.deepEqual(
+    byKey.get("infectedStaff-hit-right").frames,
+    byKey.get("infectedStaff-hit-left").frames,
+    "right-facing infected animation should mirror the full-size left-facing row"
+  );
   assert.deepEqual(byKey.get("infectedStaff-hit-up").frames, {
     sheetKey: TEXTURES.infectedOpeningSheet,
     start: 46,
@@ -194,7 +213,11 @@ test("presentation sync changes only animation-facing display state", () => {
   syncCharacterPresentation(scene);
 
   assert.deepEqual(player.played, ["player-move-right"]);
+  assert.equal(player.sprite.flipX, true);
+  assert.equal(player.sprite.scaleX, 1);
+  assert.equal(player.sprite.scaleY, 1);
   assert.deepEqual(enemy.played, ["infectedStaff-hit-up"]);
+  assert.equal(enemy.sprite.flipX, false);
   assert.equal(enemy.sprite.presentationHitUntilMs, 1_120);
   assert.deepEqual(
     {
@@ -214,6 +237,50 @@ test("presentation sync changes only animation-facing display state", () => {
     },
     enemyBodyBefore
   );
+});
+
+test("horizontal facing mirrors right without changing character scale", () => {
+  const player = createSprite({
+    kind: "player",
+    sheetKey: TEXTURES.playerOpeningSheet,
+    velocity: { x: 90, y: 0 },
+    scaleX: 1.2,
+    scaleY: 1.2
+  });
+  const enemy = createSprite({
+    kind: "infectedStaff",
+    sheetKey: TEXTURES.infectedOpeningSheet,
+    velocity: { x: -55, y: 0 },
+    scaleX: 1.15,
+    scaleY: 1.15
+  });
+  const scene = {
+    elapsedSurvivalMs: 0,
+    player: player.sprite,
+    enemies: { getChildren: () => [enemy.sprite] }
+  };
+
+  syncCharacterPresentation(scene);
+
+  assert.equal(player.sprite.presentationFacing, "right");
+  assert.equal(player.sprite.flipX, true);
+  assert.equal(player.sprite.scaleX, 1.2);
+  assert.equal(player.sprite.scaleY, 1.2);
+  assert.equal(enemy.sprite.presentationFacing, "left");
+  assert.equal(enemy.sprite.flipX, false);
+  assert.equal(enemy.sprite.scaleX, 1.15);
+  assert.equal(enemy.sprite.scaleY, 1.15);
+
+  player.sprite.body.velocity.x = -90;
+  enemy.sprite.body.velocity.x = 55;
+  syncCharacterPresentation(scene);
+
+  assert.equal(player.sprite.presentationFacing, "left");
+  assert.equal(player.sprite.flipX, false);
+  assert.equal(enemy.sprite.presentationFacing, "right");
+  assert.equal(enemy.sprite.flipX, true);
+  assert.equal(player.sprite.scaleX, 1.2);
+  assert.equal(enemy.sprite.scaleX, 1.15);
 });
 
 test("static fallbacks and later-wave textures are presentation-compatible", () => {

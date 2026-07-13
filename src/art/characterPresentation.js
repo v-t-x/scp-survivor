@@ -60,6 +60,7 @@ export function registerOpeningCharacterAnimations(scene) {
     }
 
     DIRECTIONS.forEach((facing, row) => {
+      const sourceRow = facing === "right" ? 1 : row;
       for (const [motion, range] of Object.entries(MOTIONS)) {
         const key = `${kind}-${motion}-${facing}`;
         if (scene.anims.exists(key)) {
@@ -68,8 +69,8 @@ export function registerOpeningCharacterAnimations(scene) {
         scene.anims.create({
           key,
           frames: scene.anims.generateFrameNumbers(config.sheetKey, {
-            start: row * 12 + range.start,
-            end: row * 12 + range.end
+            start: sourceRow * 12 + range.start,
+            end: sourceRow * 12 + range.end
           }),
           frameRate: range.frameRate,
           repeat: motion === "hit" ? 0 : -1
@@ -118,6 +119,7 @@ function syncSprite(scene, sprite, kind) {
     sprite.body.velocity.y,
     sprite.presentationFacing
   );
+  sprite.setFlipX?.(sprite.presentationFacing === "right");
   const moving = sprite.body.velocity.lengthSq() > 1;
   const key = getCharacterAnimationKey({
     kind,
