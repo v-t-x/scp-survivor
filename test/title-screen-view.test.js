@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { THEME } from "../src/ui/theme.js";
 import {
   createTitleAction,
+  createTitleScreenView,
+  formatTitleCredits,
   getTitleActionPalette
 } from "../src/art/titleScreenView.js";
 
@@ -59,6 +61,25 @@ function sceneStub() {
   };
 }
 
+function screenSceneStub() {
+  const scene = sceneStub();
+  const tweens = [];
+  scene.add.circle = (...args) => {
+    const object = { ...displayObject("circle"), args };
+    scene.created.push(object);
+    return object;
+  };
+  scene.tweens = {
+    add(config) {
+      const tween = { config, stopCount: 0, stop() { this.stopCount += 1; } };
+      tweens.push(tween);
+      return tween;
+    }
+  };
+  scene.tweens.created = tweens;
+  return scene;
+}
+
 test("title action palettes are distinct and production tokens are fixed", () => {
   assert.deepEqual(THEME.title, {
     scrim: 0x03070c,
@@ -103,4 +124,36 @@ test("title action owns one exact hit area and stops listeners idempotently", ()
   action.stop();
   assert.equal(action.hitArea.handlers.size, 0);
   assert.equal(action.hitArea.interactive, false);
+});
+
+test("credits formatting is finite and title view owns the approved information hierarchy", () => {
+  assert.equal(formatTitleCredits(585), "585");
+  assert.equal(formatTitleCredits(1234567), "1,234,567");
+  assert.equal(formatTitleCredits(Number.MAX_SAFE_INTEGER), "999,999,999+");
+  assert.equal(formatTitleCredits(-4), "0");
+  assert.equal(formatTitleCredits("bad"), "0");
+
+  const scene = screenSceneStub();
+  const cleanup = [];
+  const view = createTitleScreenView(scene, cleanup, {
+    credits: 585,
+    depth: 20,
+    onActivate() {}
+  });
+  const texts = scene.created.filter(({ type }) => type === "text").map(({ text }) => text);
+  assert.ok(texts.includes("SITE-CN-03 // CONTAINMENT INCIDENT"));
+  assert.ok(texts.includes("收容失效"));
+  assert.ok(texts.includes("SCP"));
+  assert.ok(texts.includes("幸存者"));
+  assert.ok(texts.includes("进入失控设施，完成 SCP-049 再收容。"));
+  assert.ok(texts.includes("累计学分 585"));
+  assert.ok(texts.some((text) => text.includes("WASD 移动")));
+  const creditsText = scene.created.find(({ type, text }) => type === "text" && text === "累计学分 585");
+  assert.equal(creditsText.style.fixedWidth, 180);
+  assert.equal(scene.tweens.created.length, 3);
+  assert.deepEqual(cleanup, view.objects);
+  view.stop();
+  view.stop();
+  assert.ok(scene.tweens.created.every((tween) => tween.stopCount === 1));
+  assert.equal(view.action.hitArea.handlers.size, 0);
 });
