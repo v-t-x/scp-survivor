@@ -1,4 +1,3 @@
-import Phaser from "phaser";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -12,8 +11,8 @@ import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
-import { createFacilityMenuBackdrop } from "../art/menuBackdrop.js";
 import { createTitleBackdrop } from "../art/titleBackdrop.js";
+import { createArmorySlot } from "../art/weaponSelectionView.js";
 import { THEME } from "../ui/theme.js";
 import { createStatusLamp, createTerminalButton } from "../ui/tacticalUi.js";
 
@@ -156,37 +155,42 @@ export const menusMixin = {
     this.weaponSelectUiObjects = [];
     this.weaponSelectHoveredCardId = null;
     this.weaponSelectButtonHovered = false;
-    createFacilityMenuBackdrop(this, this.weaponSelectUiObjects, 0);
 
-    const cardWidth = 250;
-    const cardHeight = 318;
-
-    const bg = this.add.rectangle(
+    const armoryBackdrop = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEXTURES.armoryRackBackdrop);
+    armoryBackdrop.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    armoryBackdrop.setDepth(0);
+    const contrastVeil = this.add.rectangle(
       GAME_WIDTH / 2,
       GAME_HEIGHT / 2,
-      870,
-      520,
-      THEME.surface.panel,
-      1
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      THEME.surface.facility,
+      0.24
     );
-    bg.setStrokeStyle(2, THEME.border.focus);
-    bg.setDepth(10);
-    this.weaponSelectUiObjects.push(bg);
-
-    const topAccent = this.add.rectangle(
+    contrastVeil.setDepth(1);
+    const commandRail = this.add.rectangle(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 246,
-      830,
-      3,
-      THEME.signal.info,
-      0.8
+      48,
+      GAME_WIDTH,
+      96,
+      THEME.terminal.panelFill,
+      0.9
     );
-    topAccent.setDepth(11);
-    this.weaponSelectUiObjects.push(topAccent);
+    commandRail.setDepth(10);
+    const lowerRail = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT - 39,
+      GAME_WIDTH,
+      78,
+      THEME.terminal.panelFill,
+      0.94
+    );
+    lowerRail.setDepth(10);
+    this.weaponSelectUiObjects.push(armoryBackdrop, contrastVeil, commandRail, lowerRail);
 
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 205, "选择主武器", {
+    const title = this.add.text(GAME_WIDTH / 2, 34, "军械库 / 主武器授权", {
       fontFamily: THEME.font.display,
-      fontSize: "48px",
+      fontSize: "30px",
       fontStyle: "bold",
       color: THEME.text.primary
     });
@@ -197,11 +201,11 @@ export const menusMixin = {
 
     const subtitle = this.add.text(
       GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 168,
-      "部署前请选择一套装备。",
+      70,
+      "选择装备槽位，锁定后确认部署。",
       {
         fontFamily: THEME.font.body,
-        fontSize: "20px",
+        fontSize: "14px",
         color: THEME.text.secondary
       }
     );
@@ -215,7 +219,6 @@ export const menusMixin = {
         id: "pistol",
         textureKey: TEXTURES.weaponPistolIcon,
         role: "可靠的中远距离单体武器",
-        difficulty: { label: "简单", color: "#7FE29A" },
         stats: [
           { label: "伤害", value: `${BALANCE.weapons.pistol.baseDamage}` },
           { label: "冷却", value: `${BALANCE.weapons.pistol.baseCooldownMs} ms` },
@@ -226,7 +229,6 @@ export const menusMixin = {
         id: "shotgun",
         textureKey: TEXTURES.weaponBreacherIcon,
         role: "近距离爆发、击退与控场",
-        difficulty: { label: "中等", color: "#FFD166" },
         stats: [
           { label: "伤害", value: `${BALANCE.weapons.shotgun.baseDamage}/弹丸` },
           { label: "弹药", value: "4" },
@@ -237,7 +239,6 @@ export const menusMixin = {
         id: "tesla",
         textureKey: TEXTURES.weaponTeslaIcon,
         role: "对密集敌群造成链式伤害",
-        difficulty: { label: "中等", color: "#FFD166" },
         stats: [
           { label: "伤害", value: `${BALANCE.weapons.tesla.baseDamage}` },
           { label: "冷却", value: `${BALANCE.weapons.tesla.baseCooldownMs} ms` },
@@ -246,152 +247,85 @@ export const menusMixin = {
       }
     ];
 
+    const slotWidth = 228;
+    const slotHeight = 316;
     const startX = GAME_WIDTH / 2 - 270;
     options.forEach((option, index) => {
-      const cardX = startX + index * 260;
-      const cardY = GAME_HEIGHT / 2 + 4;
-
-      const cardBg = this.add.graphics();
-      cardBg.setDepth(20);
-      const divider = this.add.graphics();
-      divider.setDepth(21);
-
-      const cardHitArea = this.add.rectangle(cardX, cardY, cardWidth, cardHeight, 0xffffff, 0.001);
-      cardHitArea.setDepth(20);
-      cardHitArea.setInteractive({ useHandCursor: true });
-      cardHitArea.on("pointerover", () => {
-        this.weaponSelectHoveredCardId = option.id;
-        this.refreshWeaponSelectionVisuals();
-      });
-      cardHitArea.on("pointerout", () => {
-        this.weaponSelectHoveredCardId = null;
-        this.refreshWeaponSelectionVisuals();
-      });
-      cardHitArea.on("pointerdown", () => {
-        this.pendingSelectedWeaponId = option.id;
-        this.refreshWeaponSelectionVisuals();
-      });
-
-      const weaponIcon = this.add.image(cardX, cardY - 122, option.textureKey).setDisplaySize(64, 64);
-      weaponIcon.setOrigin(0.5);
-      weaponIcon.setDepth(21);
-
-      const nameText = this.add.text(cardX, cardY - 68, BALANCE.weapons[option.id].name, {
-        fontFamily: THEME.font.display,
-        fontSize: "22px",
-        fontStyle: "bold",
-        color: THEME.text.primary,
-        align: "center",
-        wordWrap: { width: 216 },
-        lineSpacing: 2
-      });
-      nameText.setOrigin(0.5);
-      nameText.setDepth(21);
-
-      const roleText = this.add.text(cardX, cardY - 2, option.role, {
-        fontFamily: THEME.font.body,
-        fontSize: "15px",
-        color: THEME.text.secondary,
-        align: "center",
-        wordWrap: { width: 214 },
-        lineSpacing: 2
-      });
-      roleText.setOrigin(0.5);
-      roleText.setDepth(21);
-
-      const difficultyBadge = this.add.rectangle(
-        cardX,
-        cardY + 50,
-        130,
-        28,
-        THEME.surface.facility,
-        1
-      );
-      difficultyBadge.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(option.difficulty.color).color);
-      difficultyBadge.setDepth(21);
-
-      const difficultyText = this.add.text(cardX, cardY + 50, `难度：${option.difficulty.label}`, {
-        fontFamily: THEME.font.label,
-        fontSize: "15px",
-        color: option.difficulty.color
-      });
-      difficultyText.setOrigin(0.5);
-      difficultyText.setDepth(21);
-
-      const selectedLabel = this.add.text(
-        cardX + cardWidth / 2 - 12,
-        cardY - cardHeight / 2 + 18,
-        "已选择",
-        {
+      const slotX = startX + index * 270;
+      const slotY = 286;
+      const slot = createArmorySlot(this, {
+        x: slotX,
+        y: slotY,
+        width: slotWidth,
+        height: slotHeight,
+        textureKey: option.textureKey,
+        name: BALANCE.weapons[option.id].name,
+        role: option.role,
+        stats: option.stats,
+        depth: 20,
+        scrollFactor: 0,
+        nameStyle: {
+          fontFamily: THEME.font.display,
+          fontSize: "20px",
+          fontStyle: "bold",
+          color: THEME.text.primary,
+          align: "center",
+          wordWrap: { width: 196 }
+        },
+        roleStyle: {
+          fontFamily: THEME.font.body,
+          fontSize: "13px",
+          color: THEME.text.secondary,
+          align: "center",
+          wordWrap: { width: 188 }
+        },
+        statsStyle: {
+          fontFamily: THEME.font.mono,
+          fontSize: "13px",
+          color: THEME.text.primary,
+          align: "left",
+          lineSpacing: 5
+        },
+        lockedStyle: {
           fontFamily: THEME.font.label,
           fontSize: "12px",
           fontStyle: "bold",
-          color: THEME.text.onButton,
-          backgroundColor: "#35578D",
-          padding: { left: 8, right: 8, top: 2, bottom: 2 }
+          color: THEME.text.contained
+        },
+        onActivate: () => {
+          this.pendingSelectedWeaponId = option.id;
+          this.refreshWeaponSelectionVisuals();
         }
-      );
-      selectedLabel.setOrigin(1, 0.5);
-      selectedLabel.setVisible(false);
-      selectedLabel.setDepth(22);
-
-      const statRows = [];
-      const statStartY = cardY + 92;
-      for (let rowIndex = 0; rowIndex < option.stats.length; rowIndex += 1) {
-        const stat = option.stats[rowIndex];
-        const rowY = statStartY + rowIndex * 30;
-        const statLabel = this.add.text(cardX - 90, rowY, stat.label, {
-          fontFamily: THEME.font.label,
-          fontSize: "16px",
-          color: THEME.text.muted
-        });
-        statLabel.setOrigin(0, 0.5);
-        statLabel.setDepth(21);
-        const statValue = this.add.text(cardX + 90, rowY, stat.value, {
-          fontFamily: THEME.font.mono,
-          fontSize: "16px",
-          color: THEME.text.primary
-        });
-        statValue.setOrigin(1, 0.5);
-        statValue.setDepth(21);
-        statRows.push(statLabel, statValue);
-      }
-
-      this.weaponSelectCards.push({
-        id: option.id,
-        cardX,
-        cardY,
-        cardWidth,
-        cardHeight,
-        cardBg,
-        divider,
-        selectedLabel
       });
-      this.weaponSelectUiObjects.push(
-        cardBg,
-        divider,
-        cardHitArea,
-        weaponIcon,
-        nameText,
-        roleText,
-        difficultyBadge,
-        difficultyText,
-        selectedLabel,
-        ...statRows
-      );
+      slot.hitArea.on("pointerover", () => {
+        this.weaponSelectHoveredCardId = option.id;
+        this.refreshWeaponSelectionVisuals();
+      });
+      slot.hitArea.on("pointerout", () => {
+        this.weaponSelectHoveredCardId = null;
+        this.refreshWeaponSelectionVisuals();
+      });
+      this.weaponSelectCards.push({ id: option.id, slot });
+      this.weaponSelectUiObjects.push(...slot.objects);
     });
 
-    this.startMissionButton = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 220,
-      250,
-      58,
-      THEME.surface.raised,
-      1
-    );
-    this.startMissionButton.setStrokeStyle(2, THEME.border.default);
-    this.startMissionButton.setDepth(30);
-    this.startMissionButton.setInteractive({ useHandCursor: true });
+    this.startMissionButtonController = createTerminalButton(this, {
+      x: GAME_WIDTH / 2 - 125,
+      y: GAME_HEIGHT - 66,
+      width: 250,
+      height: 52,
+      text: "请选择武器",
+      state: "idle",
+      depth: 30,
+      scrollFactor: 0,
+      onActivate: () => {
+        if (this.pendingSelectedWeaponId) {
+          this.startMissionWithWeapon(this.pendingSelectedWeaponId);
+        }
+      }
+    });
+    this.startMissionButton = this.startMissionButtonController.hitArea;
+    this.startMissionButtonLabel = this.startMissionButtonController.label;
     this.startMissionButton.on("pointerover", () => {
       this.weaponSelectButtonHovered = true;
       this.refreshWeaponSelectionVisuals();
@@ -400,32 +334,12 @@ export const menusMixin = {
       this.weaponSelectButtonHovered = false;
       this.refreshWeaponSelectionVisuals();
     });
-    this.startMissionButton.on("pointerdown", () => {
-      if (this.pendingSelectedWeaponId) {
-        this.startMissionWithWeapon(this.pendingSelectedWeaponId);
-      }
-    });
-
-    this.startMissionButtonLabel = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 220,
-      "请选择武器",
-      {
-        fontFamily: THEME.font.display,
-        fontSize: "24px",
-        fontStyle: "bold",
-        color: THEME.text.muted
-      }
-    );
-    this.startMissionButtonLabel.setOrigin(0.5);
-    this.startMissionButtonLabel.setDepth(31);
-
-    this.weaponSelectUiObjects.push(this.startMissionButton, this.startMissionButtonLabel);
+    this.weaponSelectUiObjects.push(...this.startMissionButtonController.objects);
 
     // Meta progression: credits display + unlock-store entry.
     this.weaponSelectCreditsLabel = this.add.text(
-      GAME_WIDTH / 2 - 410,
-      GAME_HEIGHT / 2 - 240,
+      28,
+      108,
       `学分：${this.meta.credits}`,
       {
         fontFamily: THEME.font.label,
@@ -438,8 +352,8 @@ export const menusMixin = {
     this.weaponSelectCreditsLabel.setDepth(31);
 
     const unlockButton = this.add.rectangle(
-      GAME_WIDTH / 2 + 330,
-      GAME_HEIGHT / 2 - 238,
+      GAME_WIDTH - 94,
+      108,
       140,
       40,
       THEME.surface.raised,
@@ -453,8 +367,8 @@ export const menusMixin = {
     unlockButton.on("pointerdown", () => this.openPerkStore());
 
     const unlockLabel = this.add.text(
-      GAME_WIDTH / 2 + 330,
-      GAME_HEIGHT / 2 - 238,
+      GAME_WIDTH - 94,
+      108,
       "解锁商店",
       {
         fontFamily: THEME.font.label,
@@ -485,65 +399,17 @@ export const menusMixin = {
     for (const entry of this.weaponSelectCards) {
       const selected = this.pendingSelectedWeaponId === entry.id;
       const hovered = this.weaponSelectHoveredCardId === entry.id;
-
-      const scale = 1;
-      const fill = selected ? 0x1e3358 : hovered ? 0x1d2b49 : 0x17223a;
-      const border = selected || hovered ? THEME.border.focus : THEME.border.default;
-      const borderWidth = selected ? 3 : 2;
-
-      const drawW = entry.cardWidth * scale;
-      const drawH = entry.cardHeight * scale;
-      const drawX = entry.cardX - drawW / 2;
-      const drawY = entry.cardY - drawH / 2;
-
-      entry.cardBg.clear();
-      entry.cardBg.fillStyle(fill, 1);
-      entry.cardBg.fillRoundedRect(drawX, drawY, drawW, drawH, 10);
-      entry.cardBg.lineStyle(borderWidth, border, 1);
-      entry.cardBg.strokeRoundedRect(drawX, drawY, drawW, drawH, 10);
-      if (selected) {
-        entry.cardBg.lineStyle(2, THEME.signal.info, 0.5);
-        entry.cardBg.strokeRoundedRect(drawX - 4, drawY - 4, drawW + 8, drawH + 8, 12);
-      }
-
-      entry.divider.clear();
-      entry.divider.lineStyle(1, THEME.border.default, 1);
-      entry.divider.lineBetween(
-        entry.cardX - 96,
-        entry.cardY + 68,
-        entry.cardX + 96,
-        entry.cardY + 68
-      );
-      entry.selectedLabel.setVisible(selected);
-      entry.selectedLabel.setPosition(
-        entry.cardX + drawW / 2 - 12,
-        entry.cardY - drawH / 2 + 18
-      );
-      entry.cardBg.setVisible(true);
-      entry.cardBg.setAlpha(1);
-      entry.divider.setVisible(true);
-      entry.divider.setAlpha(1);
-      entry.selectedLabel.setAlpha(1);
-      entry.selectedLabel.setDepth(22);
+      entry.slot.setState({ selected, hovered });
     }
 
     const canStart = !!this.pendingSelectedWeaponId;
-    this.startMissionButton.setFillStyle(
-      canStart
-        ? this.weaponSelectButtonHovered
-          ? THEME.signal.info
-          : THEME.surface.raised
-        : THEME.surface.raised,
-      1
-    );
-    this.startMissionButton.setStrokeStyle(
-      2,
-      canStart ? THEME.border.focus : THEME.border.default
-    );
+    const terminalState = canStart
+      ? this.weaponSelectButtonHovered
+        ? "hover"
+        : "armed"
+      : "disabled";
+    this.startMissionButtonController.setState(terminalState);
     this.startMissionButtonLabel.setText(canStart ? "开始任务" : "请选择武器");
-    this.startMissionButtonLabel.setColor(
-      canStart ? THEME.text.onButton : THEME.text.muted
-    );
   },
 
 
@@ -560,6 +426,9 @@ export const menusMixin = {
     this.weaponSelectUiObjects = [];
     this.weaponSelectCards = [];
     this.weaponSelectOverlay = null;
+    this.startMissionButtonController = null;
+    this.startMissionButton = null;
+    this.startMissionButtonLabel = null;
   },
 
 

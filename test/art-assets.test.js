@@ -15,10 +15,11 @@ const approvedImageAssets = [
   { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
   { key: "enemy-infected", path: "assets/art/characters/infected-staff.png", size: [48, 48] },
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
-  { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [64, 64] },
-  { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [64, 64] },
-  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [64, 64] },
-  { key: "title-facility-backdrop", path: "assets/art/menus/title-facility-backdrop.png", size: [960, 540] }
+  { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [96, 96] },
+  { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [96, 96] },
+  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [96, 96] },
+  { key: "title-facility-backdrop", path: "assets/art/menus/title-facility-backdrop.png", size: [960, 540] },
+  { key: "armory-rack-backdrop", path: "assets/art/menus/armory-rack-backdrop.png", size: [960, 540] }
 ];
 
 const expected = new Map(approvedImageAssets.map(({ key, size }) => [key, size]));
@@ -95,7 +96,7 @@ function decodeRgbaPng(buffer) {
 }
 
 function assertApprovedStaticImageAssets(assets) {
-  assert.equal(assets.length, 13);
+  assert.equal(assets.length, 14);
   assert.equal(
     new Set(assets.map(({ key }) => key)).size,
     assets.length,
@@ -111,6 +112,7 @@ test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
   assert.equal(TEXTURES.weaponTeslaIcon, "weapon-tesla-icon");
+  assert.equal(TEXTURES.armoryRackBackdrop, "armory-rack-backdrop");
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 

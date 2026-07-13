@@ -50,6 +50,30 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.titleFacilityBackdrop, 960, 540);
   });
 
+  ensureTexture(scene, TEXTURES.armoryRackBackdrop, () => {
+    graphics.clear();
+    graphics.fillStyle(0x070b10, 1);
+    graphics.fillRect(0, 0, 960, 540);
+    graphics.fillStyle(0x151d25, 1);
+    graphics.fillRect(54, 74, 852, 392);
+    graphics.fillStyle(0x27323d, 1);
+    graphics.fillRect(72, 92, 816, 28);
+    graphics.fillRect(72, 420, 816, 28);
+    for (let index = 0; index < 3; index += 1) {
+      const x = 102 + index * 270;
+      graphics.fillStyle(0x0b1118, 1);
+      graphics.fillRect(x, 126, 216, 288);
+      graphics.lineStyle(index === 1 ? 3 : 2, index === 1 ? 0x8da6c2 : 0x53677d, 1);
+      graphics.strokeRect(x, 126, 216, 288);
+      graphics.fillStyle(index === 1 ? 0x6fd6b4 : 0xd2a34b, 1);
+      graphics.fillRect(x + 92, 104, 32, 6);
+    }
+    graphics.lineStyle(6, 0x303b4b, 1);
+    graphics.lineBetween(74, 62, 74, 478);
+    graphics.lineBetween(886, 62, 886, 478);
+    graphics.generateTexture(TEXTURES.armoryRackBackdrop, 960, 540);
+  });
+
   ensureTexture(scene, TEXTURES.facilityFloor, () => {
     graphics.clear();
     graphics.fillStyle(0x151b24, 1);
@@ -116,51 +140,51 @@ export function generateFallbackTextures(scene) {
   ensureTexture(scene, TEXTURES.weaponPistolIcon, () => {
     graphics.clear();
     graphics.fillStyle(0x202832, 1);
-    graphics.fillRect(10, 24, 38, 12);
-    graphics.fillRect(15, 20, 25, 5);
-    graphics.fillRect(30, 34, 10, 17);
+    graphics.fillRect(15, 36, 57, 18);
+    graphics.fillRect(23, 30, 37, 8);
+    graphics.fillRect(45, 51, 15, 26);
     graphics.fillStyle(0x667585, 1);
-    graphics.fillRect(13, 26, 29, 3);
-    graphics.fillRect(33, 37, 4, 12);
+    graphics.fillRect(20, 39, 43, 5);
+    graphics.fillRect(50, 56, 6, 18);
     graphics.fillStyle(0xd6dde4, 1);
-    graphics.fillRect(17, 22, 14, 2);
+    graphics.fillRect(26, 33, 21, 3);
     graphics.fillStyle(0xd39c3c, 1);
-    graphics.fillRect(39, 29, 3, 3);
-    graphics.generateTexture(TEXTURES.weaponPistolIcon, 64, 64);
+    graphics.fillRect(59, 44, 5, 5);
+    graphics.generateTexture(TEXTURES.weaponPistolIcon, 96, 96);
   });
 
   ensureTexture(scene, TEXTURES.weaponBreacherIcon, () => {
     graphics.clear();
     graphics.fillStyle(0x1c242d, 1);
-    graphics.fillRect(5, 27, 49, 11);
-    graphics.fillRect(14, 38, 15, 8);
-    graphics.fillRect(7, 36, 10, 7);
+    graphics.fillRect(8, 41, 73, 16);
+    graphics.fillRect(21, 57, 23, 12);
+    graphics.fillRect(11, 54, 15, 11);
     graphics.fillStyle(0x697887, 1);
-    graphics.fillRect(9, 29, 42, 3);
-    graphics.fillRect(28, 34, 16, 5);
+    graphics.fillRect(14, 44, 63, 5);
+    graphics.fillRect(42, 51, 24, 8);
     graphics.fillStyle(0xcbd5de, 1);
-    graphics.fillRect(45, 28, 9, 8);
+    graphics.fillRect(68, 42, 14, 12);
     graphics.fillStyle(0xd39c3c, 1);
-    graphics.fillRect(22, 30, 3, 3);
-    graphics.generateTexture(TEXTURES.weaponBreacherIcon, 64, 64);
+    graphics.fillRect(33, 45, 5, 5);
+    graphics.generateTexture(TEXTURES.weaponBreacherIcon, 96, 96);
   });
 
   ensureTexture(scene, TEXTURES.weaponTeslaIcon, () => {
     graphics.clear();
     graphics.fillStyle(0x202832, 1);
-    graphics.fillRect(15, 26, 31, 14);
-    graphics.fillRect(25, 39, 11, 14);
+    graphics.fillRect(23, 39, 46, 21);
+    graphics.fillRect(38, 59, 16, 21);
     graphics.fillStyle(0x70808f, 1);
-    graphics.fillRect(19, 29, 23, 4);
-    graphics.fillRect(28, 42, 4, 8);
-    graphics.lineStyle(3, 0xc18443, 1);
-    graphics.strokeCircle(21, 33, 9);
-    graphics.strokeCircle(40, 33, 9);
+    graphics.fillRect(29, 44, 34, 6);
+    graphics.fillRect(42, 63, 6, 12);
+    graphics.lineStyle(5, 0xc18443, 1);
+    graphics.strokeCircle(32, 50, 14);
+    graphics.strokeCircle(60, 50, 14);
     graphics.fillStyle(0x77d8e8, 1);
-    graphics.fillRect(18, 31, 5, 4);
-    graphics.fillRect(38, 31, 5, 4);
-    graphics.fillRect(45, 31, 6, 3);
-    graphics.generateTexture(TEXTURES.weaponTeslaIcon, 64, 64);
+    graphics.fillRect(27, 47, 8, 6);
+    graphics.fillRect(57, 47, 8, 6);
+    graphics.fillRect(68, 47, 9, 5);
+    graphics.generateTexture(TEXTURES.weaponTeslaIcon, 96, 96);
   });
 
   ensureTexture(scene, TEXTURES.player, () => {

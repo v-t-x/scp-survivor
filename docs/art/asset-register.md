@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批静态正式素材的真实生产信息。13 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录首批静态正式素材的真实生产信息。14 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
@@ -163,9 +163,9 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
-| weapon-pistol-icon | PNG | `assets/art/weapons/pistol.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P10](#p10-weapon-pistol-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(9,9,55,55)`，21 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
-| weapon-breacher-icon | PNG | `assets/art/weapons/breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P11](#p11-weapon-breacher-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,14,60,50)`，19 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
-| weapon-tesla-icon | PNG | `assets/art/weapons/tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-12 | [P12](#p12-weapon-tesla-icon)；仅文本输入 | 官方 `remove_chroma_key.py`；裁切；nearest 缩放至 64×64 RGBA；alpha 阈值为 0/255；以共享 32 色武器调色板无抖动量化；bbox `(4,10,60,54)`，32 个不透明颜色 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+| weapon-pistol-icon | PNG | `assets/art/weapons/pistol.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P15](#p15-weapon-pistol-icon-96)；仅文本输入 | 原图 1254×1254；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 二值裁切；nearest 等比缩入 86×86 内容区并居中至 96×96；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(5,12,91,84)`，31 个不透明颜色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+| weapon-breacher-icon | PNG | `assets/art/weapons/breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P16](#p16-weapon-breacher-icon-96)；仅文本输入 | 原图 1254×1254；同上官方去色键流程；alpha 二值裁切；nearest 等比缩入 86×86 内容区并居中至 96×96；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(5,29,91,66)`，32 个不透明颜色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
+| weapon-tesla-icon | PNG | `assets/art/weapons/tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P17](#p17-weapon-tesla-icon-96)；仅文本输入 | 原图 1254×1254；同上官方去色键流程；alpha 二值裁切；nearest 等比缩入 86×86 内容区并居中至 96×96；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(5,13,91,83)`，32 个不透明颜色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
 
 ## Opening Task 1 计划素材
 
@@ -174,21 +174,74 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
 | title-facility-backdrop | PNG | `assets/art/menus/title-facility-backdrop.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P13](#p13-title-facility-backdrop)；仅文本输入 | 原图 1672×941 RGB；Pillow 12.2.0 LANCZOS 精确缩放至 960×540；MEDIANCUT 无抖动量化为 32 色；转 8-bit RGBA 并将 alpha 固定为 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
-| armory-rack-backdrop | PNG | `assets/art/menus/armory-rack-backdrop.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| armory-rack-backdrop | PNG | `assets/art/menus/armory-rack-backdrop.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P14](#p14-armory-rack-backdrop)；仅文本输入 | 原图 1672×941 RGB；Pillow 12.2.0 LANCZOS 精确缩放至 960×540；MEDIANCUT 无抖动量化为 32 色；转 8-bit RGBA 并将 alpha 固定为 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
 | facility-service-floor | PNG | `assets/art/facility/service-floor.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | facility-observation-window | PNG | `assets/art/facility/observation-window.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | facility-pipe-bank | PNG | `assets/art/facility/pipe-bank.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | player-opening-sheet | PNG | `assets/art/characters/player-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | infected-opening-sheet | PNG | `assets/art/characters/infected-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
-| weapon-pistol-illustration | PNG（96×96） | `assets/art/weapons/pistol-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
-| weapon-breacher-illustration | PNG（96×96） | `assets/art/weapons/breacher-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
-| weapon-tesla-illustration | PNG（96×96） | `assets/art/weapons/tesla-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 
 ### P13 title-facility-backdrop
 
 ```text
 960x540 orthographic 2D pixel-art game background, Foundation containment facility security checkpoint during an early containment breach. Left 44 percent intentionally low-detail and dark for title/UI readability. Right side has a coherent wall-connected half-open blast door, observation monitor bank, conduit pipes and red rotating warning lamp. Top-down/near-orthographic 2D only, no 3D render, no isometric camera, no characters, no text, no logos, no UI, no loose floating props. Steel blue and graphite base, restrained amber and deep red signals, hard pixel edges, detailed but controlled 32-pixel module language.
+```
+
+### P14 armory-rack-backdrop
+
+```text
+Use case: stylized-concept
+Asset type: production 960x540 game menu background for a 2D Phaser armory loadout screen
+Primary request: 960x540 orthographic 2D pixel-art Foundation armory wall, three coherent illuminated equipment bays connected by one metal rack structure, central bay emphasized but empty, cables and status lamps attached to the rack
+Scene/backdrop: full-screen dark industrial armory wall, all three empty bays integrated into one continuous structure
+Style/medium: detailed 2D pixel art with hard pixel edges, readable under a high-definition tactical overlay
+Composition/framing: exact 16:9 landscape composition, straight-on orthographic view, three narrow bays spanning the center, usable darker space near top and bottom for overlay text and controls
+Lighting/mood: professional oppressive containment-facility lighting
+Color palette: dark graphite and steel blue with controlled amber and cyan signals
+Constraints: no weapons, no text, no UI, no characters, no logos, no watermark, no 3D render, no isometric perspective, no rounded card panels
+```
+
+### P15 weapon-pistol-icon-96
+
+```text
+Use case: stylized-concept
+Asset type: production 96x96 transparent-background weapon illustration for a 2D Phaser armory loadout screen
+Primary request: detailed pixel-art orthographic equipment illustration of one Foundation duty pistol
+Subject: one mechanically plausible compact duty semi-automatic pistol with clear slide, short barrel, trigger guard and textured grip; steel graphite body with restrained blue-grey accents
+Style/medium: authentic detailed 2D pixel art, deliberate hard pixel clusters, technical inventory illustration
+Composition/framing: isolated single weapon in side-three-quarter technical inventory view, centered with generous padding, fully inside the square frame, instantly readable at 96x96
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal
+Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane or lighting variation; crisp subject edges; do not use #00ff00 anywhere in the weapon; no cast shadow, no contact shadow, no reflection, no hands, no text, no logo, no watermark, no glow outside the 96x96 frame
+Avoid: 3D render, isometric environment, extra weapons, muzzle flash, smooth painted edges
+```
+
+### P16 weapon-breacher-icon-96
+
+```text
+Use case: stylized-concept
+Asset type: production 96x96 transparent-background weapon illustration for a 2D Phaser armory loadout screen
+Primary request: detailed pixel-art orthographic equipment illustration of one containment breacher shotgun
+Subject: one mechanically plausible compact short-barrel pump-action breaching shotgun with thick muzzle, tubular magazine, pump fore-end and compact stock; heavier silhouette than a pistol; steel graphite body with restrained Foundation blue-grey accents
+Style/medium: authentic detailed 2D pixel art, deliberate hard pixel clusters, technical inventory illustration
+Composition/framing: isolated single weapon in side-three-quarter technical inventory view, centered with generous padding, fully inside the square frame, instantly readable at 96x96
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal
+Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane or lighting variation; crisp subject edges; do not use #00ff00 anywhere in the weapon; no cast shadow, no contact shadow, no reflection, no hands, no shells, no blast, no text, no logo, no watermark, no glow outside the 96x96 frame
+Avoid: 3D render, isometric environment, extra weapons, muzzle flash, smooth painted edges
+```
+
+### P17 weapon-tesla-icon-96
+
+```text
+Use case: stylized-concept
+Asset type: production 96x96 transparent-background weapon illustration for a 2D Phaser armory loadout screen
+Primary request: detailed pixel-art orthographic equipment illustration of one compact Tesla projector
+Subject: one mechanically plausible compact handheld industrial electrical projector with twin exposed copper induction coils, central steel emitter fork, insulated grip, cable housing and two tiny cold-cyan charge cells; steel graphite body with restrained Foundation blue-grey accents
+Style/medium: authentic detailed 2D pixel art, deliberate hard pixel clusters, technical inventory illustration
+Composition/framing: isolated single weapon in side-three-quarter technical inventory view, centered with generous padding, fully inside the square frame, instantly readable at 96x96
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal
+Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane or lighting variation; crisp subject edges; do not use #00ff00 anywhere in the weapon; no cast shadow, no contact shadow, no reflection, no hands, no text, no logo, no watermark, no glow or electricity outside the 96x96 frame
+Avoid: 3D render, isometric environment, extra weapons, magical wand, smooth painted edges
 ```
 
 开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
@@ -243,8 +296,8 @@ Subject: one compact industrial electrical launcher with twin exposed copper ind
 
 ## 准入备注
 
-- 12 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
-- `facility-floor` 为不透明 32×32；自动测试逐像素验证上下与左右边缘相等。
+- 14 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
+- `facility-floor`、标题背景与军械库背景保持全不透明；地板另由自动测试逐像素验证上下与左右边缘相等。
 - 其余 11 项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
 - AI 输出不是自动准入。Task 3 的真实 Phaser 接入和 Task 4 的 960×540 静态成品感门禁通过前，所有条目仍是候选。

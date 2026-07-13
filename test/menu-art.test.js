@@ -82,11 +82,8 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
     );
   }
 
-  assert.match(
-    source,
-    /this\.add\.image\(cardX, cardY - 122, option\.textureKey\)/,
-    "weapon selection must render each option's formal texture"
-  );
+  assert.match(source, /createArmorySlot\(this,\s*\{/);
+  assert.match(source, /textureKey:\s*option\.textureKey/);
 
   assert.match(
     source,
@@ -95,7 +92,8 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
   );
   assert.match(
     source,
-    /createFacilityMenuBackdrop\(this, this\.weaponSelectUiObjects, 0\)/,
-    "weapon selection must place the facility backdrop behind its existing panel"
+    /this\.add\.image\(GAME_WIDTH \/ 2, GAME_HEIGHT \/ 2, TEXTURES\.armoryRackBackdrop\)/,
+    "weapon selection must use one coherent production armory rack"
   );
+  assert.doesNotMatch(source, /fillRoundedRect|strokeRoundedRect/);
 });
