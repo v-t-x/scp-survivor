@@ -46,6 +46,22 @@ function makeDisplayObject() {
     strokeRect(...args) {
       this.commands.push(["strokeRect", ...args]);
       return this;
+    },
+    beginPath() {
+      this.commands.push(["beginPath"]);
+      return this;
+    },
+    moveTo(...args) {
+      this.commands.push(["moveTo", ...args]);
+      return this;
+    },
+    lineTo(...args) {
+      this.commands.push(["lineTo", ...args]);
+      return this;
+    },
+    strokePath() {
+      this.commands.push(["strokePath"]);
+      return this;
     }
   };
 }
@@ -73,7 +89,7 @@ test("title screen delegates presentation and keeps the existing mission transit
   assert.match(destroyMethod, /object\.destroy\(\)/);
 });
 
-test("title backdrop owns gradient, gate focus and every tween idempotently", () => {
+test("title backdrop uses a smooth early scrim fade and door-only gate marks", () => {
   const calls = [];
   const tweens = [];
   const scene = {
@@ -115,25 +131,38 @@ test("title backdrop owns gradient, gate focus and every tween idempotently", ()
   assert.deepEqual(calls[0].args, [480, 270, TEXTURES.titleFacilityBackdrop]);
   assert.equal(calls.filter(({ type }) => type === "graphics").length, 2);
   assert.equal(calls.some(({ type, args }) => type === "rectangle" && args[2] === 440 && args[3] === 540), false);
-  assert.equal(tweens.length, 3);
+  assert.equal(tweens.length, 4);
   assert.deepEqual(cleanup, controller.objects);
   const gradientCommands = controller.objects[1].commands;
-  const expectedGradientCommands = Array.from({ length: 12 }, (_, index) => [
-    ["fillStyle", THEME.title.scrim, Math.max(0.08, 0.82 - index * 0.065)],
-    ["fillRect", index * 48, 0, 52, 540]
+  const expectedGradientCommands = Array.from({ length: 18 }, (_, index) => [
+    ["fillStyle", THEME.title.scrim, 0.02 + 0.78 * ((17 - index) / 17) ** 2],
+    ["fillRect", index * 32, 0, 34, 540]
   ]).flat();
   assert.deepEqual(gradientCommands, expectedGradientCommands);
-  assert.deepEqual(
-    controller.objects[3].commands.filter(([type]) => type === "strokeRect"),
-    [
-      ["strokeRect", 592, 124, 286, 366],
-      ["strokeRect", 604, 136, 22, 3],
-      ["strokeRect", 844, 474, 22, 3]
-    ]
-  );
+  const gradientAlphas = gradientCommands
+    .filter(([type]) => type === "fillStyle")
+    .map(([, , alpha]) => alpha);
+  assert.ok(gradientAlphas[8] < 0.25, "scrim should already be light by x=256");
+  assert.ok(gradientAlphas[14] < 0.06, "scrim should nearly clear before x=470");
+  assert.ok(gradientAlphas.every((alpha, index) => index === 0 || alpha < gradientAlphas[index - 1]));
+
+  const gateCommands = controller.objects[3].commands;
+  assert.equal(gateCommands.some(([type]) => type === "strokeRect"), false);
+  const gateSegments = gateCommands.filter(([type]) => type === "lineTo");
+  assert.ok(gateSegments.length >= 8, "gate focus should be composed from short corner/tick segments");
+  assert.ok(gateSegments.every(([, x]) => x <= 798), "gate marks must not frame the monitor wall");
   const gateLabel = calls.find(({ type }) => type === "text");
   assert.deepEqual(gateLabel.args.slice(0, 3), [604, 112, "GATE 03 // BREACH"]);
-  assert.ok(gateLabel.args[1] < 124);
+  assert.ok(gateLabel.args[1] < 150);
+  const scanlineCall = calls.find(({ type, args }) => type === "rectangle" && args[3] === 2);
+  assert.ok(scanlineCall.args[2] <= 80, "scanline should stay local to the door frame");
+  const scanTween = tweens.find(({ config }) => config.targets === controller.objects[6]);
+  assert.ok(scanTween.config.y.to - scanTween.config.y.from <= 48, "scanline travel should be short");
+  const gateEntranceTween = tweens.find(({ config }) => Array.isArray(config.targets));
+  assert.deepEqual(gateEntranceTween.config.targets, [controller.objects[3], controller.objects[4]]);
+  assert.equal(controller.objects[6].alpha, 0);
+  assert.ok(gateEntranceTween.config.delay >= 420, "gate focus must illuminate last");
+  assert.ok(scanTween.config.delay >= 420, "gate scan must also wait for the final entrance beat");
   assert.equal(cleanup.length, controller.objects.length);
   assert.ok(controller.objects.every((object) => object.scrollFactor === 0));
   controller.stop();

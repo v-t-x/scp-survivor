@@ -7,6 +7,7 @@ import {
   formatTitleCredits,
   getTitleActionPalette
 } from "../src/art/titleScreenView.js";
+import { menusMixin } from "../src/scene/menus.js";
 
 function displayObject(type) {
   const handlers = new Map();
@@ -26,9 +27,12 @@ function displayObject(type) {
     on(event, handler) { handlers.set(event, handler); return this; },
     setText(value) { this.text = value; return this; },
     setColor(value) { this.color = value; return this; },
+    setFillStyle(fill, alpha) { this.fill = fill; this.fillAlpha = alpha; return this; },
     clear() { this.commands = []; return this; },
     fillStyle(...args) { this.commands.push(["fillStyle", ...args]); return this; },
+    fillRect(...args) { this.commands.push(["fillRect", ...args]); return this; },
     lineStyle(...args) { this.commands.push(["lineStyle", ...args]); return this; },
+    strokeRect(...args) { this.commands.push(["strokeRect", ...args]); return this; },
     beginPath() { this.commands.push(["beginPath"]); return this; },
     moveTo(...args) { this.commands.push(["moveTo", ...args]); return this; },
     lineTo(...args) { this.commands.push(["lineTo", ...args]); return this; },
@@ -94,6 +98,10 @@ test("title action palettes are distinct and production tokens are fixed", () =>
     .map(getTitleActionPalette);
   assert.equal(new Set(states.map(({ fill, border }) => `${fill}/${border}`)).size, 4);
   assert.equal(states[3].label, "授权中");
+  assert.equal(states[0].status, "AUTH");
+  assert.equal(states[1].status, "READY");
+  assert.ok(states[1].borderWidth > states[0].borderWidth);
+  assert.ok(states[1].accentAlpha > states[0].accentAlpha);
   assert.ok(states.every(Object.isFrozen));
 });
 
@@ -116,7 +124,17 @@ test("title action owns one exact hit area and stops listeners idempotently", ()
   assert.equal(action.hitArea.width, 316);
   assert.equal(action.hitArea.height, 62);
   assert.deepEqual(cleanup, action.objects);
+  const [frame, main, , index, , , accent] = action.objects;
+  assert.equal(main.x, 70);
+  assert.equal(index.text, "AUTH");
+  assert.equal(accent.alpha, getTitleActionPalette("idle").accentAlpha);
   action.hitArea.handlers.get("pointerover")();
+  assert.equal(main.x, 73);
+  assert.equal(index.text, "READY");
+  assert.equal(accent.alpha, getTitleActionPalette("hover").accentAlpha);
+  assert.ok(frame.commands.some((command) =>
+    command[0] === "lineStyle" && command[1] === getTitleActionPalette("hover").borderWidth
+  ));
   action.hitArea.handlers.get("pointerdown")();
   action.hitArea.handlers.get("pointerup")();
   assert.equal(activations, 1);
@@ -149,10 +167,20 @@ test("credits formatting is finite and title view owns the approved information 
   assert.ok(texts.includes("进入失控设施，完成 SCP-049 再收容。"));
   assert.ok(texts.includes("累计学分 585"));
   assert.ok(texts.some((text) => text.includes("WASD 移动")));
+  assert.ok(texts.includes("电力在线"));
+  assert.ok(texts.includes("收容失效"));
+  assert.equal(texts.includes("电力在线          收容失效"), false);
+  const controls = scene.created.find(({ type, text }) => type === "text" && text.includes("WASD 移动"));
+  assert.equal(controls.style.fontSize, "12px");
+  assert.equal(controls.style.color, THEME.text.secondary);
+  const powerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "电力在线" && y === 517);
+  const dangerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "收容失效" && y === 517);
+  assert.equal(powerStatus.style.color, THEME.text.contained);
+  assert.equal(dangerStatus.style.color, THEME.text.critical);
   const creditsText = scene.created.find(({ type, text }) => type === "text" && text === "累计学分 585");
   assert.equal(creditsText.style.fixedWidth, 180);
-  assert.equal(scene.tweens.created.length, 3);
-  const [titleTween, missionTween, actionTween] = scene.tweens.created;
+  assert.equal(scene.tweens.created.length, 4);
+  const [titleTween, missionTween, actionTween, dangerPulseTween] = scene.tweens.created;
   assert.deepEqual(titleTween.config, {
     targets: scene.created.slice(0, 5), x: "+=16", alpha: 1, duration: 360, ease: "Sine.Out"
   });
@@ -162,6 +190,15 @@ test("credits formatting is finite and title view owns the approved information 
   const actionVisualObjects = view.action.objects.filter((object) => object !== view.action.hitArea);
   assert.deepEqual(actionTween.config, {
     targets: actionVisualObjects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out"
+  });
+  assert.deepEqual(dangerPulseTween.config, {
+    targets: dangerStatus,
+    alpha: { from: 0.72, to: 1 },
+    yoyo: true,
+    repeat: -1,
+    delay: 700,
+    duration: 900,
+    ease: "Sine.InOut"
   });
   assert.equal(view.action.hitArea.alpha, 1);
   assert.ok(actionVisualObjects.every(({ alpha }) => alpha === 0));
@@ -173,4 +210,89 @@ test("credits formatting is finite and title view owns the approved information 
   view.stop();
   assert.ok(scene.tweens.created.every((tween) => tween.stopCount === 1));
   assert.equal(view.action.hitArea.handlers.size, 0);
+});
+
+function lifecycleScene() {
+  const objects = [];
+  const tweens = [];
+  function object(type, values = {}) {
+    const item = {
+      ...displayObject(type),
+      ...values,
+      active: true,
+      setScale(value) { this.scale = value; return this; },
+      destroyCount: 0,
+      destroy() { this.active = false; this.destroyCount += 1; return this; }
+    };
+    objects.push(item);
+    return item;
+  }
+  const scene = {
+    meta: { credits: 17 },
+    setGameplayHudVisible() {},
+    cameras: { main: { setBackgroundColor() {} } },
+    add: {
+      image: (x, y, texture) => object("image", { x, y, texture }),
+      graphics: () => object("graphics"),
+      rectangle: (x, y, width, height, fill, alpha) => object("rectangle", { x, y, width, height, fill, alpha }),
+      circle: (x, y, radius, fill, alpha) => object("circle", { x, y, radius, fill, alpha }),
+      text: (x, y, text, style) => object("text", { x, y, text, style })
+    },
+    tweens: {
+      add(config) {
+        const tween = { config, stopCount: 0, stop() { this.stopCount += 1; } };
+        tweens.push(tween);
+        return tween;
+      }
+    },
+    weaponSelectionCreates: 0,
+    createWeaponSelectionScreen() { this.weaponSelectionCreates += 1; }
+  };
+  scene.createStartScreen = menusMixin.createStartScreen;
+  scene.beginFromStartScreen = menusMixin.beginFromStartScreen;
+  scene.destroyStartScreen = menusMixin.destroyStartScreen;
+  return { scene, objects, tweens };
+}
+
+test("menusMixin title lifecycle activates, destroys idempotently and recreates without leaks", () => {
+  const { scene, objects, tweens } = lifecycleScene();
+
+  scene.createStartScreen();
+  const firstObjects = [...scene.startScreenObjects];
+  const firstTweens = [...tweens];
+  const firstHitArea = scene.titleScreenController.action.hitArea;
+  assert.equal(firstTweens.length, 8, "both controllers should own all entrance and ambient tweens");
+  assert.equal(firstHitArea.handlers.size, 4);
+  assert.ok(scene.titleBackdropController);
+  assert.ok(scene.titleScreenController);
+
+  firstHitArea.handlers.get("pointerup")();
+  assert.equal(scene.weaponSelectionCreates, 1);
+  assert.equal(scene.startScreenObjects, null);
+  assert.equal(scene.titleBackdropController, null);
+  assert.equal(scene.titleScreenController, null);
+  assert.ok(firstObjects.every(({ active, destroyCount }) => !active && destroyCount === 1));
+  assert.ok(firstTweens.every(({ stopCount }) => stopCount === 1));
+  assert.equal(firstHitArea.handlers.size, 0);
+
+  scene.destroyStartScreen();
+  assert.ok(firstObjects.every(({ destroyCount }) => destroyCount === 1));
+  assert.ok(firstTweens.every(({ stopCount }) => stopCount === 1));
+
+  scene.createStartScreen();
+  const secondObjects = [...scene.startScreenObjects];
+  const secondTweens = tweens.slice(firstTweens.length);
+  const secondHitArea = scene.titleScreenController.action.hitArea;
+  assert.notEqual(secondHitArea, firstHitArea);
+  assert.equal(secondHitArea.handlers.size, 4);
+  assert.equal(secondTweens.length, 8);
+  assert.equal(objects.filter(({ active }) => active).length, secondObjects.length);
+  assert.ok(secondTweens.every(({ stopCount }) => stopCount === 0));
+
+  scene.destroyStartScreen();
+  scene.destroyStartScreen();
+  assert.ok(secondObjects.every(({ active, destroyCount }) => !active && destroyCount === 1));
+  assert.ok(secondTweens.every(({ stopCount }) => stopCount === 1));
+  assert.equal(secondHitArea.handlers.size, 0);
+  assert.equal(objects.filter(({ active }) => active).length, 0);
 });
