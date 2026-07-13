@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批静态正式素材的真实生产信息。12 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录首批静态正式素材的真实生产信息。13 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
@@ -173,7 +173,7 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission |
 |---|---|---|---|---|---|---|---|---|---|
-| title-facility-backdrop | PNG | `assets/art/menus/title-facility-backdrop.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| title-facility-backdrop | PNG | `assets/art/menus/title-facility-backdrop.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P13](#p13-title-facility-backdrop)；仅文本输入 | 原图 1672×941 RGB；Pillow 12.2.0 LANCZOS 精确缩放至 960×540；MEDIANCUT 无抖动量化为 32 色；转 8-bit RGBA 并将 alpha 固定为 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 |
 | armory-rack-backdrop | PNG | `assets/art/menus/armory-rack-backdrop.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | facility-service-floor | PNG | `assets/art/facility/service-floor.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` |  |  |  |  |  |  | 计划中 / 未准入 |
@@ -184,6 +184,12 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | weapon-pistol-illustration | PNG（96×96） | `assets/art/weapons/pistol-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | weapon-breacher-illustration | PNG（96×96） | `assets/art/weapons/breacher-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
 | weapon-tesla-illustration | PNG（96×96） | `assets/art/weapons/tesla-illustration.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+
+### P13 title-facility-backdrop
+
+```text
+960x540 orthographic 2D pixel-art game background, Foundation containment facility security checkpoint during an early containment breach. Left 44 percent intentionally low-detail and dark for title/UI readability. Right side has a coherent wall-connected half-open blast door, observation monitor bank, conduit pipes and red rotating warning lamp. Top-down/near-orthographic 2D only, no 3D render, no isometric camera, no characters, no text, no logos, no UI, no loose floating props. Steel blue and graphite base, restrained amber and deep red signals, hard pixel edges, detailed but controlled 32-pixel module language.
+```
 
 开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
 

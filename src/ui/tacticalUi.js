@@ -78,7 +78,7 @@ export function createStatusLamp(scene, options = {}) {
     lamp.fillStyle(color, nextState === "off" ? 0.45 : 1);
     lamp.fillCircle(x, y, radius);
     lamp.lineStyle(1, THEME.terminal.frameFocus, 0.8);
-    lamp.lineCircle(x, y, radius);
+    lamp.strokeCircle(x, y, radius);
   }
 
   setState(state);
@@ -174,7 +174,7 @@ export function createTerminalButton(scene, options = {}) {
     signal.fillStyle(getLampColor(palette.signal), palette.signal === "off" ? 0.45 : 1);
     signal.fillCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
     signal.lineStyle(1, THEME.terminal.frameFocus, 0.8);
-    signal.lineCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
+    signal.strokeCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
 
     if (palette.interactive) {
       hitArea.setInteractive({ useHandCursor: true });

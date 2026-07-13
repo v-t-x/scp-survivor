@@ -26,6 +26,7 @@ export const TEXTURES = {
   facilityConsole: "facility-console",
   facilityVent: "facility-vent",
   facilityDecal: "facility-decal",
+  titleFacilityBackdrop: "title-facility-backdrop",
   weaponPistolIcon: "weapon-pistol-icon",
   weaponBreacherIcon: "weapon-breacher-icon",
   weaponTeslaIcon: "weapon-tesla-icon",
@@ -51,7 +52,8 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" },
   { key: TEXTURES.weaponPistolIcon, path: "assets/art/weapons/pistol.png" },
   { key: TEXTURES.weaponBreacherIcon, path: "assets/art/weapons/breacher.png" },
-  { key: TEXTURES.weaponTeslaIcon, path: "assets/art/weapons/tesla.png" }
+  { key: TEXTURES.weaponTeslaIcon, path: "assets/art/weapons/tesla.png" },
+  { key: TEXTURES.titleFacilityBackdrop, path: "assets/art/menus/title-facility-backdrop.png" }
 ];
 
 // Real spritesheet / texture-atlas assets. Empty at this stage.

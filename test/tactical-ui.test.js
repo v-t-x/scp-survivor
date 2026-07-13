@@ -108,8 +108,8 @@ function createDisplayObject(type) {
       this.calls.push(["fillCircle", ...args]);
       return this;
     },
-    lineCircle(...args) {
-      this.calls.push(["lineCircle", ...args]);
+    strokeCircle(...args) {
+      this.calls.push(["strokeCircle", ...args]);
       return this;
     },
     destroy() {
@@ -199,6 +199,7 @@ test("terminal buttons draw clipped frames, honor display options, and clean up"
   }
   assert.ok(button.objects[0].calls.some(([name]) => name === "lineTo"));
   assert.equal(button.objects[0].calls.some(([name]) => name === "fillRoundedRect"), false);
+  assert.ok(button.signal.calls.some(([name]) => name === "strokeCircle"));
 
   button.hitArea.emit("pointerover");
   assert.equal(button.hitArea.interactive, true);
@@ -255,6 +256,7 @@ test("status lamps redraw state and release their graphics", () => {
   assert.equal(lamp.lamp.depth, 15);
   assert.equal(lamp.lamp.scrollFactor, 0);
   assert.ok(lamp.lamp.calls.some(([name]) => name === "fillCircle"));
+  assert.ok(lamp.lamp.calls.some(([name]) => name === "strokeCircle"));
   lamp.setState("contained");
   assert.ok(lamp.lamp.calls.filter(([name]) => name === "clear").length >= 2);
   lamp.destroy();

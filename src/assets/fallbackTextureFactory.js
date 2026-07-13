@@ -24,6 +24,32 @@ function ensureTexture(scene, key, draw) {
 export function generateFallbackTextures(scene) {
   const graphics = scene.add.graphics();
 
+  ensureTexture(scene, TEXTURES.titleFacilityBackdrop, () => {
+    graphics.clear();
+    graphics.fillStyle(0x151b24, 1);
+    graphics.fillRect(0, 0, 960, 540);
+    graphics.fillStyle(0x303b4b, 1);
+    graphics.fillRect(480, 0, 480, 540);
+    graphics.lineStyle(3, 0x596779, 1);
+    for (let x = 480; x < 960; x += 64) graphics.lineBetween(x, 0, x, 540);
+    for (let y = 0; y < 540; y += 64) graphics.lineBetween(480, y, 960, y);
+    graphics.fillStyle(0x495363, 1);
+    graphics.fillRect(585, 150, 230, 300);
+    graphics.fillStyle(0x222a35, 1);
+    graphics.fillRect(690, 150, 20, 300);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(602, 292, 196, 12);
+    graphics.fillStyle(0x303b4b, 1);
+    graphics.fillRect(830, 112, 112, 250);
+    graphics.fillStyle(0x1b2430, 1);
+    graphics.fillRect(846, 132, 80, 118);
+    graphics.fillStyle(0x68d9bc, 1);
+    graphics.fillRect(854, 142, 64, 42);
+    graphics.fillStyle(0x788596, 1);
+    graphics.fillRect(850, 274, 72, 34);
+    graphics.generateTexture(TEXTURES.titleFacilityBackdrop, 960, 540);
+  });
+
   ensureTexture(scene, TEXTURES.facilityFloor, () => {
     graphics.clear();
     graphics.fillStyle(0x151b24, 1);

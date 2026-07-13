@@ -13,7 +13,9 @@ import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createFacilityMenuBackdrop } from "../art/menuBackdrop.js";
+import { createTitleBackdrop } from "../art/titleBackdrop.js";
 import { THEME } from "../ui/theme.js";
+import { createStatusLamp, createTerminalButton } from "../ui/tacticalUi.js";
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const menusMixin = {
@@ -23,81 +25,92 @@ export const menusMixin = {
     this.cameras.main.setBackgroundColor(THEME.surface.facility);
     this.startScreenObjects = [];
 
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
+    this.titleBackdropController = createTitleBackdrop(this, this.startScreenObjects, 7);
 
-    createFacilityMenuBackdrop(this, this.startScreenObjects, 7);
+    const facilityCode = this.add.text(72, 62, "SITE-CN-██ / 安保终端 03", {
+      fontFamily: THEME.font.mono,
+      fontSize: "14px",
+      color: THEME.text.muted
+    });
+    facilityCode.setOrigin(0, 0.5);
+    facilityCode.setDepth(11);
+    this.startScreenObjects.push(facilityCode);
 
-    const title = this.add.text(cx, cy - 130, "SCP：幸存者", {
+    const alertLevel = this.add.text(72, 86, "警戒等级：收容失效", {
+      fontFamily: THEME.font.label,
+      fontSize: "16px",
+      color: THEME.text.critical
+    });
+    alertLevel.setOrigin(0, 0.5);
+    alertLevel.setDepth(11);
+    this.startScreenObjects.push(alertLevel);
+
+    const title = this.add.text(72, 116, "SCP：幸存者", {
       fontFamily: THEME.font.display,
-      fontSize: "64px",
+      fontSize: "52px",
       fontStyle: "bold",
       color: THEME.text.primary
     });
     title.setShadow(0, 3, "#04070e", 8, false, true);
-    title.setOrigin(0.5);
+    title.setOrigin(0, 0.5);
     title.setDepth(11);
     this.startScreenObjects.push(title);
 
-    const subtitle = this.add.text(
-      cx,
-      cy - 70,
-      "在收容失效的设施中生存到底，收容 SCP-049。",
+    const objective = this.add.text(
+      72,
+      176,
+      "目标：穿越失控设施并完成 SCP-049 再收容。",
       {
         fontFamily: THEME.font.body,
-        fontSize: "20px",
+        fontSize: "18px",
         color: THEME.text.secondary
       }
     );
-    subtitle.setOrigin(0.5);
-    subtitle.setDepth(11);
-    this.startScreenObjects.push(subtitle);
+    objective.setOrigin(0, 0.5);
+    objective.setDepth(11);
+    this.startScreenObjects.push(objective);
 
     const hint = this.add.text(
-      cx,
-      cy - 8,
-      "WASD 移动 · 空格 闪避 · TAB 查看构建 · ESC 暂停 · M 静音",
+      72,
+      216,
+      "WASD 移动  /  空格 闪避  /  TAB 构建  /  ESC 暂停  /  M 静音",
       {
         fontFamily: THEME.font.label,
         fontSize: "15px",
         color: THEME.text.muted
       }
     );
-    hint.setOrigin(0.5);
+    hint.setOrigin(0, 0.5);
     hint.setDepth(11);
     this.startScreenObjects.push(hint);
 
-    const startButton = this.add.rectangle(cx, cy + 78, 260, 62, THEME.surface.raised, 1);
-    startButton.setStrokeStyle(2, THEME.border.focus);
-    startButton.setDepth(11);
-    startButton.setInteractive({ useHandCursor: true });
-    startButton.on("pointerover", () => startButton.setFillStyle(THEME.border.default, 1));
-    startButton.on("pointerout", () => startButton.setFillStyle(THEME.surface.raised, 1));
-    startButton.on("pointerdown", () => this.beginFromStartScreen());
-    this.startScreenObjects.push(startButton);
-
-    const startLabel = this.add.text(cx, cy + 78, "开始游戏", {
-      fontFamily: THEME.font.display,
-      fontSize: "28px",
-      fontStyle: "bold",
-      color: THEME.text.onButton
+    const startButton = createTerminalButton(this, {
+      x: 72,
+      y: 322,
+      width: 316,
+      height: 60,
+      text: "开始行动",
+      depth: 11,
+      onActivate: () => this.beginFromStartScreen()
     });
-    startLabel.setOrigin(0.5);
-    startLabel.setDepth(12);
-    this.startScreenObjects.push(startLabel);
+    this.startScreenObjects.push(...startButton.objects);
 
-    const facilityStatus = this.add.text(cx, cy + 122, "● 电力正常    ● 收容稳定", {
+    const powerLamp = createStatusLamp(this, { x: 80, y: 412, state: "contained", depth: 11 });
+    const containmentLamp = createStatusLamp(this, { x: 210, y: 412, state: "danger", depth: 11 });
+    this.startScreenObjects.push(...powerLamp.objects, ...containmentLamp.objects);
+
+    const facilityStatus = this.add.text(94, 412, "电力在线       收容失效", {
       fontFamily: THEME.font.label,
       fontSize: "13px",
       color: THEME.text.contained
     });
-    facilityStatus.setOrigin(0.5);
+    facilityStatus.setOrigin(0, 0.5);
     facilityStatus.setDepth(11);
     this.startScreenObjects.push(facilityStatus);
 
     const creditsHint = this.add.text(
-      cx,
-      cy + 158,
+      72,
+      452,
       `累计学分：${this.meta.credits}（进入后可在解锁商店消费）`,
       {
         fontFamily: THEME.font.label,
@@ -105,7 +118,7 @@ export const menusMixin = {
         color: THEME.text.secondary
       }
     );
-    creditsHint.setOrigin(0.5);
+    creditsHint.setOrigin(0, 0.5);
     creditsHint.setDepth(11);
     this.startScreenObjects.push(creditsHint);
 
@@ -122,6 +135,8 @@ export const menusMixin = {
 
 
   destroyStartScreen() {
+    this.titleBackdropController?.stop();
+    this.titleBackdropController = null;
     if (!this.startScreenObjects) {
       return;
     }

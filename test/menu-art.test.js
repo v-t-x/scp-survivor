@@ -90,8 +90,8 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
 
   assert.match(
     source,
-    /createFacilityMenuBackdrop\(this, this\.startScreenObjects, 7\)/,
-    "title menu must use the facility backdrop instead of a pure-color full-screen rectangle"
+    /createTitleBackdrop\(this, this\.startScreenObjects, 7\)/,
+    "title menu must use its dedicated production facility backdrop"
   );
   assert.match(
     source,

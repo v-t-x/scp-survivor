@@ -17,7 +17,8 @@ const approvedImageAssets = [
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
   { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [64, 64] },
   { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [64, 64] },
-  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [64, 64] }
+  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [64, 64] },
+  { key: "title-facility-backdrop", path: "assets/art/menus/title-facility-backdrop.png", size: [960, 540] }
 ];
 
 const expected = new Map(approvedImageAssets.map(({ key, size }) => [key, size]));
@@ -94,7 +95,7 @@ function decodeRgbaPng(buffer) {
 }
 
 function assertApprovedStaticImageAssets(assets) {
-  assert.equal(assets.length, 12);
+  assert.equal(assets.length, 13);
   assert.equal(
     new Set(assets.map(({ key }) => key)).size,
     assets.length,
