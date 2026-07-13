@@ -15,6 +15,9 @@ import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createFacilityRoomVisuals } from "../art/facilityRoom.js";
 import {
+  resolveCharacterTexture
+} from "../art/characterPresentation.js";
+import {
   applyDisplayScalePreservingBody,
   CHARACTER_DISPLAY_SCALE
 } from "../art/presentationRules.js";
@@ -44,10 +47,11 @@ export const worldMixin = {
 
 
   createPlayer() {
-    this.player = this.physics.add.image(
+    const playerTexture = resolveCharacterTexture(this, "player", TEXTURES.player);
+    this.player = this.physics.add.sprite(
       WORLD_WIDTH / 2,
       WORLD_HEIGHT / 2,
-      TEXTURES.player
+      playerTexture
     );
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(24, 24);
@@ -58,7 +62,22 @@ export const worldMixin = {
 
 
   createGroups() {
-    this.enemies = this.physics.add.group();
+    this.enemies = this.physics.add.group({
+      classType: Phaser.Physics.Arcade.Sprite,
+      createCallback: (enemy) => {
+        if (enemy.texture.key !== TEXTURES.enemyInfected) {
+          return;
+        }
+        const textureKey = resolveCharacterTexture(
+          this,
+          "infectedStaff",
+          TEXTURES.enemyInfected
+        );
+        if (textureKey !== enemy.texture.key) {
+          enemy.setTexture(textureKey, 0);
+        }
+      }
+    });
     this.bullets = this.physics.add.group();
     this.enemyProjectiles = this.physics.add.group();
     this.xpGems = this.physics.add.group();

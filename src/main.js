@@ -12,6 +12,7 @@ import { hudMixin } from "./scene/hud.js";
 import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
+import { syncCharacterPresentation } from "./art/characterPresentation.js";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -181,6 +182,7 @@ class PrototypeScene extends Phaser.Scene {
       this.handleExperienceCollection();
       this.updateSupplyPickups();
       this.updatePickupRadiusIndicator();
+      syncCharacterPresentation(this);
     }
 
     this.updatePlayerInvulnerabilityVisual();

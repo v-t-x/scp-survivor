@@ -179,8 +179,8 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P19](#p19-facility-hazard-stripe)；仅文本输入 | 原图 1254×1254 RGB；中心正方形裁切；nearest 精确缩至 32×32；MEDIANCUT 无抖动量化为 32 色；复制首行/列到末行/列形成逐像素闭合边界；转 8-bit RGBA，alpha 固定 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
 | facility-observation-window | PNG | `assets/art/facility/observation-window.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P20](#p20-facility-observation-window)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,13,94,51)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
 | facility-pipe-bank | PNG | `assets/art/facility/pipe-bank.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P21](#p21-facility-pipe-bank)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,16,94,48)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 |
-| player-opening-sheet | PNG | `assets/art/characters/player-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
-| infected-opening-sheet | PNG | `assets/art/characters/infected-opening-sheet.png` |  |  |  |  |  |  | 计划中 / 未准入 |
+| player-opening-sheet | PNG spritesheet | `assets/art/characters/player-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ bundled Python/Pillow 12.2.0 | 2026-07-13 | [P22](#p22-player-opening-sheet)；仅文本输入；原始输出 `C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-3d058fc0-8885-4f0b-9121-627db2e44d05.png`，工作副本 `.superpowers/sdd/opening-task-6-sources/player-grid-raw.png` | 1254×1254 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化；按 4×3 单元提取 idle/move/hit 源姿势并按 alpha bbox 裁切；nearest 等比缩入每帧最大 40×42 内容区；以源姿势和 ±1px 横移/1–2px 高度变化组装每方向 idle 4 / move 6 / hit 2，脚底固定 y=44；整张 sheet MEDIANCUT 无抖动量化为 32 个可见色；输出 576×192、48 帧、8-bit RGBA、alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求，若复核产生要求则补充 | 候选；商业发布前复核 | 开局动画候选 |
+| infected-opening-sheet | PNG spritesheet | `assets/art/characters/infected-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ bundled Python/Pillow 12.2.0 | 2026-07-13 | [P23](#p23-infected-opening-sheet-first-attempt-no-output) 首次调用卡住且无输出；[P24](#p24-infected-opening-sheet-successful-source) 为实际源；仅文本输入；原始输出 `C:\Users\24037\.codex\generated_images\019f59e7-6613-73d3-9ac1-a2f4baa76dcd\exec-d4c287ef-366b-4f0f-983a-7e1b93fa44fe.png`，工作副本 `.superpowers/sdd/opening-task-6-sources/infected-grid-raw.png` | 1254×1254 RGB；使用与 player 完全相同的官方去色键、alpha 二值化、4×3 源姿势提取、nearest 缩放、逐帧组装和整 sheet MEDIANCUT 无抖动量化流程；脚底固定 y=44；输出 576×192、48 帧、8-bit RGBA、32 个可见色、alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求，若复核产生要求则补充 | 候选；商业发布前复核 | 开局动画候选 |
 
 ### P13 title-facility-backdrop
 
@@ -304,6 +304,55 @@ Color palette: graphite, gunmetal, desaturated steel blue, dirty cold grey, mute
 Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal
 Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane or lighting variation; do not use #00ff00 anywhere in the subject; crisp hard subject edges; no cast shadow, contact shadow, reflection, text, logo, watermark, characters, steam, leaks or loose props
 Avoid: 3D render, pseudo-3D, isometric view, perspective wall, floating sticker, photorealism, smooth painting, soft transparency, tangled plumbing
+```
+
+### P22 player-opening-sheet
+
+```text
+Use case: stylized-concept
+Asset type: production source reference sheet for a 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Primary request: Create exactly twelve isolated pose references of the same adult Foundation tactical survivor, arranged as a clean 4-row by 3-column grid.
+Row order from top to bottom: facing down toward the viewer, facing left, facing right, facing up away from the viewer.
+Column order from left to right: calm idle stance, clearly different mid-stride movement pose, clearly recoiling hit pose.
+Subject: one consistent adult realistic-proportion survivor in a dark navy protective suit, compact chest rig, pale shoulder insignia with no readable text, black boots, and a clearly held compact weapon pointing in the facing direction.
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited steel-blue and graphite palette, no antialiasing.
+Composition/framing: exact 4 by 3 evenly spaced grid, one complete full-body character per cell, identical scale in every cell, generous separation and padding, stable feet position within each row. No cell borders.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal.
+Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane, or lighting variation; do not use #00ff00 anywhere in the character; crisp opaque subject edges; each pose must be visibly different; direction and weapon orientation must be unambiguous; no cast shadow, contact shadow, reflection, text, labels, numbers, logo, watermark, extra characters, loose props, muzzle flash, blood, or scenery.
+Avoid: chibi or Q-version proportions, oversized head, 3D render, isometric view, side-view platform sprite, front-perspective character sheet, smooth painting, soft transparency, duplicated identical poses.
+```
+
+### P23 infected-opening-sheet-first-attempt-no-output
+
+该次 built-in `image_gen` 调用持续约 5 分钟无输出，随后按用户指令终止；未产生可用源文件，也未进入后处理。逐字 prompt：
+
+```text
+Use case: stylized-concept
+Asset type: production source reference sheet for a 48x48-per-frame top-down 2D pixel-art game character spritesheet
+Primary request: Create exactly twelve isolated pose references of the same adult infected Foundation maintenance worker, arranged as a clean 4-row by 3-column grid.
+Row order from top to bottom: facing down toward the viewer, facing left, facing right, facing up away from the viewer.
+Column order from left to right: tense uneven idle stance, clearly different lurching mid-stride movement pose, clearly recoiling hit pose.
+Subject: one consistent adult realistic-proportion infected maintenance worker in a torn grey-blue work uniform, dark work boots, utility belt, asymmetric diseased posture, readable head and arms, and only restrained dark dried blood on one sleeve and collar.
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited grey-blue, graphite and restrained dark-red palette, no antialiasing.
+Composition/framing: exact 4 by 3 evenly spaced grid, one complete full-body character per cell, identical scale in every cell, generous separation and padding, stable feet position within each row. No cell borders.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal.
+Constraints: background must be one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane, or lighting variation; do not use #00ff00 anywhere in the character; crisp opaque subject edges; each pose must be visibly different; facing direction must be unambiguous; no cast shadow, contact shadow, reflection, text, labels, numbers, logos, watermark, extra characters, loose props, gore, exposed organs, or scenery.
+Avoid: chibi or Q-version proportions, oversized head, zombie caricature, excessive blood, 3D render, isometric view, side-view platform sprite, front-perspective character sheet, smooth painting, soft transparency, duplicated identical poses.
+```
+
+### P24 infected-opening-sheet-successful-source
+
+```text
+Use case: stylized-concept
+Asset type: source pose grid for a production 48x48 top-down 2D pixel-art game spritesheet
+Primary request: exactly 12 isolated poses of one consistent adult infected Foundation maintenance worker in a 4-row by 3-column grid.
+Rows, top to bottom: facing down, facing left, facing right, facing up. Columns, left to right: tense idle, visibly different lurching mid-stride, visibly different hit recoil.
+Subject: realistic adult proportions; torn grey-blue maintenance uniform; dark work boots; utility belt; asymmetric diseased posture; readable head and arms; restrained dark dried blood only on one sleeve and collar.
+Style/medium: detailed orthographic top-down 2D pixel art, hard deliberate pixel clusters, limited grey-blue/graphite/dark-red palette, no antialiasing.
+Composition: equal scale, full body, generous separation and padding, stable feet within each row, no borders.
+Scene/backdrop: perfectly flat uniform solid #00ff00 chroma-key background.
+Constraints: no #00ff00 in the character; no shadows, gradients, floor, reflections, text, labels, logos, watermark, extra characters, props, gore, or scenery; crisp opaque edges; every pose distinct and direction unambiguous.
+Avoid: chibi, oversized head, zombie caricature, excess blood, 3D, isometric, side-view, smooth painting, soft transparency, duplicated poses.
 ```
 
 开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。

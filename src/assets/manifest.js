@@ -12,7 +12,9 @@
 // them needs to change.
 export const TEXTURES = {
   player: "player-rect",
+  playerOpeningSheet: "player-opening-sheet",
   enemyInfected: "enemy-infected",
+  infectedOpeningSheet: "infected-opening-sheet",
   enemyCrawler: "enemy-crawler",
   enemyDrone: "enemy-drone",
   eliteRiot: "elite-riot",
@@ -66,8 +68,19 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.titleFacilityBackdrop, path: "assets/art/menus/title-facility-backdrop.png" }
 ];
 
-// Real spritesheet / texture-atlas assets. Empty at this stage.
-export const SPRITESHEET_ASSETS = [];
+// Opening character sheets keep the original static textures above as fallback.
+export const SPRITESHEET_ASSETS = [
+  {
+    key: TEXTURES.playerOpeningSheet,
+    path: "assets/art/characters/player-opening-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  },
+  {
+    key: TEXTURES.infectedOpeningSheet,
+    path: "assets/art/characters/infected-opening-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  }
+];
 export const ATLAS_ASSETS = [];
 
 // Real audio assets to preload. Empty for now — audio is synthesized at runtime

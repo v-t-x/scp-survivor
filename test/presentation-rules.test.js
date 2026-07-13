@@ -114,3 +114,17 @@ test("facility presentation reset clears outage tint and alpha", () => {
   assert.equal(activeVisual.alpha, 1);
   assert.equal(activeVisual.tinted, false);
 });
+
+test("opening character integration preserves body configuration contracts", async () => {
+  const [world, enemies, main] = await Promise.all([
+    readFile(new URL("../src/scene/world.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/main.js", import.meta.url), "utf8")
+  ]);
+  assert.match(world, /this\.player\.body\.setSize\(24, 24\)/);
+  assert.match(enemies, /enemy\.setCircle\(config\.bodyRadius\)/);
+  assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
+  assert.match(enemies, /boss\.setCircle\(18\)/);
+  assert.doesNotMatch(`${world}\n${enemies}`, /body\.setOffset/);
+  assert.match(main, /syncCharacterPresentation\(this\)/);
+});

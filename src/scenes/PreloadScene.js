@@ -6,6 +6,7 @@ import {
   AUDIO_ASSETS
 } from "../assets/manifest.js";
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
+import { registerOpeningCharacterAnimations } from "../art/characterPresentation.js";
 
 // PreloadScene — the normal startup entry for asset loading.
 //
@@ -43,6 +44,7 @@ export class PreloadScene extends Phaser.Scene {
     // Generate procedural fallbacks for any texture key not provided by a real
     // asset above. Existence-checked per key, so real art is never overwritten.
     generateFallbackTextures(this);
+    registerOpeningCharacterAnimations(this);
 
     this.scene.start("PrototypeScene");
   }

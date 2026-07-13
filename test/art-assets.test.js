@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
-import { IMAGE_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import { IMAGE_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
 
 const approvedImageAssets = [
   { key: "facility-floor", path: "assets/art/facility/floor.png", size: [32, 32] },
@@ -30,6 +30,19 @@ const expected = new Map(approvedImageAssets.map(({ key, size }) => [key, size])
 const expectedImageAssetPaths = new Map(
   approvedImageAssets.map(({ key, path }) => [key, path])
 );
+
+const approvedCharacterSheets = [
+  {
+    key: "player-opening-sheet",
+    path: "assets/art/characters/player-opening-sheet.png",
+    size: [576, 192]
+  },
+  {
+    key: "infected-opening-sheet",
+    path: "assets/art/characters/infected-opening-sheet.png",
+    size: [576, 192]
+  }
+];
 
 function readPngSize(buffer) {
   assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
@@ -112,6 +125,30 @@ function assertApprovedStaticImageAssets(assets) {
   );
 }
 
+function getFramePixels(pixels, sheetWidth, frameIndex) {
+  const frameWidth = 48;
+  const frameHeight = 48;
+  const frameX = (frameIndex % 12) * frameWidth;
+  const frameY = Math.floor(frameIndex / 12) * frameHeight;
+  const result = Buffer.alloc(frameWidth * frameHeight * 4);
+  for (let y = 0; y < frameHeight; y += 1) {
+    const sourceStart = ((frameY + y) * sheetWidth + frameX) * 4;
+    const targetStart = y * frameWidth * 4;
+    pixels.copy(result, targetStart, sourceStart, sourceStart + frameWidth * 4);
+  }
+  return result;
+}
+
+function getVisibleFootY(framePixels) {
+  let footY = -1;
+  for (let offset = 0; offset < framePixels.length; offset += 4) {
+    if (framePixels[offset + 3] === 255) {
+      footY = Math.max(footY, Math.floor(offset / 4 / 48));
+    }
+  }
+  return footY;
+}
+
 test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
@@ -122,6 +159,16 @@ test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.facilityObservationWindow, "facility-observation-window");
   assert.equal(TEXTURES.facilityPipeBank, "facility-pipe-bank");
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
+});
+
+test("production manifest declares exact opening character spritesheets", () => {
+  assert.equal(TEXTURES.playerOpeningSheet, "player-opening-sheet");
+  assert.equal(TEXTURES.infectedOpeningSheet, "infected-opening-sheet");
+  assert.deepEqual(SPRITESHEET_ASSETS, approvedCharacterSheets.map(({ key, path }) => ({
+    key,
+    path,
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  })));
 });
 
 test("production manifest contract rejects duplicate texture keys", () => {
@@ -169,6 +216,52 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
 
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
+    }
+  }
+});
+
+test("opening character sheets are exact RGBA 48-frame production assets", async () => {
+  for (const { key, path, size } of approvedCharacterSheets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    await access(absolute);
+    const buffer = await readFile(absolute);
+    assert.deepEqual(readPngSize(buffer), size, key);
+    const { width, height, pixels } = decodeRgbaPng(buffer);
+    assert.equal((width / 48) * (height / 48), 48, `${key} must contain 48 frames`);
+
+    const colors = new Set();
+    const alphaValues = new Set();
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const alpha = pixels[offset + 3];
+      alphaValues.add(alpha);
+      if (alpha === 255) {
+        colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      }
+    }
+    assert.ok(colors.size <= 32, `${key} exceeds the 32-color production palette`);
+    assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must use binary alpha with transparency`);
+
+    for (let row = 0; row < 4; row += 1) {
+      for (const [motion, start, end] of [
+        ["idle", 0, 3],
+        ["move", 4, 9],
+        ["hit", 10, 11]
+      ]) {
+        const frames = [];
+        for (let column = start; column <= end; column += 1) {
+          frames.push(getFramePixels(pixels, width, row * 12 + column));
+        }
+        assert.ok(
+          new Set(frames.map((frame) => frame.toString("base64"))).size >= 2,
+          `${key} ${motion} row ${row} cannot repeat one frame`
+        );
+        const footYs = frames.map(getVisibleFootY);
+        assert.ok(footYs.every((value) => value >= 0), `${key} ${motion} row ${row} has an empty frame`);
+        assert.ok(
+          Math.max(...footYs) - Math.min(...footYs) <= 1,
+          `${key} ${motion} row ${row} foot anchor drifts more than one pixel`
+        );
+      }
     }
   }
 });

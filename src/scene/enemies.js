@@ -20,6 +20,7 @@ import {
   applyDisplayScalePreservingBody,
   CHARACTER_DISPLAY_SCALE
 } from "../art/presentationRules.js";
+import { resolveCharacterTexture } from "../art/characterPresentation.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -185,7 +186,8 @@ export const enemiesMixin = {
     const config =
       BALANCE.enemy.types[type] ?? BALANCE.enemy.types.infectedStaff;
     const { x, y } = this.getSpawnPositionAtEdge();
-    const enemy = this.enemies.create(x, y, config.textureKey);
+    const textureKey = resolveCharacterTexture(this, config.type, config.textureKey);
+    const enemy = this.enemies.create(x, y, textureKey);
 
     this.initializeEnemyFromConfig(enemy, config, scaling, false);
   },
@@ -897,7 +899,12 @@ export const enemiesMixin = {
         24,
         WORLD_HEIGHT - 24
       );
-      const minion = this.enemies.create(spawnX, spawnY, baseConfig.textureKey);
+      const textureKey = resolveCharacterTexture(
+        this,
+        baseConfig.type,
+        baseConfig.textureKey
+      );
+      const minion = this.enemies.create(spawnX, spawnY, textureKey);
       this.initializeEnemyFromConfig(minion, baseConfig, scaling, false);
       minion.isBossMinion = true;
     }

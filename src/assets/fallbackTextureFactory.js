@@ -241,6 +241,8 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.weaponTeslaIcon, 96, 96);
   });
 
+  // Static character textures remain the safe fallback when an opening sheet is
+  // missing or incomplete. Do not synthesize formal spritesheet keys here.
   ensureTexture(scene, TEXTURES.player, () => {
     graphics.clear();
     graphics.fillStyle(0x3f82ff, 1);
