@@ -170,17 +170,27 @@ test("outage dims status indicators without dimming the physical module", () => 
   const status = statusGraphics(scene);
   const [pistol] = moduleImages(scene);
 
-  rig.update({ weaponId: "pistol", projectileCount: 1, outageStrength: 0 }, 16);
-  const normalAlphas = status.commands
-    .filter(([name]) => name === "fillStyle")
-    .map(([, , alpha]) => alpha);
   rig.update({ weaponId: "pistol", projectileCount: 1, outageStrength: 1 }, 16);
-  const outageAlphas = status.commands
+  const fillStyles = status.commands
     .filter(([name]) => name === "fillStyle")
     .map(([, , alpha]) => alpha);
 
-  assert.ok(Math.max(...outageAlphas) < Math.max(...normalAlphas));
+  assert.deepEqual(fillStyles.slice(0, 2), [1, 1], "physical pivot fills remain full alpha");
+  assert.ok(fillStyles.slice(2).every((alpha) => alpha < 1), "status-light fills dim during outage");
   assert.equal(pistol.alpha, 1);
+});
+
+test("fire tracer bridges from the shoulder muzzle back toward the center-origin path", () => {
+  const scene = makeScene();
+  const rig = createWeaponRigView(scene);
+  const snapshot = { weaponId: "pistol", anchorX: 100, anchorY: 200, aimAngle: 0, projectileCount: 1 };
+
+  rig.fire(snapshot);
+
+  const tracer = scene.created.at(-1);
+  const line = tracer.commands.find(([name]) => name === "lineBetween");
+  assert.deepEqual(line, ["lineBetween", 125, 187, 118, 187]);
+  assert.ok(line[1] > line[3], "tracer endpoint must move back toward the player center");
 });
 
 test("fire reuses one muzzle and tracer and replaces the prior effect tween", () => {

@@ -68,11 +68,11 @@ function drawBackpack(graphics) {
 function drawStatus(graphics, state) {
   const indicatorAlpha = 1 - state.outageStrength * 0.75;
   graphics.clear();
-  graphics.fillStyle(COLORS.base, indicatorAlpha);
+  graphics.fillStyle(COLORS.base, 1);
   graphics.fillCircle(0, 0, 12);
-  graphics.fillStyle(COLORS.pivot, indicatorAlpha);
+  graphics.fillStyle(COLORS.pivot, 1);
   graphics.fillCircle(0, 0, 8);
-  graphics.lineStyle(1, COLORS.baseEdge, indicatorAlpha);
+  graphics.lineStyle(1, COLORS.baseEdge, 1);
   graphics.strokeCircle(0, 0, 12);
 
   if (state.weaponId === "pistol") {
@@ -188,8 +188,8 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
     const directionY = Math.sin(fireState.aimAngle);
     const muzzleX = shoulderX + directionX * WEAPON_RIG_LAYOUT.muzzleDistance;
     const muzzleY = shoulderY + directionY * WEAPON_RIG_LAYOUT.muzzleDistance;
-    const tracerEndX = muzzleX + directionX * WEAPON_RIG_LAYOUT.tracerDistance;
-    const tracerEndY = muzzleY + directionY * WEAPON_RIG_LAYOUT.tracerDistance;
+    const tracerEndX = muzzleX - directionX * WEAPON_RIG_LAYOUT.tracerDistance;
+    const tracerEndY = muzzleY - directionY * WEAPON_RIG_LAYOUT.tracerDistance;
 
     muzzle.clear();
     muzzle.fillStyle(COLORS.muzzle, 1);
