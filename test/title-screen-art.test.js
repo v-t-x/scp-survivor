@@ -108,6 +108,27 @@ test("title backdrop owns gradient, gate focus and every tween idempotently", ()
   assert.equal(calls.filter(({ type }) => type === "graphics").length, 2);
   assert.equal(calls.some(({ type, args }) => type === "rectangle" && args[2] === 440 && args[3] === 540), false);
   assert.equal(tweens.length, 3);
+  assert.deepEqual(cleanup, controller.objects);
+  const gradientFillRects = controller.objects[1].commands.filter(([type]) => type === "fillRect");
+  assert.equal(gradientFillRects.length, 12);
+  const gradientAlphas = controller.objects[1].commands
+    .filter(([type]) => type === "fillStyle")
+    .map(([, , alpha]) => alpha);
+  assert.equal(gradientAlphas.length, 12);
+  assert.equal(gradientAlphas[0], 0.82);
+  assert.ok(Math.abs(gradientAlphas.at(-1) - 0.105) < 1e-12);
+  assert.ok(gradientAlphas.every((alpha, index) => index === 0 || alpha < gradientAlphas[index - 1]));
+  assert.deepEqual(
+    controller.objects[3].commands.filter(([type]) => type === "strokeRect"),
+    [
+      ["strokeRect", 592, 124, 286, 366],
+      ["strokeRect", 604, 136, 22, 3],
+      ["strokeRect", 844, 474, 22, 3]
+    ]
+  );
+  const gateLabel = calls.find(({ type }) => type === "text");
+  assert.deepEqual(gateLabel.args.slice(0, 3), [604, 112, "GATE 03 // BREACH"]);
+  assert.ok(gateLabel.args[1] < 124);
   assert.equal(cleanup.length, controller.objects.length);
   assert.ok(controller.objects.every((object) => object.scrollFactor === 0));
   controller.stop();
