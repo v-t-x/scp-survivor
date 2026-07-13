@@ -56,6 +56,16 @@ export const THEME = {
     disabled: 0x48525d
   },
 
+  title: {
+    scrim: 0x03070c,
+    bottomRail: 0x071019,
+    line: 0x637b90,
+    actionFill: 0x101b27,
+    actionHover: 0x172a38,
+    actionPressed: 0x0a1119,
+    alarm: 0xb9474f
+  },
+
   layout: {
     cornerCut: 8,
     panelPadding: 12,
