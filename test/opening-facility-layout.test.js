@@ -11,6 +11,13 @@ import {
 const WORLD_SIZE = 1920;
 const CENTER = WORLD_SIZE / 2;
 const SAFE_RADIUS = 260;
+const CAMERA = {
+  left: CENTER - 480,
+  top: CENTER - 270,
+  width: 960,
+  height: 540
+};
+const HUD_BOUNDS = { left: 0, right: 400, top: 0, bottom: 180 };
 const KNOWN_ROLES = new Set([
   "wall",
   "door",
@@ -43,18 +50,55 @@ function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function closestTextureBoundsDistance(item) {
+function rotatedHalfExtents(item) {
   const dimensions = TEXTURE_DIMENSIONS.get(item.key);
   assert.ok(dimensions, `missing dimensions for ${item.key}`);
   const cosine = Math.abs(Math.cos(item.rotation));
   const sine = Math.abs(Math.sin(item.rotation));
   const halfWidth = dimensions.width * Math.abs(item.scaleX) / 2;
   const halfHeight = dimensions.height * Math.abs(item.scaleY) / 2;
-  const rotatedHalfWidth = cosine * halfWidth + sine * halfHeight;
-  const rotatedHalfHeight = sine * halfWidth + cosine * halfHeight;
-  const closestX = Math.max(Math.abs(item.x - CENTER) - rotatedHalfWidth, 0);
-  const closestY = Math.max(Math.abs(item.y - CENTER) - rotatedHalfHeight, 0);
+  return {
+    x: cosine * halfWidth + sine * halfHeight,
+    y: sine * halfWidth + cosine * halfHeight
+  };
+}
+
+function textureBoundsGap(a, b) {
+  const aHalf = rotatedHalfExtents(a);
+  const bHalf = rotatedHalfExtents(b);
+  const gapX = Math.max(Math.abs(a.x - b.x) - aHalf.x - bHalf.x, 0);
+  const gapY = Math.max(Math.abs(a.y - b.y) - aHalf.y - bHalf.y, 0);
+  return Math.hypot(gapX, gapY);
+}
+
+function projectedBounds(item) {
+  const half = rotatedHalfExtents(item);
+  const x = item.x - CAMERA.left;
+  const y = item.y - CAMERA.top;
+  return {
+    left: x - half.x,
+    right: x + half.x,
+    top: y - half.y,
+    bottom: y + half.y
+  };
+}
+
+function closestTextureBoundsDistance(item) {
+  const half = rotatedHalfExtents(item);
+  const closestX = Math.max(Math.abs(item.x - CENTER) - half.x, 0);
+  const closestY = Math.max(Math.abs(item.y - CENTER) - half.y, 0);
   return Math.hypot(closestX, closestY);
+}
+
+function assertAttachedChain(layout, ids) {
+  for (let index = 1; index < ids.length; index += 1) {
+    const previous = getById(layout, ids[index - 1]);
+    const current = getById(layout, ids[index]);
+    assert.ok(previous, `${ids[index - 1]} should exist`);
+    assert.ok(current, `${ids[index]} should exist`);
+    assert.equal(current.parentId, previous.id, `${current.id} should continue its structural chain`);
+    assert.ok(textureBoundsGap(current, previous) <= 8, `${current.id} should touch ${previous.id}`);
+  }
 }
 
 test("opening facility entries have unique semantic identities", () => {
@@ -85,16 +129,47 @@ test("consoles stay in functional zones beside their assigned door or window", (
     assert.ok(["maintenance", "observation"].includes(console.zone), console.id);
     assert.ok(parent && ["door", "window"].includes(parent.role), console.id);
     assert.ok(distance(console, parent) <= 128, console.id);
+    assert.ok(textureBoundsGap(console, parent) <= 8, `${console.id} should touch ${parent.id}`);
   }
 });
 
-test("vents and pipes inherit a wall or maintenance relationship", () => {
+test("vents and pipes sit against their declared structural parent", () => {
   const layout = getLayout();
   for (const utility of layout.filter(({ role }) => ["vent", "pipe"].includes(role))) {
     const parent = getById(layout, utility.parentId);
     assert.ok(parent, utility.id);
     assert.ok(parent.role === "wall" || parent.zone === "maintenance", utility.id);
+    assert.ok(textureBoundsGap(utility, parent) <= 8, `${utility.id} should touch ${parent.id}`);
   }
+});
+
+test("observation windows are mounted directly into their wall chain", () => {
+  const layout = getLayout();
+  for (const window of layout.filter(({ role }) => role === "window")) {
+    const parent = getById(layout, window.parentId);
+    assert.equal(parent?.role, "wall", window.id);
+    assert.ok(textureBoundsGap(window, parent) <= 8, `${window.id} should touch ${parent?.id}`);
+  }
+});
+
+test("left entry and right observation-maintenance boundaries form continuous chains", () => {
+  const layout = getLayout();
+  assertAttachedChain(layout, [
+    "entry-wall-left",
+    "entry-door",
+    "entry-wall-right",
+    "entry-wall-lower",
+    "entry-wall-bottom"
+  ]);
+  assertAttachedChain(layout, [
+    "observation-wall",
+    "observation-window",
+    "observation-corner-wall",
+    "maintenance-wall-upper",
+    "maintenance-wall-middle",
+    "maintenance-wall-lower",
+    "maintenance-wall-bottom"
+  ]);
 });
 
 test("contamination is one parent-linked incident trail", () => {
@@ -118,10 +193,10 @@ test("all semantic texture bounds preserve the 260px center safe radius", () => 
 test("the initial 960x540 camera reads entry, walls and functional equipment", () => {
   const layout = getLayout();
   const camera = {
-    left: CENTER - 480,
-    right: CENTER + 480,
-    top: CENTER - 270,
-    bottom: CENTER + 270
+    left: CAMERA.left,
+    right: CAMERA.left + CAMERA.width,
+    top: CAMERA.top,
+    bottom: CAMERA.top + CAMERA.height
   };
   const visible = layout.filter(({ x, y }) => (
     x >= camera.left && x <= camera.right && y >= camera.top && y <= camera.bottom
@@ -131,6 +206,21 @@ test("the initial 960x540 camera reads entry, walls and functional equipment", (
   assert.ok(visible.some(({ zone, role }) => (
     zone === "maintenance" && ["console", "pipe", "vent"].includes(role)
   )));
+});
+
+test("the projected entry is fully visible below the current top-left HUD", () => {
+  const entry = getById(getLayout(), "entry-door");
+  const bounds = projectedBounds(entry);
+  const overlapsHud = (
+    bounds.left < HUD_BOUNDS.right
+    && bounds.right > HUD_BOUNDS.left
+    && bounds.top < HUD_BOUNDS.bottom
+    && bounds.bottom > HUD_BOUNDS.top
+  );
+
+  assert.ok(bounds.left >= 0 && bounds.right <= CAMERA.width, "entry should fit horizontally");
+  assert.ok(bounds.top >= 0 && bounds.bottom <= CAMERA.height, "entry should fit vertically");
+  assert.equal(overlapsHud, false, "entry should not project under the top-left HUD");
 });
 
 test("relationship validator accepts the approved opening graph", () => {
@@ -150,6 +240,15 @@ test("relationship validator reports broken semantic relationships", () => {
   const brokenUtility = getLayout().map((item) => (
     item.id === "maintenance-pipes" ? { ...item, parentId: "incident-origin" } : item
   ));
+  const distantUtility = getLayout().map((item) => (
+    item.id === "maintenance-pipes" ? { ...item, x: item.x - 160 } : item
+  ));
+  const detachedWindow = getLayout().map((item) => (
+    item.id === "observation-window" ? { ...item, x: item.x - 192 } : item
+  ));
+  const brokenStructure = getLayout().map((item) => (
+    item.id === "maintenance-wall-middle" ? { ...item, y: item.y + 64 } : item
+  ));
   const brokenTrail = getLayout().map((item) => (
     item.id === "incident-trail-b" ? { ...item, parentId: null } : item
   ));
@@ -158,6 +257,9 @@ test("relationship validator reports broken semantic relationships", () => {
   assert.ok(validateOpeningFacilityRelationships(detachedDoor).includes("door-detached"));
   assert.ok(validateOpeningFacilityRelationships(detachedConsole).includes("console-detached"));
   assert.ok(validateOpeningFacilityRelationships(brokenUtility).includes("utility-detached"));
+  assert.ok(validateOpeningFacilityRelationships(distantUtility).includes("utility-detached"));
+  assert.ok(validateOpeningFacilityRelationships(detachedWindow).includes("window-detached"));
+  assert.ok(validateOpeningFacilityRelationships(brokenStructure).includes("structure-detached"));
   assert.ok(validateOpeningFacilityRelationships(brokenTrail).includes("contamination-disconnected"));
 });
 

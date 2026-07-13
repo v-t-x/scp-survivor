@@ -96,6 +96,39 @@ test("facility room renders the semantic graph with debugging metadata", () => {
   )));
 });
 
+test("service-floor and hazard-stripe lanes follow the left and right structural boundaries", () => {
+  const scene = createSceneStub();
+  const layout = createOpeningFacilityLayout(1920, 1920);
+  createFacilityRoomVisuals(scene, 1920, 1920);
+
+  const tileSprites = scene.created.filter(({ kind }) => kind === "tileSprite");
+  const serviceLanes = tileSprites.filter(({ key }) => key === TEXTURES.facilityServiceFloor);
+  const hazardLanes = tileSprites.filter(({ key }) => key === TEXTURES.facilityHazardStripe);
+  const entryWall = layout.find(({ id }) => id === "entry-wall-left");
+  const observationWall = layout.find(({ id }) => id === "observation-wall");
+  const maintenanceWall = layout.find(({ id }) => id === "maintenance-wall-middle");
+
+  assert.deepEqual(
+    serviceLanes.map(({ x, y, width, height }) => [x, y, width, height]),
+    [
+      [608, 992, 64, 320],
+      [1328, 928, 160, 64],
+      [1328, 1024, 96, 320]
+    ]
+  );
+  assert.deepEqual(
+    hazardLanes.map(({ x, y, width, height }) => [x, y, width, height]),
+    [
+      [576, 992, 8, 320],
+      [1328, 896, 160, 8],
+      [1376, 1024, 8, 320]
+    ]
+  );
+  assert.equal(entryWall.x + 32, serviceLanes[0].x - serviceLanes[0].width / 2);
+  assert.equal(observationWall.y + 32, serviceLanes[1].y - serviceLanes[1].height / 2);
+  assert.equal(maintenanceWall.x - 32, serviceLanes[2].x + serviceLanes[2].width / 2);
+});
+
 test("facility room rendering is display-only", async () => {
   const source = await readFile(new URL("../src/art/facilityRoom.js", import.meta.url), "utf8");
   assert.doesNotMatch(source, /\bphysics\b|add\.existing|body\./);

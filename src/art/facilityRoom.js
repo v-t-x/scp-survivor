@@ -35,22 +35,32 @@ export function createFacilityRoomVisuals(scene, width, height) {
   );
 
   addLayer(
-    scene.add.tileSprite(centerX + 32, centerY - 192, 640, 64, TEXTURES.facilityServiceFloor).setDepth(-19),
+    scene.add.tileSprite(centerX - 352, centerY + 32, 64, 320, TEXTURES.facilityServiceFloor).setDepth(-19),
+    "service-floor",
+    "entry"
+  );
+  addLayer(
+    scene.add.tileSprite(centerX + 368, centerY - 32, 160, 64, TEXTURES.facilityServiceFloor).setDepth(-19),
     "service-floor",
     "maintenance"
   );
   addLayer(
-    scene.add.tileSprite(centerX + 320, centerY - 144, 64, 128, TEXTURES.facilityServiceFloor).setDepth(-19),
+    scene.add.tileSprite(centerX + 368, centerY + 64, 96, 320, TEXTURES.facilityServiceFloor).setDepth(-19),
     "service-floor",
     "maintenance"
   );
   addLayer(
-    scene.add.tileSprite(centerX + 32, centerY - 224, 640, 8, TEXTURES.facilityHazardStripe).setDepth(-18),
+    scene.add.tileSprite(centerX - 384, centerY + 32, 8, 320, TEXTURES.facilityHazardStripe).setDepth(-18),
     "hazard-stripe",
     "entry"
   );
   addLayer(
-    scene.add.tileSprite(centerX + 288, centerY - 144, 8, 128, TEXTURES.facilityHazardStripe).setDepth(-18),
+    scene.add.tileSprite(centerX + 368, centerY - 64, 160, 8, TEXTURES.facilityHazardStripe).setDepth(-18),
+    "hazard-stripe",
+    "observation"
+  );
+  addLayer(
+    scene.add.tileSprite(centerX + 416, centerY + 64, 8, 320, TEXTURES.facilityHazardStripe).setDepth(-18),
     "hazard-stripe",
     "maintenance"
   );
