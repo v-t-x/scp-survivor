@@ -13,6 +13,39 @@ import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { resetFacilityPresentation } from "../art/presentationRules.js";
 
+export function updateWeaponRigPresentation(scene, delta) {
+  const selectedWeapon = scene.weapons?.[scene.selectedWeaponId] ?? null;
+  const elapsedSurvivalMs = scene.elapsedSurvivalMs;
+  const cooldownMs = selectedWeapon?.cooldownMs ?? 0;
+  const cooldownRemainingMs = Math.max(
+    0,
+    (selectedWeapon?.nextAttackAtMs ?? elapsedSurvivalMs) - elapsedSurvivalMs
+  );
+  const cooldownRatio = cooldownRemainingMs <= 0
+    ? 1
+    : cooldownMs > 0
+      ? Math.max(0, 1 - cooldownRemainingMs / cooldownMs)
+      : 0;
+  const snapshot = Object.freeze({
+    anchorX: scene.player?.x ?? 0,
+    anchorY: scene.player?.y ?? 0,
+    weaponId: selectedWeapon?.id ?? null,
+    aimAngle: scene.weaponRigAimAngle,
+    hasTarget: Boolean(scene.weaponRigHasTarget),
+    targetAgeMs: elapsedSurvivalMs - scene.weaponRigLastTargetAtMs,
+    projectileCount: scene.projectileCount,
+    currentShells: selectedWeapon?.currentShells ?? 0,
+    magazineSize: selectedWeapon?.magazineSize ?? 0,
+    isReloading: Boolean(selectedWeapon?.isReloading),
+    chainTargets: selectedWeapon?.chainTargets ?? 0,
+    cooldownRatio,
+    outageStrength: scene.outageVisualStrength,
+    paused: Boolean(scene.isPaused || scene.isLevelUpActive || scene.isGameOver)
+  });
+
+  scene.weaponRigView?.update(snapshot, delta);
+}
+
 // Domain mixin: systems. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const systemsMixin = {
 
@@ -143,6 +176,7 @@ export const systemsMixin = {
 
   pauseGameplaySystems() {
     this.physics.pause();
+    this.weaponRigView?.setPaused(true);
 
     if (this.spawnEvent) {
       this.spawnEvent.paused = true;
@@ -162,12 +196,18 @@ export const systemsMixin = {
 
   resumeGameplaySystems() {
     this.physics.resume();
+    this.weaponRigView?.setPaused(false);
 
     if (this.spawnEvent && this.regularSpawningActive) {
       this.spawnEvent.paused = false;
     } else if (this.regularSpawningActive && !this.spawnEvent && !this.isGameOver) {
       this.scheduleNextSpawn();
     }
+  },
+
+
+  updateWeaponRigPresentation(delta) {
+    updateWeaponRigPresentation(this, delta);
   },
 
 

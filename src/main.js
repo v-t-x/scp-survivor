@@ -13,6 +13,7 @@ import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
 import { syncCharacterPresentation } from "./art/characterPresentation.js";
+import { createWeaponRigView } from "./art/weaponRigView.js";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -140,6 +141,15 @@ class PrototypeScene extends Phaser.Scene {
     this.createPlaceholderTextures();
     this.createArenaDecoration();
     this.createPlayer();
+    this.weaponRigHasTarget = false;
+    this.weaponRigAimAngle = 0;
+    this.weaponRigLastTargetAtMs = Number.NEGATIVE_INFINITY;
+    try {
+      this.weaponRigView = createWeaponRigView(this, { depth: 16 });
+    } catch (error) {
+      console.warn("Shoulder fire-control presentation disabled", error);
+      this.weaponRigView = null;
+    }
     this.createGroups();
     this.createColliders();
     this.createUI();
@@ -183,6 +193,7 @@ class PrototypeScene extends Phaser.Scene {
       this.updateSupplyPickups();
       this.updatePickupRadiusIndicator();
       syncCharacterPresentation(this);
+      this.updateWeaponRigPresentation(delta);
     }
 
     this.updatePlayerInvulnerabilityVisual();
@@ -199,6 +210,8 @@ class PrototypeScene extends Phaser.Scene {
   // create() rebuilds this.audio / this.ui, so this prevents a leaked (or
   // duplicate) AudioContext across runs.
   teardownManagers() {
+    this.weaponRigView?.destroy();
+    this.weaponRigView = null;
     if (this.audio) {
       this.audio.destroy();
       this.audio = null;
