@@ -316,32 +316,41 @@ export const timelineMixin = {
   },
 
 
-  updatePhaseHud() {
-    if (!this.phaseText || !this.isMissionActive) {
-      return;
+  getPhaseHudState() {
+    if (!this.isMissionActive) {
+      return {
+        phaseLabel: "",
+        nextNodeSeconds: 0,
+        missionDetail: null
+      };
     }
 
     const phase = this.getTimelinePhase();
     const countdownSeconds = Math.ceil(phase.countdownMs / 1000);
-
-    if (this.survivalPhaseEnded) {
-      if (this.bossPhaseActive && this.bossEnemy?.active) {
-        const hpPercent = Math.ceil(
-          (this.bossEnemy.health / this.bossEnemy.maxHealth) * 100
-        );
-        this.phaseText.setText(`终局：SCP-049  |  Boss 生命 ${hpPercent}%`);
-      } else {
-        this.phaseText.setText(`${phase.name}  |  等待 Boss 登场`);
-      }
-      return;
+    if (this.survivalPhaseEnded && !this.bossEnemy?.active) {
+      return {
+        phaseLabel: phase.name,
+        nextNodeSeconds: 0,
+        missionDetail: "等待 Boss 登场"
+      };
     }
-
-    if (phase.id >= 7) {
-      this.phaseText.setText(`${phase.name}  |  Boss 战即将开始`);
-      return;
+    if (!this.survivalPhaseEnded && phase.id >= 7) {
+      return {
+        phaseLabel: phase.name,
+        nextNodeSeconds: 0,
+        missionDetail: "Boss 战即将开始"
+      };
     }
+    return {
+      phaseLabel: phase.name,
+      nextNodeSeconds: countdownSeconds,
+      missionDetail: null
+    };
+  },
 
-    this.phaseText.setText(`${phase.name}  |  下一节点 ${countdownSeconds}秒`);
+
+  updatePhaseHud() {
+    this.updateUI();
   },
 
 

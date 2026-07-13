@@ -1,55 +1,270 @@
 import Phaser from "phaser";
 import {
-  DEBUG_MODE,
   GAME_WIDTH,
-  GAME_HEIGHT,
-  WORLD_WIDTH,
-  WORLD_HEIGHT,
-  ENEMY_GRID_CELL_SIZE,
-  ENEMY_GRID_STRIDE
+  GAME_HEIGHT
 } from "../config/constants.js";
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
-import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { HUD_REGIONS } from "../art/openingVisualContract.js";
+import { TEXTURES } from "../assets/manifest.js";
+import { getHudPresentation } from "../ui/hudPresentation.js";
 import { THEME } from "../ui/theme.js";
+import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
+
+const HUD_DEPTH = 45;
+const FACILITY_HUD_DEPTH = 58;
+const HEALTH_BAR_WIDTH = 150;
+const XP_BAR_WIDTH = 82;
+const WEAPON_STATUS_BAR_WIDTH = 92;
+const DASH_BAR_WIDTH = 72;
 
 // Domain mixin: hud. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const hudMixin = {
 
   createUI() {
-    this.statsText = this.add.text(14, 12, "", {
-      fontFamily: THEME.font.mono,
-      fontSize: THEME.fontSize.stats,
-      color: THEME.text.primary
-    });
-    this.statsText.setDepth(45);
-    this.statsText.setScrollFactor(0);
+    this._hudTornDown = false;
 
-    this.levelText = this.add.text(14, 40, "", {
+    this.missionHudContainer = this.add.container(HUD_REGIONS.mission.x, HUD_REGIONS.mission.y);
+    this.vitalsHudContainer = this.add.container(HUD_REGIONS.vitals.x, HUD_REGIONS.vitals.y);
+    this.weaponHudContainer = this.add.container(HUD_REGIONS.weapon.x, HUD_REGIONS.weapon.y);
+    this.facilityHudContainer = this.add.container(HUD_REGIONS.facility.x, HUD_REGIONS.facility.y);
+    this.missionHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
+    this.vitalsHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
+    this.weaponHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
+    this.facilityHudContainer.setDepth(FACILITY_HUD_DEPTH).setScrollFactor(0);
+    this.gameplayHudContainers = [
+      this.missionHudContainer,
+      this.vitalsHudContainer,
+      this.weaponHudContainer,
+      this.facilityHudContainer
+    ];
+
+    this.missionPanel = createTacticalPanel(this, {
+      x: 0,
+      y: 0,
+      width: HUD_REGIONS.mission.width,
+      height: HUD_REGIONS.mission.height,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.hud.panelBorder
+    });
+    this.missionEyebrowText = this.add.text(12, 8, "MISSION // 当前任务", {
       fontFamily: THEME.font.mono,
-      fontSize: THEME.fontSize.level,
+      fontSize: THEME.fontSize.hudEyebrow,
+      color: THEME.text.muted
+    }).setDepth(0).setScrollFactor(0);
+    this.missionTitleText = this.add.text(12, 24, "", {
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.hudTitle,
+      color: THEME.text.primary
+    }).setDepth(0).setScrollFactor(0);
+    this.missionDetailText = this.add.text(12, 48, "", {
+      fontFamily: THEME.font.body,
+      fontSize: THEME.fontSize.hudBody,
+      color: THEME.text.secondary
+    }).setDepth(0).setScrollFactor(0);
+    this.missionKillsText = this.add.text(280, 70, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.muted
+    }).setOrigin(1, 0).setDepth(0).setScrollFactor(0);
+    this.missionBossBarBackground = this.add.rectangle(12, 78, 174, 5, THEME.hud.barTrack, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0).setVisible(false);
+    this.missionBossBarFill = this.add.rectangle(12, 78, 174, 5, THEME.terminal.danger, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0).setVisible(false);
+    this.missionHudContainer.add([
+      ...this.missionPanel.objects,
+      this.missionEyebrowText,
+      this.missionTitleText,
+      this.missionDetailText,
+      this.missionKillsText,
+      this.missionBossBarBackground,
+      this.missionBossBarFill
+    ]);
+
+    this.vitalsPanel = createTacticalPanel(this, {
+      x: 0,
+      y: 0,
+      width: HUD_REGIONS.vitals.width,
+      height: HUD_REGIONS.vitals.height,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.hud.panelBorder
+    });
+    this.healthLabelText = this.add.text(12, 8, "生命", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudEyebrow,
+      color: THEME.text.muted
+    }).setDepth(0).setScrollFactor(0);
+    this.healthValueText = this.add.text(58, 6, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudBody,
+      color: THEME.text.primary
+    }).setDepth(0).setScrollFactor(0);
+    this.healthBarBackground = this.add.rectangle(12, 27, HEALTH_BAR_WIDTH, 7, THEME.hud.barTrack, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.healthBarFill = this.add.rectangle(12, 27, HEALTH_BAR_WIDTH, 7, THEME.hud.health, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.levelValueText = this.add.text(12, 42, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
       color: THEME.text.contained
-    });
-    this.levelText.setDepth(45);
-    this.levelText.setScrollFactor(0);
-
-    this.xpBarBackground = this.add.rectangle(15, 72, 250, 14, THEME.surface.raised, 1);
-    this.xpBarBackground.setOrigin(0, 0);
-    this.xpBarBackground.setDepth(45);
-    this.xpBarBackground.setScrollFactor(0);
-
-    this.xpBarFill = this.add.rectangle(16, 73, 248, 12, THEME.signal.contained, 1);
-    this.xpBarFill.setOrigin(0, 0);
-    this.xpBarFill.setDepth(46);
-    this.xpBarFill.setScrollFactor(0);
-
-    this.xpText = this.add.text(272, 67, "", {
+    }).setDepth(0).setScrollFactor(0);
+    this.xpValueText = this.add.text(174, 8, "", {
       fontFamily: THEME.font.mono,
-      fontSize: THEME.fontSize.xp,
-      color: THEME.text.primary
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.secondary
+    }).setDepth(0).setScrollFactor(0);
+    this.xpBarTrack = this.add.rectangle(174, 27, XP_BAR_WIDTH, 7, THEME.hud.barTrack, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.xpBarProgress = this.add.rectangle(174, 27, XP_BAR_WIDTH, 7, THEME.hud.experience, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.xpCaptionText = this.add.text(174, 42, "经验", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.muted
+    }).setDepth(0).setScrollFactor(0);
+    this.vitalsHudContainer.add([
+      ...this.vitalsPanel.objects,
+      this.healthLabelText,
+      this.healthValueText,
+      this.healthBarBackground,
+      this.healthBarFill,
+      this.levelValueText,
+      this.xpValueText,
+      this.xpBarTrack,
+      this.xpBarProgress,
+      this.xpCaptionText
+    ]);
+
+    this.weaponPanel = createTacticalPanel(this, {
+      x: 0,
+      y: 0,
+      width: HUD_REGIONS.weapon.width,
+      height: HUD_REGIONS.weapon.height,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.hud.panelBorder
     });
-    this.xpText.setDepth(45);
-    this.xpText.setScrollFactor(0);
+    this.weaponIcon = this.add.image(38, 39, TEXTURES.weaponPistolIcon)
+      .setDisplaySize(62, 62).setDepth(0).setScrollFactor(0);
+    this.weaponDivider = this.add.rectangle(76, 10, 1, 58, THEME.terminal.frame, 0.75)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.weaponNameText = this.add.text(86, 7, "", {
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.hudTitle,
+      color: THEME.text.primary,
+      wordWrap: { width: 170 }
+    }).setDepth(0).setScrollFactor(0);
+    this.weaponDetailText = this.add.text(86, 28, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.muted
+    }).setDepth(0).setScrollFactor(0);
+    this.weaponStatusText = this.add.text(86, 46, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.secondary
+    }).setDepth(0).setScrollFactor(0);
+    this.weaponStatusBarBackground = this.add.rectangle(86, 64, WEAPON_STATUS_BAR_WIDTH, 5, THEME.hud.barTrack, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.weaponStatusBarFill = this.add.rectangle(86, 64, WEAPON_STATUS_BAR_WIDTH, 5, THEME.hud.health, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.dashStatusText = this.add.text(184, 46, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.secondary
+    }).setDepth(0).setScrollFactor(0);
+    this.dashBarBackground = this.add.rectangle(184, 64, DASH_BAR_WIDTH, 5, THEME.hud.barTrack, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.dashBarFill = this.add.rectangle(184, 64, DASH_BAR_WIDTH, 5, THEME.terminal.contained, 1)
+      .setOrigin(0, 0).setDepth(0).setScrollFactor(0);
+    this.weaponHudContainer.add([
+      ...this.weaponPanel.objects,
+      this.weaponIcon,
+      this.weaponDivider,
+      this.weaponNameText,
+      this.weaponDetailText,
+      this.weaponStatusText,
+      this.weaponStatusBarBackground,
+      this.weaponStatusBarFill,
+      this.dashStatusText,
+      this.dashBarBackground,
+      this.dashBarFill
+    ]);
+
+    this.facilityCollapsedPanel = createTacticalPanel(this, {
+      x: 54,
+      y: 0,
+      width: 212,
+      height: 28,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.terminal.contained
+    });
+    this.facilityWarningPanel = createTacticalPanel(this, {
+      x: 0,
+      y: 0,
+      width: HUD_REGIONS.facility.width,
+      height: HUD_REGIONS.facility.height,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.terminal.warning
+    });
+    this.facilityDangerPanel = createTacticalPanel(this, {
+      x: 0,
+      y: 0,
+      width: HUD_REGIONS.facility.width,
+      height: HUD_REGIONS.facility.height,
+      depth: 0,
+      scrollFactor: 0,
+      fill: THEME.hud.panelFill,
+      border: THEME.terminal.danger
+    });
+    this.facilityPanel = this.facilityCollapsedPanel;
+    this.facilityWarningPanel.frame.setVisible(false);
+    this.facilityDangerPanel.frame.setVisible(false);
+    this.facilityLampController = createStatusLamp(this, {
+      x: 68,
+      y: 14,
+      radius: 4,
+      state: "contained",
+      depth: 0,
+      scrollFactor: 0
+    });
+    this.facilityTitleText = this.add.text(84, 5, "", {
+      fontFamily: THEME.font.mono,
+      fontSize: THEME.fontSize.hudBody,
+      color: THEME.text.contained
+    }).setDepth(0).setScrollFactor(0);
+    this.facilityDetailText = this.add.text(84, 25, "", {
+      fontFamily: THEME.font.body,
+      fontSize: THEME.fontSize.hudMicro,
+      color: THEME.text.secondary,
+      wordWrap: { width: 224 }
+    }).setDepth(0).setScrollFactor(0).setVisible(false);
+    this.facilityHudContainer.add([
+      ...this.facilityCollapsedPanel.objects,
+      ...this.facilityWarningPanel.objects,
+      ...this.facilityDangerPanel.objects,
+      ...this.facilityLampController.objects,
+      this.facilityTitleText,
+      this.facilityDetailText
+    ]);
+
+    // Compatibility properties retained for timeline/UIManager consumers.
+    this.statsText = this.healthValueText;
+    this.levelText = this.levelValueText;
+    this.xpBarBackground = this.xpBarTrack;
+    this.xpBarFill = this.xpBarProgress;
+    this.xpText = this.xpValueText;
+    this.weaponHudText = this.weaponStatusText;
+    this.phaseText = this.missionDetailText;
 
     this.muteText = this.add.text(GAME_WIDTH - 14, 14, "", {
       fontFamily: THEME.font.label,
@@ -84,39 +299,24 @@ export const hudMixin = {
     this.pickupRadiusIndicator = this.add.graphics();
     this.pickupRadiusIndicator.setDepth(4);
 
-    this.weaponHudText = this.add.text(14, 98, "", {
-      fontFamily: THEME.font.mono,
-      fontSize: THEME.fontSize.weaponHud,
-      color: THEME.text.secondary,
-      lineSpacing: THEME.spacing.weaponHudLineSpacing
-    });
-    this.weaponHudText.setDepth(45);
-    this.weaponHudText.setScrollFactor(0);
-
-    this.phaseText = this.add.text(14, 148, "", {
-      fontFamily: THEME.font.label,
-      fontSize: THEME.fontSize.phase,
-      color: THEME.color.text.phase
-    });
-    this.phaseText.setDepth(45);
-    this.phaseText.setScrollFactor(0);
-
     this.eventBannerContainer = this.add.container(0, 0);
-    this.eventBannerContainer.setDepth(58);
+    this.eventBannerContainer.setDepth(64);
     this.eventBannerContainer.setScrollFactor(0);
     this.eventBannerContainer.setVisible(false);
-    this.eventBannerBg = this.add.rectangle(GAME_WIDTH / 2, 30, 640, 52, THEME.surface.overlay, 0.78);
+    this.eventBannerBg = this.add.rectangle(516, 86, 400, 48, THEME.surface.overlay, 0.88);
     this.eventBannerBg.setStrokeStyle(2, THEME.border.warning);
-    this.eventBannerTitle = this.add.text(GAME_WIDTH / 2, 20, "", {
+    this.eventBannerTitle = this.add.text(516, 78, "", {
       fontFamily: THEME.font.display,
       fontSize: THEME.fontSize.bannerTitle,
       color: THEME.color.text.bannerTitle
     });
     this.eventBannerTitle.setOrigin(0.5);
-    this.eventBannerDetail = this.add.text(GAME_WIDTH / 2, 38, "", {
+    this.eventBannerDetail = this.add.text(516, 96, "", {
       fontFamily: THEME.font.body,
       fontSize: THEME.fontSize.bannerDetail,
-      color: THEME.text.secondary
+      color: THEME.text.secondary,
+      wordWrap: { width: 372 },
+      align: "center"
     });
     this.eventBannerDetail.setOrigin(0.5);
     this.eventBannerContainer.add([
@@ -134,13 +334,50 @@ export const hudMixin = {
     this.outageLightSprite.setVisible(false);
     this.outageLightSprite.setOrigin(0.5);
 
-    this.timelineHudBasePositions = [
-      [this.statsText, this.statsText.x, this.statsText.y],
-      [this.levelText, this.levelText.x, this.levelText.y],
-      [this.xpText, this.xpText.x, this.xpText.y],
-      [this.weaponHudText, this.weaponHudText.x, this.weaponHudText.y],
-      [this.phaseText, this.phaseText.x, this.phaseText.y]
-    ];
+    this.timelineHudBasePositions = this.gameplayHudContainers.map((container) => [
+      container,
+      container.x,
+      container.y
+    ]);
+
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+  },
+
+
+  teardownHud() {
+    if (this._hudTornDown) {
+      return;
+    }
+    this._hudTornDown = true;
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+    this.pauseButton?.removeAllListeners();
+    for (const container of this.gameplayHudContainers ?? []) {
+      if (container?.active) {
+        container.destroy(true);
+      }
+    }
+    if (this.eventBannerContainer?.active) {
+      this.eventBannerContainer.destroy(true);
+    }
+    for (const object of [
+      this.muteText,
+      this.pauseButton,
+      this.pauseButtonLabel,
+      this.pickupRadiusIndicator,
+      this.outageDarknessRt,
+      this.outageLightSprite
+    ]) {
+      if (object?.active) {
+        object.destroy();
+      }
+    }
+    this.gameplayHudContainers = [];
+    this.timelineHudBasePositions = null;
+    this.topBannerState = null;
   },
 
 
@@ -158,16 +395,10 @@ export const hudMixin = {
 
   setGameplayHudVisible(isVisible) {
     const targets = [
-      this.statsText,
-      this.levelText,
-      this.xpBarBackground,
-      this.xpBarFill,
-      this.xpText,
+      ...(this.gameplayHudContainers ?? []),
       this.muteText,
       this.pauseButton,
       this.pauseButtonLabel,
-      this.weaponHudText,
-      this.phaseText,
       this.pickupRadiusIndicator
     ];
     for (const target of targets) {
@@ -270,61 +501,134 @@ export const hudMixin = {
 
 
   updateUI() {
-    const elapsedSeconds = this.elapsedSurvivalMs / 1000;
-
-    this.statsText.setText(
-      `生命：${Math.floor(this.health)} / ${this.maxHealth}   时间：${elapsedSeconds.toFixed(1)}秒   击杀：${this.killCount}`
-    );
-    const healthRatio = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
-    this.statsText.setColor(
-      healthRatio < 0.35 ? THEME.text.critical : THEME.text.primary
-    );
-    this.levelText.setText(`等级：${this.level}`);
-
-    const xpProgress = Phaser.Math.Clamp(this.currentXp / this.xpToNextLevel, 0, 1);
-    this.xpBarFill.width = 248 * xpProgress;
-    this.xpText.setText(`${this.currentXp} / ${this.xpToNextLevel} 经验`);
-    this.updateWeaponHud();
-    this.updatePhaseHud();
+    const phaseHudState = this.getPhaseHudState();
+    const selectedWeapon = this.weapons?.[this.selectedWeaponId] ?? null;
+    const facilityEvent = this.activeFacilityEvent
+      ? {
+          ...this.activeFacilityEvent,
+          warning: BALANCE.facility.events[this.activeFacilityEvent.type]?.warning
+        }
+      : null;
+    const bossHealthRatio = this.bossEnemy?.active && this.bossEnemy.maxHealth > 0
+      ? this.bossEnemy.health / this.bossEnemy.maxHealth
+      : 0;
+    const presentation = getHudPresentation({
+      isMissionActive: this.isMissionActive && !this.isGameOver,
+      health: this.health,
+      maxHealth: this.maxHealth,
+      level: this.level,
+      currentXp: this.currentXp,
+      xpToNextLevel: this.xpToNextLevel,
+      killCount: this.killCount,
+      elapsedSurvivalMs: this.elapsedSurvivalMs,
+      selectedWeaponId: this.selectedWeaponId,
+      weapon: selectedWeapon,
+      dashReadyAtMs: this.dashReadyAtMs,
+      dashCooldownMs: BALANCE.player.dashCooldownMs,
+      phaseLabel: phaseHudState.phaseLabel,
+      nextNodeSeconds: phaseHudState.nextNodeSeconds,
+      missionDetail: phaseHudState.missionDetail,
+      bossPhaseActive: this.bossPhaseActive && !this.isGameOver,
+      bossHealthRatio,
+      activeFacilityEvent: facilityEvent,
+      eventBannerActive: this.topBannerState !== null
+    });
+    this.applyHudPresentation(presentation);
   },
 
 
   updateWeaponHud() {
-    if (!this.isMissionActive || !this.selectedWeaponId) {
-      this.weaponHudText.setText("");
-      return;
-    }
+    this.updateUI();
+  },
 
-    const lines = [];
-    if (this.selectedWeaponId === "pistol") {
-      const pistol = this.weapons.pistol;
-      const fireRate = (1000 / pistol.cooldownMs).toFixed(2);
-      lines.push(`■ ${pistol.name} — 等级 ${pistol.currentLevel}`);
-      lines.push(`伤害 ${pistol.damage.toFixed(1)} | ${fireRate}/秒`);
-    } else if (this.selectedWeaponId === "shotgun") {
-      const breacher = this.weapons.shotgun;
-      const status = breacher.isReloading
-        ? `装填 ${(
-            Math.max(0, breacher.reloadEndAtMs - this.elapsedSurvivalMs) / 1000
-          ).toFixed(1)}秒`
-        : `弹药 ${breacher.currentShells}/${breacher.magazineSize}`;
-      lines.push(`▲ ${breacher.name} — 等级 ${breacher.currentLevel}`);
-      lines.push(`${status} | 弹丸伤害 ${breacher.damage.toFixed(1)}`);
-    } else if (this.selectedWeaponId === "tesla") {
-      const tesla = this.weapons.tesla;
-      const cdLeft = Math.max(0, tesla.nextAttackAtMs - this.elapsedSurvivalMs);
-      lines.push(`≈ ${tesla.name} — 等级 ${tesla.currentLevel}`);
-      lines.push(`链击 ${tesla.chainTargets} | 放电 ${(cdLeft / 1000).toFixed(1)}秒`);
-    }
 
-    const dashCdLeft = Math.max(0, this.dashReadyAtMs - this.elapsedSurvivalMs);
-    lines.push(
-      dashCdLeft > 0
-        ? `闪避(空格) 冷却 ${(dashCdLeft / 1000).toFixed(1)}秒`
-        : `闪避(空格) 就绪`
+  applyHudPresentation(presentation) {
+    const { mission, vitals, weapon, facility } = presentation;
+    for (const container of this.gameplayHudContainers ?? []) {
+      container.setVisible(mission.active);
+    }
+    this.missionTitleText.setText(mission.title);
+    this.missionDetailText.setText(mission.detail);
+    this.missionKillsText.setText(mission.killsText);
+    const bossVisible = facility.tone === "danger" && mission.active;
+    this.missionBossBarBackground.setVisible(bossVisible);
+    this.missionBossBarFill.setVisible(bossVisible);
+    this.missionBossBarFill.width = 174 * mission.bossHealthRatio;
+
+    this.healthValueText.setText(vitals.healthText);
+    this.healthValueText.setColor(
+      vitals.critical ? THEME.text.critical : THEME.text.primary
     );
+    this.healthBarFill.setFillStyle(
+      vitals.critical ? THEME.hud.healthCritical : THEME.hud.health,
+      1
+    );
+    this.healthBarFill.width = HEALTH_BAR_WIDTH * vitals.healthRatio;
+    this.levelValueText.setText(vitals.levelText);
+    this.xpValueText.setText(vitals.xpText);
+    this.xpBarProgress.width = XP_BAR_WIDTH * vitals.xpRatio;
 
-    this.weaponHudText.setText(lines.join("\n"));
+    if (weapon.iconKey) {
+      if (this.weaponIcon.texture?.key !== weapon.iconKey) {
+        this.weaponIcon.setTexture(weapon.iconKey);
+      }
+      this.weaponIcon.setVisible(true);
+    } else {
+      this.weaponIcon.setVisible(false);
+    }
+    this.weaponNameText.setText(weapon.name);
+    this.weaponDetailText.setText(weapon.detail);
+    this.weaponStatusText.setText(weapon.statusText);
+    const weaponToneColor = weapon.statusTone === "warning"
+      ? THEME.terminal.warning
+      : weapon.statusTone === "contained"
+        ? THEME.terminal.contained
+        : THEME.hud.neutral;
+    this.weaponStatusBarFill.setFillStyle(weaponToneColor, 1);
+    this.weaponStatusBarFill.width = WEAPON_STATUS_BAR_WIDTH * weapon.statusRatio;
+    this.dashStatusText.setText(
+      weapon.dashReady ? "闪避 就绪" : weapon.dashText.replace("闪避 冷却 ", "闪避 ")
+    );
+    this.dashStatusText.setColor(
+      weapon.dashReady ? THEME.text.contained : THEME.text.secondary
+    );
+    this.dashBarFill.setFillStyle(
+      weapon.dashReady ? THEME.terminal.contained : THEME.terminal.warning,
+      1
+    );
+    this.dashBarFill.width = DASH_BAR_WIDTH * weapon.dashRatio;
+
+    this.applyFacilityHudPresentation(facility);
+  },
+
+
+  applyFacilityHudPresentation(facility) {
+    const warning = facility.expanded && facility.tone !== "danger";
+    const danger = facility.expanded && facility.tone === "danger";
+    this.facilityCollapsedPanel.frame.setVisible(!facility.expanded);
+    this.facilityWarningPanel.frame.setVisible(warning);
+    this.facilityDangerPanel.frame.setVisible(danger);
+    this.facilityLampController.setState(facility.tone);
+    this.facilityTitleText.setText(facility.title);
+    this.facilityTitleText.setColor(
+      danger
+        ? THEME.text.critical
+        : warning
+          ? THEME.color.text.phase
+          : THEME.text.contained
+    );
+    this.facilityDetailText.setText(facility.detail);
+    this.facilityDetailText.setVisible(facility.expanded);
+  },
+
+
+  collapseFacilityHud() {
+    this.applyFacilityHudPresentation({
+      expanded: false,
+      title: "设施稳定",
+      detail: "SITE-CN // 收容系统在线",
+      tone: "contained"
+    });
   },
 
 

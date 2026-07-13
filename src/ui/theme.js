@@ -63,6 +63,16 @@ export const THEME = {
     labelGap: 8
   },
 
+  hud: {
+    panelFill: 0x091018,
+    panelBorder: 0x53677d,
+    barTrack: 0x1d2a36,
+    health: 0x6fd6b4,
+    healthCritical: 0xb9474f,
+    experience: 0x7398c9,
+    neutral: 0x738294
+  },
+
   surface: {
     facility: 0x080c16,
     panel: 0x141c2f,
@@ -121,7 +131,11 @@ export const THEME = {
     bannerDetail: "13px",
     panelTitle: "28px",
     panelBody: "16px",
-    damageNumber: "14px"
+    damageNumber: "14px",
+    hudEyebrow: "10px",
+    hudTitle: "16px",
+    hudBody: "12px",
+    hudMicro: "10px"
   },
 
   // Layout spacing / line spacing values currently used in the HUD.

@@ -193,7 +193,11 @@ export const systemsMixin = {
     resetFacilityPresentation(this.facilityVisuals);
     if (this.eventBannerContainer) {
       this.eventBannerContainer.setVisible(false);
+      this.eventBannerContainer.setAlpha(1);
     }
+    this.eventBannerTitle?.setText("");
+    this.eventBannerDetail?.setText("");
     this.topBannerState = null;
+    this.collapseFacilityHud();
   }
 };
