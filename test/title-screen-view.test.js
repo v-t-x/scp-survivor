@@ -56,7 +56,7 @@ function sceneStub() {
     add: {
       graphics: add("graphics", () => displayObject("graphics")),
       rectangle: add("rectangle", (x, y, width, height, fill, alpha) => ({
-        ...displayObject("rectangle"), x, y, width, height, fill, alpha
+        ...displayObject("rectangle"), x, y, width, height, fill, fillAlpha: alpha
       })),
       text: add("text", (x, y, text, style) => ({
         ...displayObject("text"), x, y, text, style
@@ -165,22 +165,42 @@ test("credits formatting is finite and title view owns the approved information 
   assert.ok(texts.includes("SCP"));
   assert.ok(texts.includes("幸存者"));
   assert.ok(texts.includes("进入失控设施，完成 SCP-049 再收容。"));
-  assert.ok(texts.includes("累计学分 585"));
-  assert.ok(texts.some((text) => text.includes("WASD 移动")));
+  assert.ok(texts.includes("累计学分"));
+  assert.ok(texts.includes("585"));
+  assert.deepEqual(
+    scene.created
+      .filter(({ type, y }) => type === "text" && y === 517)
+      .map(({ text }) => text),
+    ["WASD  移动", "SPACE  闪避", "TAB  构建", "ESC  暂停 · M  静音"]
+  );
+  assert.equal(texts.some((text) => text.includes("/ SPACE")), false);
+  assert.ok(texts.includes("POWER"));
+  assert.ok(texts.includes("CONTAINMENT"));
   assert.ok(texts.includes("电力在线"));
   assert.ok(texts.includes("收容失效"));
   assert.equal(texts.includes("电力在线          收容失效"), false);
-  const controls = scene.created.find(({ type, text }) => type === "text" && text.includes("WASD 移动"));
-  assert.equal(controls.style.fontSize, "12px");
-  assert.equal(controls.style.color, THEME.text.secondary);
-  const powerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "电力在线" && y === 517);
-  const dangerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "收容失效" && y === 517);
+  const controlGroups = scene.created.filter(({ type, y }) => type === "text" && y === 517);
+  assert.ok(controlGroups.every(({ style }) => style.fontSize === "10px" && style.color === THEME.text.secondary));
+  const powerLabel = scene.created.find(({ type, text, y }) => type === "text" && text === "POWER" && y === 507);
+  const dangerLabel = scene.created.find(({ type, text, y }) => type === "text" && text === "CONTAINMENT" && y === 507);
+  const powerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "电力在线" && y === 524);
+  const dangerStatus = scene.created.find(({ type, text, y }) => type === "text" && text === "收容失效" && y === 524);
+  assert.equal(powerLabel.style.fontSize, "8px");
+  assert.equal(dangerLabel.style.fontSize, "8px");
   assert.equal(powerStatus.style.color, THEME.text.contained);
   assert.equal(dangerStatus.style.color, THEME.text.critical);
-  const creditsText = scene.created.find(({ type, text }) => type === "text" && text === "累计学分 585");
-  assert.equal(creditsText.style.fixedWidth, 180);
-  assert.equal(scene.tweens.created.length, 4);
-  const [titleTween, missionTween, actionTween, dangerPulseTween] = scene.tweens.created;
+  const creditsLabel = scene.created.find(({ type, text, y }) => type === "text" && text === "累计学分" && y === 507);
+  const creditsValue = scene.created.find(({ type, text, y }) => type === "text" && text === "585" && y === 524);
+  assert.ok(Number.parseInt(creditsValue.style.fontSize) > Number.parseInt(creditsLabel.style.fontSize));
+  assert.equal(creditsValue.style.align, "right");
+  const bottom = scene.created.find(({ type, width, height }) => type === "rectangle" && width === 960 && height === 46);
+  assert.ok(bottom.fillAlpha <= 0.72, "bottom rail fill should remain translucent");
+  const bottomTicks = scene.created.find(({ type, commands }) =>
+    type === "graphics" && commands.some(([command, x]) => command === "lineTo" && x === 512)
+  );
+  assert.ok(bottomTicks.commands.filter(([command]) => command === "lineTo").length >= 4);
+  assert.equal(scene.tweens.created.length, 5);
+  const [titleTween, missionTween, actionTween, bottomEntranceTween, alertPulseTween] = scene.tweens.created;
   assert.deepEqual(titleTween.config, {
     targets: scene.created.slice(0, 5), x: "+=16", alpha: 1, duration: 360, ease: "Sine.Out"
   });
@@ -191,9 +211,15 @@ test("credits formatting is finite and title view owns the approved information 
   assert.deepEqual(actionTween.config, {
     targets: actionVisualObjects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out"
   });
-  assert.deepEqual(dangerPulseTween.config, {
-    targets: dangerStatus,
-    alpha: { from: 0.72, to: 1 },
+  const bottomObjects = bottomEntranceTween.config.targets;
+  assert.ok(bottomObjects.includes(bottom));
+  assert.ok(bottomObjects.includes(dangerStatus));
+  assert.ok(bottomObjects.every(({ alpha }) => alpha === 0));
+  assert.ok(bottomEntranceTween.config.delay >= 400, "bottom rail should resolve after the title hierarchy");
+  const alert = scene.created.find(({ type, text, y }) => type === "text" && text === "收容失效" && y === 72);
+  assert.deepEqual(alertPulseTween.config, {
+    targets: alert,
+    alpha: { from: 0.84, to: 1 },
     yoyo: true,
     repeat: -1,
     delay: 700,
@@ -261,7 +287,7 @@ test("menusMixin title lifecycle activates, destroys idempotently and recreates 
   const firstObjects = [...scene.startScreenObjects];
   const firstTweens = [...tweens];
   const firstHitArea = scene.titleScreenController.action.hitArea;
-  assert.equal(firstTweens.length, 8, "both controllers should own all entrance and ambient tweens");
+  assert.equal(firstTweens.length, 9, "both controllers should own all entrance and ambient tweens");
   assert.equal(firstHitArea.handlers.size, 4);
   assert.ok(scene.titleBackdropController);
   assert.ok(scene.titleScreenController);
@@ -285,7 +311,7 @@ test("menusMixin title lifecycle activates, destroys idempotently and recreates 
   const secondHitArea = scene.titleScreenController.action.hitArea;
   assert.notEqual(secondHitArea, firstHitArea);
   assert.equal(secondHitArea.handlers.size, 4);
-  assert.equal(secondTweens.length, 8);
+  assert.equal(secondTweens.length, 9);
   assert.equal(objects.filter(({ active }) => active).length, secondObjects.length);
   assert.ok(secondTweens.every(({ stopCount }) => stopCount === 0));
 

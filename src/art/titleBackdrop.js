@@ -6,10 +6,16 @@ export function createTitleBackdrop(scene, targetArray, depth) {
     .setDepth(depth)
     .setScale(1.02);
   const gradient = scene.add.graphics().setDepth(depth + 1);
-  for (let index = 0; index < 18; index += 1) {
-    const fade = (17 - index) / 17;
-    gradient.fillStyle(THEME.title.scrim, 0.02 + 0.78 * fade ** 2);
+  for (let index = 0; index < 11; index += 1) {
+    const fade = (10 - index) / 10;
+    gradient.fillStyle(THEME.title.scrim, 0.004 + 0.36 * fade ** 2);
     gradient.fillRect(index * 32, 0, 34, 540);
+  }
+  const localProtection = scene.add.graphics().setDepth(depth + 1);
+  for (let index = 0; index < 9; index += 1) {
+    const fade = (8 - index) / 8;
+    localProtection.fillStyle(THEME.title.scrim, 0.008 + 0.125 * fade ** 2);
+    localProtection.fillRect(index * 44, 36, 46, 252);
   }
   const vignette = scene.add.rectangle(480, 270, 960, 540, 0x000000, 0.08).setDepth(depth + 1);
   const gateFocus = scene.add.graphics().setDepth(depth + 2);
@@ -51,7 +57,7 @@ export function createTitleBackdrop(scene, targetArray, depth) {
   gateFocus.alpha = 0;
   gateLabel.alpha = 0;
   scanline.alpha = 0;
-  const objects = [background, gradient, vignette, gateFocus, gateLabel, lamp, scanline];
+  const objects = [background, gradient, localProtection, vignette, gateFocus, gateLabel, lamp, scanline];
   for (const object of objects) {
     object.setScrollFactor(0);
     targetArray.push(object);

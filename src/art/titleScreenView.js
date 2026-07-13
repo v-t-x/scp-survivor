@@ -127,33 +127,70 @@ export function createTitleScreenView(scene, targetArray, options) {
   const action = createTitleAction(scene, targetArray, {
     x: 52, y: 356, width: 316, height: 62, depth, onActivate
   });
-  const bottom = scene.add.rectangle(480, 517, 960, 46, THEME.title.bottomRail, 0.92).setOrigin(0.5, 0.5);
-  const topLine = scene.add.rectangle(480, 494, 960, 1, THEME.title.line, 0.55).setOrigin(0.5, 0.5);
-  const controls = scene.add.text(24, 517, "WASD 移动 / SPACE 闪避 / TAB 构建 / ESC 暂停 / M 静音", {
-    fontFamily: THEME.font.mono, fontSize: "12px", color: THEME.text.secondary, fixedWidth: 500
+  const bottom = scene.add.rectangle(480, 517, 960, 46, THEME.title.bottomRail, 0.68).setOrigin(0.5, 0.5);
+  const topLine = scene.add.rectangle(480, 494, 960, 1, THEME.title.line, 0.34).setOrigin(0.5, 0.5);
+  const controlStyle = { fontFamily: THEME.font.mono, fontSize: "10px", color: THEME.text.secondary };
+  const controls = [
+    scene.add.text(24, 517, "WASD  移动", controlStyle).setOrigin(0, 0.5),
+    scene.add.text(120, 517, "SPACE  闪避", controlStyle).setOrigin(0, 0.5),
+    scene.add.text(236, 517, "TAB  构建", controlStyle).setOrigin(0, 0.5),
+    scene.add.text(338, 517, "ESC  暂停 · M  静音", controlStyle).setOrigin(0, 0.5)
+  ];
+  const bottomTicks = scene.add.graphics();
+  bottomTicks.lineStyle(1, THEME.title.line, 0.36);
+  bottomTicks.beginPath();
+  bottomTicks.moveTo(512, 504);
+  bottomTicks.lineTo(512, 530);
+  bottomTicks.moveTo(776, 504);
+  bottomTicks.lineTo(776, 530);
+  bottomTicks.moveTo(526, 500);
+  bottomTicks.lineTo(538, 500);
+  bottomTicks.moveTo(642, 500);
+  bottomTicks.lineTo(654, 500);
+  bottomTicks.strokePath();
+  const telemetryLabelStyle = { fontFamily: THEME.font.mono, fontSize: "8px", color: THEME.text.muted };
+  const powerLabel = scene.add.text(532, 507, "POWER", telemetryLabelStyle).setOrigin(0, 0.5);
+  const powerLamp = scene.add.circle(536, 524, 3, THEME.terminal.contained, 1);
+  const powerStatus = scene.add.text(546, 524, "电力在线", {
+    fontFamily: THEME.font.label, fontSize: "11px", fontStyle: "bold", color: THEME.text.contained
   }).setOrigin(0, 0.5);
-  const powerLamp = scene.add.circle(565, 517, 4, THEME.terminal.contained, 1);
-  const powerStatus = scene.add.text(578, 517, "电力在线", {
-    fontFamily: THEME.font.label, fontSize: "12px", fontStyle: "bold", color: THEME.text.contained
+  const dangerLabel = scene.add.text(648, 507, "CONTAINMENT", telemetryLabelStyle).setOrigin(0, 0.5);
+  const dangerLamp = scene.add.circle(652, 524, 3, THEME.terminal.danger, 1);
+  const dangerStatus = scene.add.text(662, 524, "收容失效", {
+    fontFamily: THEME.font.label, fontSize: "11px", fontStyle: "bold", color: THEME.text.critical
   }).setOrigin(0, 0.5);
-  const dangerLamp = scene.add.circle(675, 517, 4, THEME.terminal.danger, 1);
-  const dangerStatus = scene.add.text(688, 517, "收容失效", {
-    fontFamily: THEME.font.label, fontSize: "12px", fontStyle: "bold", color: THEME.text.critical
-  }).setOrigin(0, 0.5);
-  const creditsText = scene.add.text(936, 517, `累计学分 ${formatTitleCredits(credits)}`, {
-    fontFamily: THEME.font.mono, fontSize: "11px", color: THEME.text.secondary, align: "right", fixedWidth: 180
+  const creditsLabel = scene.add.text(936, 507, "累计学分", {
+    fontFamily: THEME.font.label, fontSize: "9px", color: THEME.text.muted, align: "right", fixedWidth: 144
   }).setOrigin(1, 0.5);
-  const bottomObjects = register(targetArray, [bottom, topLine, controls, powerLamp, powerStatus, dangerLamp, dangerStatus, creditsText], depth);
+  const creditsValue = scene.add.text(936, 524, formatTitleCredits(credits), {
+    fontFamily: THEME.font.mono, fontSize: "14px", fontStyle: "bold", color: THEME.text.primary, align: "right", fixedWidth: 144
+  }).setOrigin(1, 0.5);
+  const bottomObjects = register(targetArray, [
+    bottom,
+    topLine,
+    ...controls,
+    bottomTicks,
+    powerLabel,
+    powerLamp,
+    powerStatus,
+    dangerLabel,
+    dangerLamp,
+    dangerStatus,
+    creditsLabel,
+    creditsValue
+  ], depth);
 
   const actionVisualObjects = action.objects.filter((object) => object !== action.hitArea);
   for (const object of [...titleObjects, ...missionObjects, ...actionVisualObjects]) object.alpha = 0;
+  for (const object of bottomObjects) object.alpha = 0;
   for (const object of titleObjects) object.x -= 16;
   for (const object of missionObjects) object.x -= 12;
   const tweens = [
     scene.tweens.add({ targets: titleObjects, x: "+=16", alpha: 1, duration: 360, ease: "Sine.Out" }),
     scene.tweens.add({ targets: missionObjects, x: "+=12", alpha: 1, delay: 120, duration: 320, ease: "Sine.Out" }),
     scene.tweens.add({ targets: actionVisualObjects, alpha: 1, delay: 240, duration: 300, ease: "Sine.Out" }),
-    scene.tweens.add({ targets: dangerStatus, alpha: { from: 0.72, to: 1 }, yoyo: true, repeat: -1, delay: 700, duration: 900, ease: "Sine.InOut" })
+    scene.tweens.add({ targets: bottomObjects, alpha: 1, delay: 420, duration: 240, ease: "Sine.Out" }),
+    scene.tweens.add({ targets: alert, alpha: { from: 0.84, to: 1 }, yoyo: true, repeat: -1, delay: 700, duration: 900, ease: "Sine.InOut" })
   ];
   let stopped = false;
   const objects = [...titleObjects, ...missionObjects, ...action.objects, ...bottomObjects];
