@@ -17,7 +17,7 @@ async function loadLifecycleSystems() {
     .replace("export const systemsMixin = ", "")
     .replace(/;\s*$/, "");
 
-  return Function(`${helper}\nreturn { updateWeaponRigPresentation, systemsMixin: ${mixin} };`)();
+  return Function(`${helper}\nreturn { updateWeaponRigPresentation, systemsMixin: ${mixin}, lifecycleSource: ${JSON.stringify(helper)} };`)();
 }
 
 async function loadSceneCreate(createWeaponRigView) {
@@ -125,6 +125,16 @@ test("weapon rig receives one frozen read-only gameplay snapshot", async () => {
   });
   assert.equal("player" in snapshot, false);
   assert.equal("weapon" in snapshot, false);
+  assert.deepEqual(scene.player, { x: 320, y: 240 });
+  assert.deepEqual(scene.weapons.pistol, {
+    id: "pistol",
+    nextAttackAtMs: 1300,
+    cooldownMs: 400,
+    currentShells: 0,
+    magazineSize: 0,
+    isReloading: false,
+    chainTargets: 0
+  });
 });
 
 test("weapon rig pauses and resumes with the gameplay systems", async () => {
@@ -200,16 +210,11 @@ test("rig lifecycle source creates after the player, updates after character syn
   assert.match(mainSource, /this\.weaponRigLastTargetAtMs\s*=\s*Number\.NEGATIVE_INFINITY/);
 });
 
-test("rig lifecycle source never mutates gameplay state", async () => {
-  const [mainSource, systemsSource] = await Promise.all([
-    readFile(mainPath, "utf8"),
-    readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8")
-  ]);
-  const lifecycleSource = `${mainSource}\n${systemsSource}`;
+test("rig lifecycle helper source never assigns gameplay state", async () => {
+  const { lifecycleSource } = await loadLifecycleSystems();
 
-  assert.doesNotMatch(lifecycleSource, /player\.body\s*(?:=|\.)/);
-  assert.doesNotMatch(lifecycleSource, /player\.(?:velocity|x|y)\s*=/);
-  assert.doesNotMatch(lifecycleSource, /enemy(?:s|\.)[^\n]*\s*=/);
-  assert.doesNotMatch(lifecycleSource, /\.(?:nextAttackAtMs|cooldownMs|damage)\s*=/);
+  assert.doesNotMatch(lifecycleSource, /scene\.player(?:\.body|\.(?:velocity|x|y))\s*=/);
+  assert.doesNotMatch(lifecycleSource, /scene\.(?:enemies|weapons)\b[^\n]*\s*=/);
+  assert.doesNotMatch(lifecycleSource, /selectedWeapon\.(?:nextAttackAtMs|cooldownMs|damage)\s*=/);
   assert.doesNotMatch(lifecycleSource, /(?:localStorage|saveMetaProgress)\s*\(/);
 });

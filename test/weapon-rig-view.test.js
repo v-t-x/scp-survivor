@@ -71,6 +71,25 @@ function makeScene() {
   return scene;
 }
 
+function makeThrowingScene(throwOnAdd) {
+  const scene = { created: [] };
+  let addCount = 0;
+  function createObject(type, args = []) {
+    addCount += 1;
+    if (addCount === throwOnAdd) {
+      throw new Error(`construction failed at ${type}`);
+    }
+    const object = displayObject(type, args);
+    scene.created.push(object);
+    return object;
+  }
+  scene.add = {
+    graphics() { return createObject("graphics"); },
+    image(...args) { return createObject("image", args); }
+  };
+  return scene;
+}
+
 function moduleImages(scene) {
   return scene.created.filter((object) => object.type === "image");
 }
@@ -94,6 +113,16 @@ test("weapon rig exposes its isolated controller contract and starts hidden", ()
     TEXTURES.weaponRigBreacher,
     TEXTURES.weaponRigTesla
   ]);
+});
+
+test("construction failures destroy every object created before add.graphics or add.image throws", () => {
+  for (const throwOnAdd of [2, 4]) {
+    const scene = makeThrowingScene(throwOnAdd);
+
+    assert.throws(() => createWeaponRigView(scene), /construction failed/);
+    assert.equal(scene.created.length, throwOnAdd - 1);
+    assert.ok(scene.created.every((object) => object.destroyCount === 1));
+  }
 });
 
 test("update selects one direction sheet without runtime pixel-art rotation", () => {

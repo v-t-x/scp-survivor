@@ -117,30 +117,51 @@ function getAnchor(snapshot) {
 }
 
 export function createWeaponRigView(scene, { depth = 16 } = {}) {
-  const base = scene.add.graphics().setDepth(depth);
-  const status = scene.add.graphics().setDepth(depth + 1);
-  const modules = [
-    scene.add.image(0, 0, MODULE_TEXTURES.pistol).setDepth(depth + 2),
-    scene.add.image(0, 0, MODULE_TEXTURES.shotgun).setDepth(depth + 2),
-    scene.add.image(0, 0, MODULE_TEXTURES.tesla).setDepth(depth + 2)
-  ];
-  const muzzle = scene.add.graphics().setDepth(depth + 3);
-  const tracer = scene.add.graphics().setDepth(depth + 3);
-  const objects = [base, status, ...modules, muzzle, tracer];
+  const objects = [];
+  const modules = [];
+  let base;
+  let status;
+  let muzzle;
+  let tracer;
+
+  try {
+    base = scene.add.graphics();
+    objects.push(base);
+    base.setDepth(depth);
+    status = scene.add.graphics();
+    objects.push(status);
+    status.setDepth(depth + 1);
+    for (const weaponId of MODULE_IDS) {
+      const module = scene.add.image(0, 0, MODULE_TEXTURES[weaponId]);
+      objects.push(module);
+      module.setDepth(depth + 2);
+      modules.push(module);
+    }
+    muzzle = scene.add.graphics();
+    objects.push(muzzle);
+    muzzle.setDepth(depth + 3);
+    tracer = scene.add.graphics();
+    objects.push(tracer);
+    tracer.setDepth(depth + 3);
+
+    drawBackpack(base);
+    for (const module of modules) {
+      module.setOrigin?.(0.5, 0.5);
+      module.setScale?.(WEAPON_RIG_LAYOUT.moduleScale);
+    }
+    setAlpha(muzzle, 0);
+    setAlpha(tracer, 0);
+    for (const object of objects) setVisible(object, false);
+  } catch (error) {
+    for (const object of objects) object.destroy?.();
+    throw error;
+  }
+
   const tweens = new Set();
   let presentationState = {};
   let effectTween = null;
   let paused = false;
   let destroyed = false;
-
-  drawBackpack(base);
-  for (const module of modules) {
-    module.setOrigin?.(0.5, 0.5);
-    module.setScale?.(WEAPON_RIG_LAYOUT.moduleScale);
-  }
-  setAlpha(muzzle, 0);
-  setAlpha(tracer, 0);
-  for (const object of objects) setVisible(object, false);
 
   function update(snapshot = {}, deltaMs = 0) {
     if (destroyed) return;
