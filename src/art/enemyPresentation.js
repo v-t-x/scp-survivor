@@ -83,3 +83,12 @@ export function applyEnemyPresentation(scene, enemy, enemyType) {
   if (scene.anims?.exists(config.animationKey)) enemy.play(config.animationKey, true);
   return enemy;
 }
+
+export function getRiotArmorArcPresentation(frontArcDegrees = 120) {
+  const halfArc = (frontArcDegrees * Math.PI) / 360;
+  return Object.freeze({
+    radius: 28,
+    startAngle: -halfArc,
+    endAngle: halfArc
+  });
+}

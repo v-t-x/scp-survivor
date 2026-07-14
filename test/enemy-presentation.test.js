@@ -4,17 +4,19 @@ import { readFile } from "node:fs/promises";
 
 import { TEXTURES } from "../src/assets/manifest.js";
 import { BALANCE } from "../src/config/balance.js";
-import {
-  ENEMY_PRESENTATION,
-  applyEnemyPresentation,
-  registerEnemyAnimations
-} from "../src/art/enemyPresentation.js";
+import * as enemyPresentationModule from "../src/art/enemyPresentation.js";
 import {
   CHARACTER_DISPLAY_SCALE,
   applyDisplayScalePreservingBody,
   centerCircularBody
 } from "../src/art/presentationRules.js";
 import { runPreloadCreatePipeline } from "../src/scenes/preloadOrchestration.js";
+
+const {
+  ENEMY_PRESENTATION,
+  applyEnemyPresentation,
+  registerEnemyAnimations
+} = enemyPresentationModule;
 
 const EXPECTED_PRESENTATION = {
   infectedStaff: {
@@ -257,6 +259,135 @@ function extractObjectMethod(source, methodName) {
   throw new Error(`Could not extract ${methodName}`);
 }
 
+function createDisplaySpy(kind) {
+  return {
+    kind,
+    active: true,
+    commands: [],
+    destroyCount: 0,
+    setOrigin(...args) {
+      this.commands.push(["setOrigin", ...args]);
+      return this;
+    },
+    setDepth(...args) {
+      this.commands.push(["setDepth", ...args]);
+      return this;
+    },
+    clear(...args) {
+      this.commands.push(["clear", ...args]);
+      return this;
+    },
+    lineStyle(...args) {
+      this.commands.push(["lineStyle", ...args]);
+      return this;
+    },
+    beginPath(...args) {
+      this.commands.push(["beginPath", ...args]);
+      return this;
+    },
+    arc(...args) {
+      this.commands.push(["arc", ...args]);
+      return this;
+    },
+    strokePath(...args) {
+      this.commands.push(["strokePath", ...args]);
+      return this;
+    },
+    lineBetween(...args) {
+      this.commands.push(["lineBetween", ...args]);
+      return this;
+    },
+    strokeRect(...args) {
+      this.commands.push(["strokeRect", ...args]);
+      return this;
+    },
+    strokeCircle(...args) {
+      this.commands.push(["strokeCircle", ...args]);
+      return this;
+    },
+    setPosition(...args) {
+      this.commands.push(["setPosition", ...args]);
+      return this;
+    },
+    setRotation(...args) {
+      this.commands.push(["setRotation", ...args]);
+      return this;
+    },
+    destroy() {
+      this.destroyCount += 1;
+      this.active = false;
+    }
+  };
+}
+
+function createEliteVisualScene() {
+  const created = {
+    graphics: [],
+    texts: [],
+    triangles: [],
+    transients: []
+  };
+  return {
+    created,
+    add: {
+      text(...args) {
+        const object = createDisplaySpy("text");
+        object.createArgs = args;
+        created.texts.push(object);
+        return object;
+      },
+      graphics(...args) {
+        const object = createDisplaySpy("graphics");
+        object.createArgs = args;
+        created.graphics.push(object);
+        return object;
+      },
+      triangle(...args) {
+        const object = createDisplaySpy("triangle");
+        object.createArgs = args;
+        created.triangles.push(object);
+        return object;
+      }
+    },
+    registerTransientEffect(object) {
+      created.transients.push(object);
+    },
+    clearEliteWarning() {}
+  };
+}
+
+function createEliteVisualEnemy(eliteType) {
+  return {
+    x: 160,
+    y: 220,
+    eliteType,
+    listeners: new Map(),
+    once(eventName, listener) {
+      this.listeners.set(eventName, listener);
+      return this;
+    }
+  };
+}
+
+async function loadEliteVisualMethods() {
+  const source = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const attachSource = extractObjectMethod(source, "attachEliteVisuals");
+  const updateSource = extractObjectMethod(source, "updateEliteVisuals");
+  return {
+    attachEliteVisuals: new Function(
+      `"use strict"; return ({${attachSource}}).attachEliteVisuals;`
+    )(),
+    updateEliteVisuals: new Function(
+      "getRiotArmorArcPresentation",
+      `"use strict"; return ({${updateSource}}).updateEliteVisuals;`
+    )(enemyPresentationModule.getRiotArmorArcPresentation),
+    updateSource
+  };
+}
+
 function createInitializerEnemy(width, height) {
   const calls = {
     once: [],
@@ -357,6 +488,144 @@ test("enemy presentation contract contains exactly the seven approved R-17 loops
   for (const config of Object.values(ENEMY_PRESENTATION)) {
     assert.ok(Object.isFrozen(config));
   }
+});
+
+test("riot armor arc presentation has a fixed radius and symmetric approved angles", () => {
+  for (const frontArcDegrees of [90, 120, 180]) {
+    const halfArc = (frontArcDegrees * Math.PI) / 360;
+    const presentation = enemyPresentationModule.getRiotArmorArcPresentation(
+      frontArcDegrees
+    );
+
+    assert.deepEqual(presentation, {
+      radius: 28,
+      startAngle: -halfArc,
+      endAngle: halfArc
+    });
+    assert.deepEqual(Object.keys(presentation), ["radius", "startAngle", "endAngle"]);
+    assert.ok(Object.isFrozen(presentation));
+  }
+});
+
+test("riot elite owns a Graphics shield indicator and destroys it with existing visuals", async () => {
+  const { attachEliteVisuals } = await loadEliteVisualMethods();
+  const scene = createEliteVisualScene();
+  const enemy = createEliteVisualEnemy("riotUnit");
+
+  attachEliteVisuals.call(scene, enemy);
+
+  assert.equal(scene.created.triangles.length, 0);
+  assert.equal(scene.created.graphics.length, 2);
+  assert.equal(enemy.eliteOutline, scene.created.graphics[0]);
+  assert.equal(enemy.shieldIndicator, scene.created.graphics[1]);
+  assert.deepEqual(enemy.shieldIndicator.createArgs, []);
+  assert.deepEqual(enemy.shieldIndicator.commands, [["setDepth", 11]]);
+  assert.deepEqual(scene.created.transients, [
+    enemy.eliteMarker,
+    enemy.eliteOutline,
+    enemy.shieldIndicator
+  ]);
+
+  enemy.listeners.get("destroy")();
+
+  assert.equal(enemy.eliteMarker.destroyCount, 1);
+  assert.equal(enemy.eliteOutline.destroyCount, 1);
+  assert.equal(enemy.shieldIndicator.destroyCount, 1);
+});
+
+test("riot armor Graphics redraws the exact two-line arc at gameplay position and facing", async () => {
+  const { updateEliteVisuals } = await loadEliteVisualMethods();
+  const outline = createDisplaySpy("outline");
+  const marker = createDisplaySpy("marker");
+  const shield = createDisplaySpy("shield");
+  const enemy = {
+    x: 145,
+    y: 278,
+    eliteType: "riotUnit",
+    frontArcDegrees: 120,
+    facingAngle: -0.625,
+    eliteOutline: outline,
+    eliteMarker: marker,
+    shieldIndicator: shield
+  };
+
+  updateEliteVisuals.call({}, enemy);
+
+  assert.deepEqual(shield.commands, [
+    ["clear"],
+    ["lineStyle", 3, 0x9fc7da, 0.95],
+    ["beginPath"],
+    ["arc", 0, 0, 28, -Math.PI / 3, Math.PI / 3, false],
+    ["strokePath"],
+    ["lineStyle", 1, 0x5f8294, 0.8],
+    ["lineBetween", 22, -11, 22, 11],
+    ["setPosition", enemy.x, enemy.y],
+    ["setRotation", enemy.facingAngle]
+  ]);
+
+  for (const frontArcDegrees of [90, 180]) {
+    shield.commands.length = 0;
+    enemy.frontArcDegrees = frontArcDegrees;
+    updateEliteVisuals.call({}, enemy);
+    const halfArc = (frontArcDegrees * Math.PI) / 360;
+    assert.deepEqual(
+      shield.commands.find(([command]) => command === "arc"),
+      ["arc", 0, 0, 28, -halfArc, halfArc, false]
+    );
+  }
+});
+
+test("non-riot elite marker and outline behavior remains unchanged", async () => {
+  const { attachEliteVisuals, updateEliteVisuals } = await loadEliteVisualMethods();
+  const cases = [
+    ["blinkStalker", 20],
+    ["biomass", 22]
+  ];
+
+  for (const [eliteType, radius] of cases) {
+    const scene = createEliteVisualScene();
+    const enemy = createEliteVisualEnemy(eliteType);
+    attachEliteVisuals.call(scene, enemy);
+
+    assert.equal(scene.created.graphics.length, 1);
+    assert.equal(scene.created.triangles.length, 0);
+    assert.equal(enemy.shieldIndicator, undefined);
+
+    enemy.eliteOutline.commands.length = 0;
+    enemy.eliteMarker.commands.length = 0;
+    updateEliteVisuals.call({}, enemy);
+
+    assert.deepEqual(enemy.eliteOutline.commands, [
+      ["clear"],
+      ["lineStyle", 2, 0xfff08e, 0.95],
+      ["strokeCircle", enemy.x, enemy.y, radius]
+    ]);
+    assert.deepEqual(enemy.eliteMarker.commands, [
+      ["setPosition", enemy.x, enemy.y - 34]
+    ]);
+
+    enemy.listeners.get("destroy")();
+    assert.equal(enemy.eliteMarker.destroyCount, 1);
+    assert.equal(enemy.eliteOutline.destroyCount, 1);
+  }
+});
+
+test("riot arc update reads gameplay geometry without writing multipliers facing or body rotation", async () => {
+  const { updateSource } = await loadEliteVisualMethods();
+
+  assert.match(
+    updateSource,
+    /getRiotArmorArcPresentation\(enemy\.frontArcDegrees\)/
+  );
+  assert.match(
+    updateSource,
+    /enemy\.shieldIndicator\.setRotation\(enemy\.facingAngle\)/
+  );
+  assert.doesNotMatch(
+    updateSource,
+    /enemy\.(?:frontDamageMultiplier|sideDamageMultiplier|rearDamageMultiplier|facingAngle)\s*=/
+  );
+  assert.doesNotMatch(updateSource, /enemy\.(?:setRotation|setAngle)\s*\(/);
 });
 
 test("only exact four-frame production sheets register complete idempotent loops", () => {

@@ -12,7 +12,10 @@ import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
-import { applyEnemyPresentation } from "../art/enemyPresentation.js";
+import {
+  applyEnemyPresentation,
+  getRiotArmorArcPresentation
+} from "../art/enemyPresentation.js";
 import {
   cloneEnemyAt as cloneEnemyForScene,
   tryReplicateEnemy as tryReplicateEnemyForScene
@@ -608,7 +611,7 @@ export const enemiesMixin = {
     enemy.eliteOutline = outline;
 
     if (enemy.eliteType === "riotUnit") {
-      const shield = this.add.triangle(enemy.x, enemy.y, 0, 0, 14, 6, 0, 12, 0x87bcff, 0.95);
+      const shield = this.add.graphics();
       shield.setDepth(11);
       this.registerTransientEffect(shield);
       enemy.shieldIndicator = shield;
@@ -649,11 +652,22 @@ export const enemiesMixin = {
     }
 
     if (enemy.shieldIndicator) {
-      const shieldDistance = 22;
-      enemy.shieldIndicator.setPosition(
-        enemy.x + Math.cos(enemy.facingAngle) * shieldDistance,
-        enemy.y + Math.sin(enemy.facingAngle) * shieldDistance
+      const arc = getRiotArmorArcPresentation(enemy.frontArcDegrees);
+      enemy.shieldIndicator.clear();
+      enemy.shieldIndicator.lineStyle(3, 0x9fc7da, 0.95);
+      enemy.shieldIndicator.beginPath();
+      enemy.shieldIndicator.arc(
+        0,
+        0,
+        arc.radius,
+        arc.startAngle,
+        arc.endAngle,
+        false
       );
+      enemy.shieldIndicator.strokePath();
+      enemy.shieldIndicator.lineStyle(1, 0x5f8294, 0.8);
+      enemy.shieldIndicator.lineBetween(22, -11, 22, 11);
+      enemy.shieldIndicator.setPosition(enemy.x, enemy.y);
       enemy.shieldIndicator.setRotation(enemy.facingAngle);
     }
   },
