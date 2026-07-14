@@ -8,6 +8,7 @@ import {
   applyEnemyPresentation,
   registerEnemyAnimations
 } from "../src/art/enemyPresentation.js";
+import { runPreloadCreatePipeline } from "../src/scenes/preloadOrchestration.js";
 
 const EXPECTED_PRESENTATION = {
   infectedStaff: {
@@ -443,22 +444,48 @@ test("enemy adapter stays display-only and has no per-frame sync API", async () 
   assert.doesNotMatch(source, /\.(?:setSize|setOffset|setCircle|setVelocity)\s*\(/);
 });
 
-test("Preload registers opening then R-17 animations after fallback generation", async () => {
-  const source = await readFile(
-    new URL("../src/scenes/PreloadScene.js", import.meta.url),
-    "utf8"
-  );
+test("preload create pipeline invokes each dependency once with one scene in exact order", () => {
+  const calls = [];
+  const scene = {
+    name: "preload-scene",
+    scene: {
+      start(key) {
+        calls.push(["start", key]);
+      }
+    }
+  };
+  const dependency = (name) => (receivedScene) => calls.push([name, receivedScene]);
+
+  runPreloadCreatePipeline(scene, {
+    generateFallbackTextures: dependency("fallback"),
+    registerOpeningCharacterAnimations: dependency("opening"),
+    registerEnemyAnimations: dependency("enemy")
+  });
+
+  assert.deepEqual(calls.map(([name]) => name), [
+    "fallback",
+    "opening",
+    "enemy",
+    "start"
+  ]);
+  assert.equal(calls.length, 4);
+  for (const [, receivedScene] of calls.slice(0, 3)) {
+    assert.equal(receivedScene, scene);
+  }
+  assert.deepEqual(calls[3], ["start", "PrototypeScene"]);
+});
+
+test("PreloadScene delegates creation through the no-DOM pipeline before scene start", async () => {
+  const [source, pipelineSource] = await Promise.all([
+    readFile(new URL("../src/scenes/PreloadScene.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/scenes/preloadOrchestration.js", import.meta.url), "utf8")
+  ]);
 
   assert.match(
     source,
-    /import \{ registerEnemyAnimations \} from "\.\.\/art\/enemyPresentation\.js";/
+    /runPreloadCreatePipeline\(this,\s*\{\s*generateFallbackTextures,\s*registerOpeningCharacterAnimations,\s*registerEnemyAnimations\s*\}\s*\)/
   );
-  const fallback = source.indexOf("generateFallbackTextures(this)");
-  const opening = source.indexOf("registerOpeningCharacterAnimations(this)");
-  const enemies = source.indexOf("registerEnemyAnimations(this)");
-  const start = source.indexOf('this.scene.start("PrototypeScene")');
-  assert.ok(
-    fallback < opening && opening < enemies && enemies < start,
-    "fallback, opening animations, enemy animations and scene start must stay ordered"
-  );
+  assert.doesNotMatch(source, /this\.scene\.start\("PrototypeScene"\)/);
+  assert.match(pipelineSource, /scene\.scene\.start\("PrototypeScene"\)/);
+  assert.doesNotMatch(pipelineSource, /from\s+["']phaser["']/i);
 });

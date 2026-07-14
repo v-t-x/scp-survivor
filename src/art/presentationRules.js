@@ -52,6 +52,12 @@ export function applyTextureAndScalePreservingBody(gameObject, textureKey, scale
     return gameObject;
   }
 
+  if (!Number.isFinite(scale) || scale === 0) {
+    throw new RangeError(
+      "applyTextureAndScalePreservingBody requires a finite, non-zero target scale when a physics body is present"
+    );
+  }
+
   // Match the effective body geometry Phaser would establish at the next
   // Arcade Body preUpdate after any immediately preceding setScale().
   body.updateFromGameObject();

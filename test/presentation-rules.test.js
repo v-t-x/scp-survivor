@@ -126,6 +126,41 @@ function createTextureSwapPhysicsStub() {
   return { calls, gameObject };
 }
 
+function snapshotTextureSwapState(gameObject, calls) {
+  return {
+    calls: {
+      setTexture: [...calls.setTexture],
+      setScale: [...calls.setScale]
+    },
+    gameObject: {
+      x: gameObject.x,
+      y: gameObject.y,
+      width: gameObject.width,
+      height: gameObject.height,
+      scaleX: gameObject.scaleX,
+      scaleY: gameObject.scaleY,
+      displayOriginX: gameObject.displayOriginX,
+      displayOriginY: gameObject.displayOriginY,
+      textureKey: gameObject.texture.key
+    },
+    body: {
+      sourceWidth: gameObject.body.sourceWidth,
+      sourceHeight: gameObject.body.sourceHeight,
+      width: gameObject.body.width,
+      height: gameObject.body.height,
+      halfWidth: gameObject.body.halfWidth,
+      halfHeight: gameObject.body.halfHeight,
+      radius: gameObject.body.radius,
+      isCircle: gameObject.body.isCircle,
+      scaleX: gameObject.body._sx,
+      scaleY: gameObject.body._sy,
+      updateCount: gameObject.body.updateCount,
+      offset: { ...gameObject.body.offset },
+      position: { ...gameObject.body.position }
+    }
+  };
+}
+
 test("outage preserves facility readability at full strength", () => {
   assert.deepEqual(CHARACTER_DISPLAY_SCALE, {
     player: 1.2,
@@ -207,6 +242,108 @@ test("texture swap snapshots the next preUpdate body after an immediate scale", 
   assert.equal(gameObject.body.updateCount, 3, "helper must update before and after the swap");
 });
 
+test("texture swap rejects zero and non-finite target scales before body mutation", () => {
+  for (const targetScale of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const { calls, gameObject } = createTextureSwapPhysicsStub();
+    gameObject.setScale(1.2);
+    calls.setScale.length = 0;
+    const before = snapshotTextureSwapState(gameObject, calls);
+
+    assert.throws(
+      () => applyTextureAndScalePreservingBody(gameObject, "production-sheet", targetScale),
+      {
+        name: "RangeError",
+        message: /finite, non-zero target scale/
+      }
+    );
+    assert.deepEqual(
+      snapshotTextureSwapState(gameObject, calls),
+      before,
+      `target scale ${String(targetScale)} must not mutate display or body state`
+    );
+  }
+});
+
+test("texture swap preserves finite circular body geometry at a negative target scale", () => {
+  const { calls, gameObject } = createTextureSwapPhysicsStub();
+  gameObject.setScale(1.2);
+  calls.setScale.length = 0;
+  const expected = {
+    x: gameObject.x
+      + gameObject.scaleX * (gameObject.body.offset.x - gameObject.displayOriginX),
+    y: gameObject.y
+      + gameObject.scaleY * (gameObject.body.offset.y - gameObject.displayOriginY),
+    width: gameObject.body.sourceWidth * Math.abs(gameObject.scaleX),
+    height: gameObject.body.sourceHeight * Math.abs(gameObject.scaleY),
+    radius: gameObject.body.radius,
+    isCircle: gameObject.body.isCircle
+  };
+
+  applyTextureAndScalePreservingBody(gameObject, "production-sheet", -1.5);
+
+  assert.equal(gameObject.scaleX, -1.5);
+  assert.equal(gameObject.scaleY, -1.5);
+  assert.deepEqual(
+    {
+      x: gameObject.body.position.x,
+      y: gameObject.body.position.y,
+      width: gameObject.body.width,
+      height: gameObject.body.height,
+      radius: gameObject.body.radius,
+      isCircle: gameObject.body.isCircle
+    },
+    expected
+  );
+  for (const value of [
+    gameObject.body.position.x,
+    gameObject.body.position.y,
+    gameObject.body.width,
+    gameObject.body.height,
+    gameObject.body.radius
+  ]) {
+    assert.ok(Number.isFinite(value));
+  }
+});
+
+test("texture swap snapshots an initial zero-scale stale body before restoring unit scale", () => {
+  const { calls, gameObject } = createTextureSwapPhysicsStub();
+  gameObject.setScale(0);
+  calls.setScale.length = 0;
+
+  assert.equal(gameObject.body._sx, 1, "body must begin stale at its previous scale");
+  applyTextureAndScalePreservingBody(gameObject, "production-sheet", 1);
+
+  assert.equal(gameObject.scaleX, 1);
+  assert.equal(gameObject.scaleY, 1);
+  assert.deepEqual(
+    {
+      x: gameObject.body.position.x,
+      y: gameObject.body.position.y,
+      width: gameObject.body.width,
+      height: gameObject.body.height,
+      radius: gameObject.body.radius,
+      isCircle: gameObject.body.isCircle
+    },
+    {
+      x: gameObject.x,
+      y: gameObject.y,
+      width: 0,
+      height: 0,
+      radius: 9,
+      isCircle: true
+    }
+  );
+  for (const value of [
+    gameObject.body.position.x,
+    gameObject.body.position.y,
+    gameObject.body.width,
+    gameObject.body.height,
+    gameObject.body.radius
+  ]) {
+    assert.ok(Number.isFinite(value));
+  }
+});
+
 test("texture swap without a physics body still applies texture and scale", () => {
   const calls = [];
   const gameObject = {
@@ -228,6 +365,31 @@ test("texture swap without a physics body still applies texture and scale", () =
     ["texture", "production-sheet", 0],
     ["scale", 1]
   ]);
+});
+
+test("texture swap without a body forwards zero and non-finite scales unchanged", () => {
+  for (const targetScale of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const calls = [];
+    const gameObject = {
+      setTexture(key, frame) {
+        calls.push(["texture", key, frame]);
+        return this;
+      },
+      setScale(scale) {
+        calls.push(["scale", scale]);
+        return this;
+      }
+    };
+
+    assert.equal(
+      applyTextureAndScalePreservingBody(gameObject, "production-sheet", targetScale),
+      gameObject
+    );
+    assert.deepEqual(calls, [
+      ["texture", "production-sheet", 0],
+      ["scale", targetScale]
+    ]);
+  }
 });
 
 test("circular bodies stay centered for production and fallback character textures", () => {

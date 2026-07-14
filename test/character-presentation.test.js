@@ -162,15 +162,10 @@ test("missing or incomplete sheets warn at most once per key and register nothin
   assert.match(missing.warnings[0], /player-opening-sheet/);
 });
 
-test("presentation sync changes only player display state and leaves enemies untouched", () => {
+test("tinted player enters hit-facing and keeps it until hitUntil expires", () => {
   const player = createSprite({
     kind: "player",
     sheetKey: TEXTURES.playerOpeningSheet,
-    velocity: { x: 90, y: 10 }
-  });
-  const enemy = createSprite({
-    kind: "infectedStaff",
-    sheetKey: TEXTURES.infectedOpeningSheet,
     velocity: { x: 0, y: -55 },
     isTinted: true
   });
@@ -180,28 +175,28 @@ test("presentation sync changes only player display state and leaves enemies unt
     offset: player.sprite.body.offset,
     velocity: { x: player.sprite.body.velocity.x, y: player.sprite.body.velocity.y }
   });
-  const enemyBodyBefore = structuredClone({
-    width: enemy.sprite.body.width,
-    height: enemy.sprite.body.height,
-    offset: enemy.sprite.body.offset,
-    velocity: { x: enemy.sprite.body.velocity.x, y: enemy.sprite.body.velocity.y }
-  });
   const scene = {
     elapsedSurvivalMs: 1_000,
-    player: player.sprite,
-    enemies: { getChildren: () => [enemy.sprite] }
+    player: player.sprite
   };
 
   syncCharacterPresentation(scene);
 
-  assert.deepEqual(player.played, ["player-move-right"]);
-  assert.equal(player.sprite.flipX, true);
+  assert.deepEqual(player.played, ["player-hit-up"]);
+  assert.equal(player.sprite.presentationHitUntilMs, 1_120);
+  assert.equal(player.sprite.presentationFacing, "up");
+  assert.equal(player.sprite.flipX, false);
   assert.equal(player.sprite.scaleX, 1);
   assert.equal(player.sprite.scaleY, 1);
-  assert.deepEqual(enemy.played, []);
-  assert.equal(enemy.sprite.flipX, false);
-  assert.equal(enemy.sprite.presentationHitUntilMs, 0);
-  assert.equal(enemy.sprite.presentationFacing, "down");
+
+  player.sprite.isTinted = false;
+  scene.elapsedSurvivalMs = 1_119;
+  syncCharacterPresentation(scene);
+  assert.deepEqual(player.played, ["player-hit-up"]);
+
+  scene.elapsedSurvivalMs = 1_120;
+  syncCharacterPresentation(scene);
+  assert.deepEqual(player.played, ["player-hit-up", "player-move-up"]);
   assert.deepEqual(
     {
       width: player.sprite.body.width,
@@ -211,15 +206,29 @@ test("presentation sync changes only player display state and leaves enemies unt
     },
     playerBodyBefore
   );
-  assert.deepEqual(
-    {
-      width: enemy.sprite.body.width,
-      height: enemy.sprite.body.height,
-      offset: enemy.sprite.body.offset,
-      velocity: { x: enemy.sprite.body.velocity.x, y: enemy.sprite.body.velocity.y }
-    },
-    enemyBodyBefore
-  );
+});
+
+test("stationary player retains the latest firing-facing without changing scale", () => {
+  const firingFacing = getFacingFromVector(1, 0, "down");
+  const player = createSprite({
+    kind: "player",
+    sheetKey: TEXTURES.playerOpeningSheet,
+    velocity: { x: 0, y: 0 },
+    presentationFacing: firingFacing,
+    scaleX: 1.2,
+    scaleY: 1.2
+  });
+
+  syncCharacterPresentation({
+    elapsedSurvivalMs: 0,
+    player: player.sprite
+  });
+
+  assert.equal(player.sprite.presentationFacing, "right");
+  assert.equal(player.sprite.flipX, true);
+  assert.deepEqual(player.played, ["player-idle-right"]);
+  assert.equal(player.sprite.scaleX, 1.2);
+  assert.equal(player.sprite.scaleY, 1.2);
 });
 
 test("horizontal facing mirrors right without changing character scale", () => {

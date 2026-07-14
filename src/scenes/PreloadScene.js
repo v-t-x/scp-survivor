@@ -8,6 +8,7 @@ import {
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 import { registerOpeningCharacterAnimations } from "../art/characterPresentation.js";
 import { registerEnemyAnimations } from "../art/enemyPresentation.js";
+import { runPreloadCreatePipeline } from "./preloadOrchestration.js";
 
 // PreloadScene — the normal startup entry for asset loading.
 //
@@ -44,10 +45,10 @@ export class PreloadScene extends Phaser.Scene {
   create() {
     // Generate procedural fallbacks for any texture key not provided by a real
     // asset above. Existence-checked per key, so real art is never overwritten.
-    generateFallbackTextures(this);
-    registerOpeningCharacterAnimations(this);
-    registerEnemyAnimations(this);
-
-    this.scene.start("PrototypeScene");
+    runPreloadCreatePipeline(this, {
+      generateFallbackTextures,
+      registerOpeningCharacterAnimations,
+      registerEnemyAnimations
+    });
   }
 }
