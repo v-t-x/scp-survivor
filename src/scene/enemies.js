@@ -11,6 +11,8 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { TEXTURES } from "../assets/manifest.js";
+import { applyEnemyPresentation } from "../art/enemyPresentation.js";
 import {
   cloneEnemyAt as cloneEnemyForScene,
   tryReplicateEnemy as tryReplicateEnemyForScene
@@ -21,7 +23,6 @@ import {
   centerCircularBody,
   CHARACTER_DISPLAY_SCALE
 } from "../art/presentationRules.js";
-import { resolveCharacterTexture } from "../art/characterPresentation.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -187,8 +188,7 @@ export const enemiesMixin = {
     const config =
       BALANCE.enemy.types[type] ?? BALANCE.enemy.types.infectedStaff;
     const { x, y } = this.getSpawnPositionAtEdge();
-    const textureKey = resolveCharacterTexture(this, config.type, config.textureKey);
-    const enemy = this.enemies.create(x, y, textureKey);
+    const enemy = this.enemies.create(x, y, config.textureKey);
 
     this.initializeEnemyFromConfig(enemy, config, scaling, false);
   },
@@ -202,10 +202,10 @@ export const enemiesMixin = {
     const { x, y } = forcedPosition ?? this.getSpawnPositionAtEdge();
     const textureKey =
       type === "riotUnit"
-        ? "elite-riot"
+        ? TEXTURES.eliteRiot
         : type === "blinkStalker"
-          ? "elite-blink"
-          : "elite-biomass";
+          ? TEXTURES.eliteBlink
+          : TEXTURES.eliteBiomass;
     const enemy = this.enemies.create(x, y, textureKey);
     this.initializeEnemyFromConfig(enemy, config, scaling, true);
     enemy.eliteType = type;
@@ -219,7 +219,7 @@ export const enemiesMixin = {
       return;
     }
     const config = BALANCE.enemy.elite.types.biomassChild;
-    const child = this.enemies.create(x, y, "biomass-child");
+    const child = this.enemies.create(x, y, TEXTURES.biomassChild);
     this.initializeEnemyFromConfig(
       child,
       config,
@@ -318,6 +318,8 @@ export const enemiesMixin = {
         enemy.setAlpha(0.85);
       }
     }
+
+    applyEnemyPresentation(this, enemy, config.type);
 
     enemy.once("destroy", () => {
       if (enemy.armorBrokenLabel?.active) {
@@ -532,8 +534,6 @@ export const enemiesMixin = {
 
   updateBiomassElite(enemy) {
     this.physics.moveToObject(enemy, this.player, enemy.moveSpeed);
-    const pulse = 1.16 + Math.sin(this.elapsedSurvivalMs * 0.008) * 0.07;
-    enemy.setScale(pulse);
   },
 
 
@@ -904,12 +904,7 @@ export const enemiesMixin = {
         24,
         WORLD_HEIGHT - 24
       );
-      const textureKey = resolveCharacterTexture(
-        this,
-        baseConfig.type,
-        baseConfig.textureKey
-      );
-      const minion = this.enemies.create(spawnX, spawnY, textureKey);
+      const minion = this.enemies.create(spawnX, spawnY, baseConfig.textureKey);
       this.initializeEnemyFromConfig(minion, baseConfig, scaling, false);
       minion.isBossMinion = true;
     }

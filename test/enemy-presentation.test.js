@@ -3,11 +3,17 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { TEXTURES } from "../src/assets/manifest.js";
+import { BALANCE } from "../src/config/balance.js";
 import {
   ENEMY_PRESENTATION,
   applyEnemyPresentation,
   registerEnemyAnimations
 } from "../src/art/enemyPresentation.js";
+import {
+  CHARACTER_DISPLAY_SCALE,
+  applyDisplayScalePreservingBody,
+  centerCircularBody
+} from "../src/art/presentationRules.js";
 import { runPreloadCreatePipeline } from "../src/scenes/preloadOrchestration.js";
 
 const EXPECTED_PRESENTATION = {
@@ -236,6 +242,115 @@ function effectiveBodySnapshot(gameObject) {
   };
 }
 
+function extractObjectMethod(source, methodName) {
+  const start = source.indexOf(`  ${methodName}(`);
+  assert.notEqual(start, -1, `${methodName} must exist`);
+  const bodyStart = source.indexOf("{", start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) {
+      return source.slice(start, index + 1).trim();
+    }
+  }
+  throw new Error(`Could not extract ${methodName}`);
+}
+
+function createInitializerEnemy(width, height) {
+  const calls = {
+    once: [],
+    setAlpha: [],
+    setCircle: [],
+    setDepth: [],
+    setScale: [],
+    setSize: []
+  };
+  const enemy = {
+    x: 120,
+    y: 180,
+    width,
+    height,
+    scaleX: 1,
+    scaleY: 1,
+    displayOriginX: width / 2,
+    displayOriginY: height / 2,
+    calls,
+    setCircle(radius, offsetX, offsetY) {
+      const nextOffsetX = offsetX ?? (this.width - radius * 2) / 2;
+      const nextOffsetY = offsetY ?? (this.height - radius * 2) / 2;
+      calls.setCircle.push([radius, nextOffsetX, nextOffsetY]);
+      this.body.sourceWidth = radius * 2;
+      this.body.sourceHeight = radius * 2;
+      this.body.radius = radius;
+      this.body.isCircle = true;
+      this.body.offset.set(nextOffsetX, nextOffsetY);
+      this.body.updateFromGameObject();
+      return this;
+    },
+    setScale(scale) {
+      calls.setScale.push(scale);
+      this.scaleX = scale;
+      this.scaleY = scale;
+      return this;
+    },
+    setDepth(depth) {
+      calls.setDepth.push(depth);
+      this.depth = depth;
+      return this;
+    },
+    setAlpha(alpha) {
+      calls.setAlpha.push(alpha);
+      this.alpha = alpha;
+      return this;
+    },
+    once(eventName) {
+      calls.once.push(eventName);
+      return this;
+    }
+  };
+  enemy.body = {
+    sourceWidth: width,
+    sourceHeight: height,
+    width,
+    height,
+    halfWidth: width / 2,
+    halfHeight: height / 2,
+    radius: 0,
+    isCircle: false,
+    offset: {
+      x: 0,
+      y: 0,
+      set(x, y) {
+        this.x = x;
+        this.y = y;
+      }
+    },
+    position: { x: 0, y: 0 },
+    setSize(nextWidth, nextHeight) {
+      calls.setSize.push([nextWidth, nextHeight]);
+      this.sourceWidth = nextWidth;
+      this.sourceHeight = nextHeight;
+      this.radius = 0;
+      this.isCircle = false;
+      this.updateFromGameObject();
+      return this;
+    },
+    updateFromGameObject() {
+      this.width = this.sourceWidth * Math.abs(enemy.scaleX);
+      this.height = this.sourceHeight * Math.abs(enemy.scaleY);
+      this.halfWidth = this.width / 2;
+      this.halfHeight = this.height / 2;
+      this.position.x =
+        enemy.x + enemy.scaleX * (this.offset.x - enemy.displayOriginX);
+      this.position.y =
+        enemy.y + enemy.scaleY * (this.offset.y - enemy.displayOriginY);
+    }
+  };
+  enemy.body.updateFromGameObject();
+  return enemy;
+}
+
 test("enemy presentation contract contains exactly the seven approved R-17 loops", () => {
   assert.deepEqual(ENEMY_PRESENTATION, EXPECTED_PRESENTATION);
   assert.ok(Object.isFrozen(ENEMY_PRESENTATION));
@@ -280,31 +395,35 @@ test("only exact four-frame production sheets register complete idempotent loops
   }
 });
 
-test("missing, incomplete and extra-frame sheets leave fallback display state untouched", () => {
-  for (const frameTotal of [undefined, 4, 6]) {
-    const scene = createScene(
-      frameTotal === undefined ? {} : { [TEXTURES.r17Drifter]: frameTotal }
-    );
+test("all seven incomplete production sheets preserve their legacy fallback display state", () => {
+  let index = 0;
+  for (const [enemyType, config] of Object.entries(EXPECTED_PRESENTATION)) {
+    const scene = createScene({ [config.productionTextureKey]: 4 });
+    const fallbackScale = enemyType === "infectedStaff"
+      ? 1.15
+      : ["riotUnit", "blinkStalker", "biomass"].includes(enemyType)
+        ? 1.2
+        : 1;
     const enemy = createEnemyStub({
-      fallbackTextureKey: TEXTURES.enemyInfected,
-      fallbackFrameWidth: 32,
-      fallbackFrameHeight: 32,
-      productionFrameWidth: 48,
-      productionFrameHeight: 48,
-      sourceWidth: 20,
-      sourceHeight: 20,
-      offsetX: 6,
-      offsetY: 7,
-      radius: 10,
-      pendingScale: 1.15
+      fallbackTextureKey: FALLBACK_TEXTURES[enemyType],
+      fallbackFrameWidth: 24 + index * 2,
+      fallbackFrameHeight: 26 + index * 2,
+      productionFrameWidth: config.frameWidth,
+      productionFrameHeight: config.frameHeight,
+      sourceWidth: 14 + index,
+      sourceHeight: 16 + index,
+      offsetX: 2 + index,
+      offsetY: 3 + index,
+      radius: enemyType === "infectedStaff" ? 10 : 0,
+      pendingScale: fallbackScale
     });
     const before = effectiveBodySnapshot(enemy);
 
-    assert.equal(applyEnemyPresentation(scene, enemy, "infectedStaff"), enemy);
+    assert.equal(applyEnemyPresentation(scene, enemy, enemyType), enemy);
 
-    assert.equal(enemy.texture.key, TEXTURES.enemyInfected);
-    assert.equal(enemy.scaleX, 1.15);
-    assert.equal(enemy.scaleY, 1.15);
+    assert.equal(enemy.texture.key, FALLBACK_TEXTURES[enemyType]);
+    assert.equal(enemy.scaleX, fallbackScale);
+    assert.equal(enemy.scaleY, fallbackScale);
     assert.deepEqual(enemy.calls, {
       play: [],
       setFlipX: [],
@@ -312,6 +431,7 @@ test("missing, incomplete and extra-frame sheets leave fallback display state un
       setTexture: []
     });
     assert.deepEqual(effectiveBodySnapshot(enemy), before);
+    index += 1;
   }
 });
 
@@ -343,7 +463,7 @@ test("a complete production sheet applies texture, unit scale and its loop", () 
   assert.deepEqual(enemy.calls.play, [["r17-drifter-loop", true]]);
 });
 
-test("all seven swaps preserve effective world-space body geometry after stale scaling", () => {
+test("all seven complete production sheets swap from fallback and preserve real body invariants", () => {
   const bodyCases = {
     infectedStaff: { source: [20, 20], offset: [7, 5], radius: 10, scale: 1.15 },
     crawler: { source: [18, 14], offset: [3, 9], radius: 7, scale: 0.9 },
@@ -380,6 +500,7 @@ test("all seven swaps preserve effective world-space body geometry after stale s
       y: 203 - index * 11
     });
     const expected = effectiveBodySnapshot(enemy);
+    assert.equal(enemy.texture.key, FALLBACK_TEXTURES[enemyType]);
     assert.notEqual(
       enemy.body._sx,
       enemy.scaleX,
@@ -399,8 +520,155 @@ test("all seven swaps preserve effective world-space body geometry after stale s
     assert.equal(enemy.texture.key, config.productionTextureKey);
     assert.equal(enemy.scaleX, 1);
     assert.equal(enemy.scaleY, 1);
+    assert.deepEqual(enemy.calls.setTexture, [[config.productionTextureKey, 0]]);
+    assert.deepEqual(enemy.calls.setScale, [1]);
+    assert.deepEqual(enemy.calls.setFlipX, [false]);
     assert.deepEqual(enemy.calls.play, [[config.animationKey, true]]);
     assert.equal(enemy.body.updateCount, 3, `${enemyType} must sync before and after the swap`);
+  }
+});
+
+test("the unified initializer reaches presentation after all legacy body scale and elite fields", async () => {
+  const source = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const methodSource = extractObjectMethod(source, "initializeEnemyFromConfig");
+  const presentationCalls = [];
+  const initializeEnemyFromConfig = new Function(
+    "Phaser",
+    "BALANCE",
+    "applyDisplayScalePreservingBody",
+    "centerCircularBody",
+    "CHARACTER_DISPLAY_SCALE",
+    "applyEnemyPresentation",
+    `"use strict"; return ({${methodSource}}).initializeEnemyFromConfig;`
+  )(
+    { Math: { Between: (minimum) => minimum } },
+    BALANCE,
+    applyDisplayScalePreservingBody,
+    centerCircularBody,
+    CHARACTER_DISPLAY_SCALE,
+    (scene, enemy, enemyType) => {
+      assert.equal(enemy.calls.once.length, 0, "presentation must precede destroy wiring");
+      presentationCalls.push({
+        scene,
+        enemy,
+        enemyType,
+        body: {
+          width: enemy.body.width,
+          height: enemy.body.height,
+          radius: enemy.body.radius,
+          isCircle: enemy.body.isCircle
+        },
+        scaleX: enemy.scaleX
+      });
+      return enemy;
+    }
+  );
+  const scene = { elapsedSurvivalMs: 1_000 };
+  const cases = [
+    {
+      type: "infectedStaff",
+      config: BALANCE.enemy.types.infectedStaff,
+      isElite: false,
+      fallbackSize: [32, 32],
+      expectedBody: [20, 20, 10, true],
+      expectedScale: CHARACTER_DISPLAY_SCALE.infectedStaff
+    },
+    {
+      type: "crawler",
+      config: BALANCE.enemy.types.crawler,
+      isElite: false,
+      fallbackSize: [24, 24],
+      expectedBody: [16, 16, 8, true],
+      expectedScale: 1
+    },
+    {
+      type: "drone",
+      config: BALANCE.enemy.types.drone,
+      isElite: false,
+      fallbackSize: [28, 28],
+      expectedBody: [18, 18, 0, false],
+      expectedScale: 1
+    },
+    {
+      type: "riotUnit",
+      config: BALANCE.enemy.elite.types.riotUnit,
+      isElite: true,
+      fallbackSize: [40, 42],
+      expectedBody: [40, 42, 0, false],
+      expectedScale: 1.2
+    },
+    {
+      type: "blinkStalker",
+      config: BALANCE.enemy.elite.types.blinkStalker,
+      isElite: true,
+      fallbackSize: [38, 44],
+      expectedBody: [38, 44, 0, false],
+      expectedScale: 1.2
+    },
+    {
+      type: "biomass",
+      config: BALANCE.enemy.elite.types.biomass,
+      isElite: true,
+      fallbackSize: [46, 48],
+      expectedBody: [46, 48, 0, false],
+      expectedScale: 1.2
+    },
+    {
+      type: "biomassChild",
+      config: BALANCE.enemy.elite.types.biomassChild,
+      isElite: false,
+      fallbackSize: [18, 16],
+      expectedBody: [18, 16, 0, false],
+      expectedScale: 1
+    }
+  ];
+
+  for (const testCase of cases) {
+    presentationCalls.length = 0;
+    const enemy = createInitializerEnemy(...testCase.fallbackSize);
+    initializeEnemyFromConfig.call(
+      scene,
+      enemy,
+      testCase.config,
+      { healthMultiplier: 1, damageMultiplier: 1 },
+      testCase.isElite
+    );
+
+    assert.equal(presentationCalls.length, 1, `${testCase.type} must reach presentation once`);
+    const presentation = presentationCalls[0];
+    assert.equal(presentation.scene, scene);
+    assert.equal(presentation.enemy, enemy);
+    assert.equal(presentation.enemyType, testCase.type);
+    assert.deepEqual(Object.values(presentation.body), testCase.expectedBody);
+    assert.equal(presentation.scaleX, testCase.expectedScale);
+    assert.equal(enemy.enemyType, testCase.type);
+    assert.equal(enemy.health, testCase.config.health);
+    assert.equal(enemy.contactDamage, testCase.config.contactDamage);
+    assert.deepEqual(enemy.calls.once, ["destroy"]);
+
+    if (testCase.type === "drone") {
+      assert.equal(enemy.shootCooldownMs, testCase.config.shootCooldownMs);
+      assert.equal(enemy.preferredRangeMax, testCase.config.preferredRangeMax);
+    }
+    if (testCase.isElite) {
+      assert.equal(enemy.eliteState, "idle");
+      assert.equal(enemy.depth, 10);
+      assert.equal(enemy.facingAngle, 0);
+    }
+    if (testCase.type === "riotUnit") {
+      assert.equal(enemy.frontArcDegrees, testCase.config.frontArcDegrees);
+      assert.equal(enemy.chargeSpeed, testCase.config.chargeSpeed);
+    }
+    if (testCase.type === "blinkStalker") {
+      assert.equal(enemy.teleportCooldownMs, testCase.config.teleportCooldownMs);
+      assert.equal(enemy.alpha, 0.85);
+    }
+    if (testCase.type === "biomass") {
+      assert.equal(enemy.canSplit, true);
+    }
   }
 });
 

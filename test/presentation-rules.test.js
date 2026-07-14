@@ -459,6 +459,35 @@ test("infected staff centers its circle without changing crawler collision offse
   assert.match(circleBranch, /enemy\.setCircle\(config\.bodyRadius\)/);
 });
 
+test("enemy frame updates never scale flip or rotate R-17 sprites and biomass only chases", async () => {
+  const enemies = await readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8");
+  const methodRanges = [
+    ["  updateEnemies()", "  tryReplicateEnemy(enemy)"],
+    ["  updateRiotElite(enemy)", "  updateBlinkElite(enemy)"],
+    ["  updateBlinkElite(enemy)", "  updateBiomassElite(enemy)"],
+    ["  updateBiomassElite(enemy)", "  updateDroneBehavior(enemy)"]
+  ];
+
+  for (const [startMarker, endMarker] of methodRanges) {
+    const block = enemies.slice(
+      enemies.indexOf(startMarker),
+      enemies.indexOf(endMarker)
+    );
+    assert.doesNotMatch(block, /enemy\.(?:setScale|setFlipX|setRotation)\s*\(/);
+    assert.doesNotMatch(block, /applyEnemyPresentation/);
+  }
+
+  const biomassUpdate = enemies.slice(
+    enemies.indexOf("  updateBiomassElite(enemy)"),
+    enemies.indexOf("  updateDroneBehavior(enemy)")
+  );
+  assert.match(
+    biomassUpdate,
+    /this\.physics\.moveToObject\(enemy, this\.player, enemy\.moveSpeed\)/
+  );
+  assert.doesNotMatch(biomassUpdate, /pulse|Math\.sin|\.body\./);
+});
+
 test("facility presentation reset clears outage tint and alpha", () => {
   const activeVisual = {
     active: true,

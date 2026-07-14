@@ -63,20 +63,7 @@ export const worldMixin = {
 
   createGroups() {
     this.enemies = this.physics.add.group({
-      classType: Phaser.Physics.Arcade.Sprite,
-      createCallback: (enemy) => {
-        if (enemy.texture.key !== TEXTURES.enemyInfected) {
-          return;
-        }
-        const textureKey = resolveCharacterTexture(
-          this,
-          "infectedStaff",
-          TEXTURES.enemyInfected
-        );
-        if (textureKey !== enemy.texture.key) {
-          enemy.setTexture(textureKey, 0);
-        }
-      }
+      classType: Phaser.Physics.Arcade.Sprite
     });
     this.bullets = this.physics.add.group();
     this.enemyProjectiles = this.physics.add.group();

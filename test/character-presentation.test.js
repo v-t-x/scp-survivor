@@ -278,6 +278,15 @@ test("player and enemy creation retain the approved physics geometry and order",
     readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8")
   ]);
   const createPlayer = world.slice(world.indexOf("  createPlayer()"), world.indexOf("  createGroups()"));
+  const createGroups = world.slice(world.indexOf("  createGroups()"), world.indexOf("  createColliders()"));
+  const initializer = enemies.slice(
+    enemies.indexOf("  initializeEnemyFromConfig("),
+    enemies.indexOf("  updateEnemies()")
+  );
+  const bossCreation = enemies.slice(
+    enemies.indexOf("  spawnScp049Boss()"),
+    enemies.indexOf("  updateBoss()")
+  );
   assert.match(createPlayer, /physics\.add\.sprite/);
   const creation = createPlayer.indexOf("physics.add.sprite");
   const collide = createPlayer.indexOf("setCollideWorldBounds(true)");
@@ -285,11 +294,46 @@ test("player and enemy creation retain the approved physics geometry and order",
   const scale = createPlayer.indexOf("applyDisplayScalePreservingBody");
   assert.ok(creation < collide && collide < body && body < scale);
 
-  assert.match(world, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
+  assert.match(createGroups, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
+  assert.doesNotMatch(createGroups, /createCallback/);
+  assert.doesNotMatch(createGroups, /resolveCharacterTexture/);
+  assert.equal(
+    world.match(/resolveCharacterTexture\s*\(/g)?.length,
+    1,
+    "resolveCharacterTexture must be called only for the player"
+  );
   assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.setCircle\(config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
-  assert.match(enemies, /centerCircularBody\(boss, 18\)/);
+  assert.match(enemies, /enemy\.body\.setSize\(enemy\.width, enemy\.height\)/);
+  assert.match(
+    initializer,
+    /applyDisplayScalePreservingBody\(enemy, CHARACTER_DISPLAY_SCALE\.infectedStaff\)/
+  );
+  assert.match(initializer, /enemy\.setScale\(1\.2\)/);
+  const bodyBranch = initializer.indexOf('if (config.bodyShape === "circle")');
+  const infectedScale = initializer.indexOf("applyDisplayScalePreservingBody");
+  const eliteScale = initializer.indexOf("enemy.setScale(1.2)");
+  const riotFields = initializer.indexOf("enemy.frontDamageMultiplier");
+  const blinkFields = initializer.indexOf("enemy.teleportCooldownMs");
+  const presentation = initializer.indexOf(
+    "applyEnemyPresentation(this, enemy, config.type)"
+  );
+  const destroyListener = initializer.indexOf('enemy.once("destroy"');
+  assert.ok(bodyBranch >= 0 && bodyBranch < infectedScale);
+  assert.ok(infectedScale < presentation);
+  assert.ok(eliteScale < presentation);
+  assert.ok(riotFields < presentation);
+  assert.ok(blinkFields < presentation);
+  assert.ok(presentation >= 0 && presentation < destroyListener);
+
+  assert.match(bossCreation, /this\.enemies\.create\(bossX, bossY, "enemy-scp049"\)/);
+  const bossCircle = bossCreation.indexOf("centerCircularBody(boss, 18)");
+  const bossScale = bossCreation.indexOf(
+    "applyDisplayScalePreservingBody(boss, CHARACTER_DISPLAY_SCALE.scp049)"
+  );
+  const bossDepth = bossCreation.indexOf("boss.setDepth(12)");
+  assert.ok(bossCircle >= 0 && bossCircle < bossScale && bossScale < bossDepth);
   assert.doesNotMatch(enemies, /body\.setOffset/);
 });
 
