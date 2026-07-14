@@ -249,7 +249,8 @@ test("shotgun reload lowers the module into a distinct travel pose without alloc
     anchorY: 200,
     weaponId: "shotgun",
     aimAngle: 0,
-    hasTarget: true,
+    hasTarget: false,
+    targetAgeMs: 2000,
     isReloading: true,
     currentShells: 0,
     magazineSize: 4

@@ -16,11 +16,14 @@ export function createWeaponRigPresentation(input = {}, previousState = {}) {
   const targetAgeMs = Math.max(0, finite(input.targetAgeMs, Number.POSITIVE_INFINITY));
   const hasTarget = Boolean(weaponId && (input.hasTarget || targetAgeMs < 250));
   const paused = Boolean(input.paused);
-  const mode = !hasTarget || paused || !weaponId
+  const mode = paused || !weaponId
     ? "travel"
-    : input.isReloading ? "reloading"
-      : weaponId === "tesla" && finite(input.cooldownRatio, 1) < 1 ? "charging"
-        : "aiming";
+    : input.isReloading
+      ? "reloading"
+      : !hasTarget
+        ? "travel"
+        : weaponId === "tesla" && finite(input.cooldownRatio, 1) < 1 ? "charging"
+          : "aiming";
   return Object.freeze({
     weaponId, mode, paused, directionIndex,
     aimAngle: finite(input.aimAngle, finite(previousState.aimAngle, 0)),
