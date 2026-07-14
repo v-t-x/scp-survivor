@@ -1,13 +1,13 @@
 # App Platform 多客户端架构提案
 
-**状态：** 待 Project Lead 审批
+**状态：** 上位多平台架构与 Windows Electron 路线已批准；实施仍须通过已记录的 Level 2 / Project Lead 执行门禁
 **范围：** Windows 首个客户端验证与长期多客户端边界
 **上位设计：** `docs/superpowers/specs/2026-07-14-multi-platform-client-design.md`
 **不在本轮范围：** 依赖、客户端脚手架、安装包、签名、自动更新、商店、公开下载、CI、游戏代码或共享入口修改
 
 ## 1. 决策摘要
 
-建议首个 Windows proof of concept（PoC）使用 **Electron**，但把它放在独立的
+已批准首个 Windows proof of concept（PoC）使用 **Electron**，但把它放在独立的
 `clients/desktop-electron/` 边界中，不把 Electron API、Node.js 或打包逻辑暴露给
 游戏代码。PoC 直接消费现有 `npm run build` 生成的 `dist/`，通过稳定的
 `app://scp-survivor/` 自定义协议加载构建产物；不修改根 `package.json`、
@@ -17,7 +17,7 @@
 
 - 与 Phaser 现有浏览器行为一致的固定 Chromium 运行时；
 - 对 WebGL、Canvas、Web Audio 和 `localStorage` 的低迁移风险；
-- 可在独立目录内验证窗口、生命周期、离线、安装和安全边界；
+- 可在独立目录内验证窗口、生命周期、离线和安全边界；
 - 可以先得到可靠 Windows 证据，再决定是否值得用 Tauri 换取更小体积。
 
 长期不统一强迫所有平台使用同一 wrapper：
@@ -28,8 +28,9 @@
 - launcher：独立安装、更新和启动产品，不承载游戏语义；
 - 未来平台容器：只实现稳定的客户端能力合同。
 
-本提案不批准任何实现。审批后应另建实施计划，并单独批准依赖、打包工具和任何
-共享文件变更。
+上位设计已批准多平台架构和 Windows Electron 路线；本提案不重新请求该技术决策。
+实际实施仍须遵守上位设计、`AGENTS.md` 的 Level 2 / Project Lead 门禁，并为依赖、
+打包工具和任何共享文件变更取得所需的单独批准。
 
 ## 2. 当前 Web 客户端事实审计
 
@@ -172,7 +173,7 @@ installer/uninstaller、签名和桌面安全配置。
 
 ### 4.2 预期 artifact
 
-审批后的 PoC 应产生：
+首轮 PoC 应产生：
 
 1. 一个未签名的 Windows x64 unpacked 应用目录，用于快速诊断；
 2. 一份记录 Electron、Chromium、Node、根游戏 commit 和构建时间的 manifest；
@@ -193,7 +194,7 @@ installer/uninstaller、签名和桌面安全配置。
 
 ### 5.1 拟议目录
 
-以下均为审批后的拟议状态，本轮不创建：
+以下为已批准边界下的拟议实施状态，当前任务不创建：
 
 | 路径 | 状态/所有者 | 作用 |
 |---|---|---|
@@ -202,7 +203,7 @@ installer/uninstaller、签名和桌面安全配置。
 | `clients/desktop-electron/package-lock.json` | 新建；App Platform | wrapper 独立、可复现的依赖图 |
 | `clients/desktop-electron/src/main.mjs` | 新建；App Platform | 单窗口、生命周期和安全策略 |
 | `clients/desktop-electron/src/app-protocol.mjs` | 新建；App Platform | 安全映射 `app://scp-survivor/` 到 staged web build |
-| `clients/desktop-electron/forge.config.mjs` | 新建；App Platform | Windows x64 package/installer 配置 |
+| `clients/desktop-electron/forge.config.mjs` | 新建；App Platform | Windows x64 unpacked PoC 的打包配置 |
 | `clients/desktop-electron/scripts/stage-web.mjs` | 新建；App Platform | 校验并复制根 `dist/`，写入 provenance manifest |
 | `clients/desktop-electron/test/` | 新建；App Platform | 协议路径、安全配置和 packaged smoke |
 | `clients/desktop-electron/.gitignore` | 新建；App Platform | 只忽略本目录 staging/out，不修改根 `.gitignore` |
@@ -312,6 +313,7 @@ wrapper 只消费，不改写根 `dist/`：
 ### 7.2 正式发布才需要
 
 - 稳定 app id、产品名、publisher 与版本权威来源；
+- installer 的制作、安装/卸载验证、升级/降级与企业部署策略；
 - 代码签名证书、时间戳、SmartScreen reputation 策略；
 - 安全更新通道、签名 manifest、回滚和最低支持版本；
 - installer 升级/降级、修复安装、静默参数与企业策略；
@@ -340,22 +342,21 @@ git diff --stat
 - 本轮 Git diff 只有本提案文件；
 - 没有修改 manifest、lockfile、HTML、CI 或源码。
 
-### 8.2 审批后 Electron PoC
+### 8.2 已批准路线下的 Electron PoC
 
 | 验证 | 操作 | 通过观察 |
 |---|---|---|
 | Web baseline | `npm run build` 后运行 `npm run preview` | 浏览器启动、开始游戏、移动/攻击、音频和 meta storage 正常 |
 | Staging | 从干净 checkout 构建并运行 stage | 只复制 `dist/`；manifest 记录 commit/hash；缺文件时失败 |
 | Dev client | 启动 Electron wrapper | 单窗口、无 Node API、固定 app origin、无 console/security error |
-| Packaged startup | 启动 unpacked exe 与安装后快捷方式 | 无 dev server/网络仍进入开始页；画布不裁切 |
+| Unpacked startup | 启动 unpacked 应用目录中的 exe | 无 dev server/网络仍进入开始页；画布不裁切 |
 | Clean exit | 开始游戏后关闭窗口 | 所有应用进程退出，无后台残留 |
 | Local assets | 断网并检查 protocol 请求 | HTML/JS/纹理/音频全部本地；未知路径失败 |
 | First-interaction audio | 启动后先等待，再点击进入游戏 | 等待阶段无强制 autoplay；交互后声音可听 |
 | Restart cleanup | 连续重开游戏至少 10 次 | 无叠音、无 AudioContext 耗尽、无明显资源累积 |
 | Persistence | 获得/写入 meta 后退出并重启 | 同一 key/schema 恢复；损坏数据安全回退 |
-| Offline | 安装完成后断网冷启动 | 游戏可启动和完成 smoke；无网络错误阻断 |
+| Offline | 从 unpacked 应用目录断网冷启动 | 游戏可启动和完成 smoke；无网络错误阻断 |
 | Window/DPI | 100%/125% 缩放，最小化/恢复 | `960 × 540` 内容完整；恢复后输入与音频正常 |
-| Install/uninstall | 普通用户安装、启动、卸载 | 无管理员依赖；程序文件移除；userData 行为被记录 |
 | Protocol security | 请求 traversal、外部 origin、新窗口、权限 | 全部拒绝并记录，不泄露任意本地文件 |
 | Renderer isolation | DevTools 检查 `process`/`require`/Electron API | renderer 不可访问 privileged API |
 | GPU fallback | 检查正常 GPU 与禁用 GPU 的诊断运行 | WebGL 正常；Canvas fallback 是否可玩被明确记录 |
@@ -368,8 +369,7 @@ git diff --stat
 - PoC 所有实现位于独立 `clients/desktop-electron/`，不改变 Web 启动；
 - 未合并前直接放弃该实施提交即可，禁止改写其他分支历史；
 - 若 wrapper 依赖共享改动才能运行，先回退该共享改动并保留失败证据；
-- installer 测试机使用系统卸载流程，人工确认残留；不得写“删除整个 userData”
-  之类不可逆脚本；
+- unpacked 输出只位于客户端私有的忽略目录；回滚前记录失败证据，不删除 userData；
 - 不发布的 unsigned artifact 不上传公共 release 或商店。
 
 ## 9. 风险与后续决策
@@ -389,17 +389,17 @@ git diff --stat
 7. **平台分裂风险：** Electron 的 Node/IPC 能力不得成为游戏依赖，否则 PWA 和
    mobile 会被迫复制桌面假设。
 
-## 10. 请求 Project Lead 审批的决定
+## 10. 实施前的 Level 2 / Project Lead 执行门禁
 
-请逐项批准或退回：
+Windows Electron 路线、独立 `clients/desktop-electron/` 边界和固定
+`app://scp-survivor/` origin 均已由上位设计批准，本节不重新请求技术路线决策。
 
-1. 以 Electron 作为 Windows 首个 PoC；
-2. 使用独立 `clients/desktop-electron/` manifest/lockfile，不修改根依赖文件；
-3. 使用 `app://scp-survivor/` 固定安全 origin 消费原样 `dist/`；
-4. PoC 目标仅包含内部验证用的 unpacked Windows x64 应用目录；
-5. PoC 不包含 installer、签名、自动更新、商店、公开下载、CI、遥测或任何游戏改动；
-6. 只有实际验证证明必要时，才单独申请共享文件变更；
-7. Electron PoC 通过后，再决定是否进行 Tauri 体积/维护成本对照 spike；
-8. Capacitor 与 PWA 分别进入未来移动和 installable Web 提案，不与本 PoC 捆绑。
+实施开始前必须：
 
-在 Project Lead 审批前，不添加依赖、不创建客户端脚手架、不生成安装包。
+1. 按 `docs/superpowers/specs/2026-07-14-multi-platform-client-design.md` 与
+   `AGENTS.md` 的要求完成适用的 Level 2 / Project Lead 执行确认；
+2. 将首轮范围保持为内部验证用的 unpacked Windows x64 应用目录，不实现 installer、
+   签名、自动更新、商店、公开下载、CI、遥测或任何游戏改动；
+3. 在添加依赖、锁定 packager 或申请任何共享文件变更前，取得对应的单独批准；
+4. 仅在实际验证证明必要时，申请 Vite、入口、资源合同或持久化等共享文件变更；
+5. 将 Tauri 对照 spike、Capacitor、PWA 与其他平台留给各自的后续计划和审批。

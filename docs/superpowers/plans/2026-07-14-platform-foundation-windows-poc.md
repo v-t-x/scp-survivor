@@ -659,7 +659,7 @@ npm.cmd --prefix clients/desktop-electron run start
 npm.cmd --prefix clients/desktop-electron run package:win
 ```
 
-README must mark PASS, FAIL or NOT TESTED for one window, title screen, starting a run, keyboard movement, first-interaction audio, mute, ten Scene restarts, meta persistence, offline cold start, 100%/125% DPI, no remaining process, unavailable renderer `process`/`require`, denied external navigation, rejected unknown path and no security warning.
+README must mark PASS, FAIL or NOT TESTED for one window, title screen, starting a run, keyboard movement, first-interaction audio, mute, ten Scene restarts, meta persistence, offline cold start from the unpacked app directory, 100%/125% DPI, no remaining process, unavailable renderer `process`/`require`, denied external navigation, rejected unknown path and no security warning.
 
 - [ ] **Step 2: Run automated gates**
 
@@ -670,9 +670,9 @@ npm.cmd --prefix clients/desktop-electron run stage
 git diff --check
 ```
 
-- [ ] **Step 3: Run development and packaged smoke**
+- [ ] **Step 3: Run development and unpacked-package smoke**
 
-Run `start`, then `package:win`. Launch the generated executable once online and once offline. Record actual evidence for every README row.
+Run `start`, then `package:win`. Launch the generated executable from the unpacked app directory once online and once offline. Record actual evidence for every README row.
 
 - [ ] **Step 4: Verify scope and commit**
 
