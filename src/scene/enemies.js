@@ -277,6 +277,11 @@ export const enemiesMixin = {
       enemy.body.setSize(enemy.width, enemy.height);
     }
 
+    if (config.type === "biomass") {
+      enemy.biomassFallbackBodySourceWidth = enemy.body.sourceWidth;
+      enemy.biomassFallbackBodySourceHeight = enemy.body.sourceHeight;
+    }
+
     if (config.type === "infectedStaff") {
       applyDisplayScalePreservingBody(enemy, CHARACTER_DISPLAY_SCALE.infectedStaff);
     }
@@ -537,6 +542,13 @@ export const enemiesMixin = {
 
   updateBiomassElite(enemy) {
     this.physics.moveToObject(enemy, this.player, enemy.moveSpeed);
+    const pulse = 1.16 + Math.sin(this.elapsedSurvivalMs * 0.008) * 0.07;
+    const scaleX = Math.abs(enemy.scaleX) || 1;
+    const scaleY = Math.abs(enemy.scaleY) || 1;
+    enemy.body.setSize(
+      (enemy.biomassFallbackBodySourceWidth * pulse) / scaleX,
+      (enemy.biomassFallbackBodySourceHeight * pulse) / scaleY
+    );
   },
 
 

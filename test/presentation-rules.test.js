@@ -459,7 +459,7 @@ test("infected staff centers its circle without changing crawler collision offse
   assert.match(circleBranch, /enemy\.setCircle\(config\.bodyRadius\)/);
 });
 
-test("enemy frame updates never scale flip or rotate R-17 sprites and biomass only chases", async () => {
+test("enemy frame updates keep R-17 transforms stable and biomass only writes its compatibility body size", async () => {
   const enemies = await readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8");
   const methodRanges = [
     ["  updateEnemies()", "  tryReplicateEnemy(enemy)"],
@@ -485,7 +485,22 @@ test("enemy frame updates never scale flip or rotate R-17 sprites and biomass on
     biomassUpdate,
     /this\.physics\.moveToObject\(enemy, this\.player, enemy\.moveSpeed\)/
   );
-  assert.doesNotMatch(biomassUpdate, /pulse|Math\.sin|\.body\./);
+  assert.match(
+    biomassUpdate,
+    /const pulse = 1\.16 \+ Math\.sin\(this\.elapsedSurvivalMs \* 0\.008\) \* 0\.07;/
+  );
+  assert.match(biomassUpdate, /enemy\.body\.setSize\(/);
+  assert.match(biomassUpdate, /enemy\.biomassFallbackBodySourceWidth \* pulse/);
+  assert.match(biomassUpdate, /enemy\.biomassFallbackBodySourceHeight \* pulse/);
+  assert.equal((biomassUpdate.match(/enemy\.body\./g) ?? []).length, 1);
+  assert.doesNotMatch(
+    biomassUpdate,
+    /enemy\.body\.(?:sourceWidth|sourceHeight|offset|updateFromGameObject|isCircle|radius)\s*=/
+  );
+  assert.doesNotMatch(
+    biomassUpdate,
+    /enemy\.(?:contactDamage|maxHealth|health|moveSpeed|frontDamageMultiplier|sideDamageMultiplier|rearDamageMultiplier)\s*=/
+  );
 });
 
 test("facility presentation reset clears outage tint and alpha", () => {
