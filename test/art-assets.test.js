@@ -503,7 +503,7 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
   }
 });
 
-function classifyR17BudMaterial(red, green, blue) {
+function classifyR17FamilyMaterial(red, green, blue) {
   const channelMaximum = Math.max(red, green, blue);
   const channelMinimum = Math.min(red, green, blue);
   const channelSpread = channelMaximum - channelMinimum;
@@ -569,7 +569,7 @@ function validateR17BudFrame(framePixels, frameWidth = 32, frameHeight = 32) {
     const red = framePixels[offset];
     const green = framePixels[offset + 1];
     const blue = framePixels[offset + 2];
-    const material = classifyR17BudMaterial(red, green, blue);
+    const material = classifyR17FamilyMaterial(red, green, blue);
     const y = Math.floor(pixelIndex / frameWidth);
     visiblePixels += 1;
     minY = Math.min(minY, y);
@@ -616,8 +616,8 @@ test("R-17 bud semantic validator rejects dark red tissue and generic gray as ch
   });
 
   const validation = validateR17BudFrame(fakeFrame);
-  assert.equal(classifyR17BudMaterial(128, 50, 58), "red");
-  assert.equal(classifyR17BudMaterial(120, 120, 120), "other");
+  assert.equal(classifyR17FamilyMaterial(128, 50, 58), "red");
+  assert.equal(classifyR17FamilyMaterial(120, 120, 120), "other");
   assert.deepEqual(validation.counts, { charcoal: 0, red: 93, steel: 0, cyan: 5, other: 2 });
   assert.equal(validation.valid, false, "93% dark red plus generic lower gray must not satisfy charcoal-body and upper steel-tag semantics");
   assert.ok(validation.errors.some((message) => message.includes("charcoal organic body")));
@@ -632,6 +632,59 @@ test("R-17 bud retains dominant dark tissue, red seams, a steel tag and a tiny c
     const frame = getEnemyFramePixels(pixels, width, 32, 32, frameIndex);
     const validation = validateR17BudFrame(frame);
     assert.deepEqual(validation.errors, [], `r17-bud frame ${frameIndex}: ${validation.errors.join("; ")}`);
+  }
+});
+
+function validateR17RiftFrame(framePixels) {
+  const counts = { charcoal: 0, red: 0, steel: 0, cyan: 0, other: 0 };
+  let visiblePixels = 0;
+
+  for (let offset = 0; offset < framePixels.length; offset += 4) {
+    if (framePixels[offset + 3] !== 255) continue;
+    const material = classifyR17FamilyMaterial(
+      framePixels[offset],
+      framePixels[offset + 1],
+      framePixels[offset + 2]
+    );
+    counts[material] += 1;
+    visiblePixels += 1;
+  }
+
+  const errors = [];
+  if (visiblePixels === 0) return { valid: false, errors: ["frame is empty"], counts, visiblePixels };
+  if (counts.charcoal / visiblePixels < 0.35) errors.push("charcoal tissue is below 35% of visible pixels");
+  if (counts.red < 2) errors.push("red tissue is not readable");
+  if (counts.steel < 2) errors.push("light-steel containment hardware is not readable");
+  if (counts.cyan < 1) errors.push("cyan core is absent");
+  if (counts.cyan / visiblePixels > 0.12) errors.push("cyan core exceeds 12% of visible pixels");
+  return {
+    valid: errors.length === 0,
+    errors,
+    counts,
+    visiblePixels,
+    charcoalRatio: counts.charcoal / visiblePixels,
+    cyanRatio: counts.cyan / visiblePixels
+  };
+}
+
+test("R-17 family material classifier keeps the production palette mutually exclusive", () => {
+  assert.deepEqual([
+    classifyR17FamilyMaterial(38, 36, 40),
+    classifyR17FamilyMaterial(128, 50, 58),
+    classifyR17FamilyMaterial(151, 238, 238),
+    classifyR17FamilyMaterial(214, 205, 195),
+    classifyR17FamilyMaterial(139, 112, 111)
+  ], ["charcoal", "red", "cyan", "steel", "other"]);
+});
+
+test("R-17 rift-skimmer retains charcoal tissue, red tissue, steel hardware and a small cyan core", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/enemies/r17-rift-skimmer.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+
+  for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 48, 48, frameIndex);
+    const validation = validateR17RiftFrame(frame);
+    assert.deepEqual(validation.errors, [], `r17-rift-skimmer frame ${frameIndex}: ${validation.errors.join("; ")}`);
   }
 });
 
