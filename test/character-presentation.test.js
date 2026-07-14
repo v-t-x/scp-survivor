@@ -4,7 +4,6 @@ import { readFile } from "node:fs/promises";
 
 import {
   CHARACTER_SHEETS,
-  OPENING_ANIMATED_ENEMY_TYPES,
   getCharacterAnimationKey,
   getFacingFromVector,
   registerOpeningCharacterAnimations,
@@ -84,17 +83,11 @@ function createSprite({
   return { sprite, played };
 }
 
-test("opening animation scope is limited to infected staff", () => {
-  assert.deepEqual(OPENING_ANIMATED_ENEMY_TYPES, ["infectedStaff"]);
-  assert.ok(Object.isFrozen(OPENING_ANIMATED_ENEMY_TYPES));
+test("opening character sheet contract is player-only", () => {
   assert.deepEqual(CHARACTER_SHEETS, {
     player: {
       sheetKey: TEXTURES.playerOpeningSheet,
       fallbackKey: TEXTURES.player
-    },
-    infectedStaff: {
-      sheetKey: TEXTURES.infectedOpeningSheet,
-      fallbackKey: TEXTURES.enemyInfected
     }
   });
 });
@@ -113,12 +106,12 @@ test("animation keys map idle, move and hit without changing character kind", ()
     "player-idle-down"
   );
   assert.equal(
-    getCharacterAnimationKey({ kind: "infectedStaff", motion: "move", facing: "left", hit: false }),
-    "infectedStaff-move-left"
+    getCharacterAnimationKey({ kind: "player", motion: "move", facing: "left", hit: false }),
+    "player-move-left"
   );
   assert.equal(
-    getCharacterAnimationKey({ kind: "infectedStaff", motion: "move", facing: "up", hit: true }),
-    "infectedStaff-hit-up"
+    getCharacterAnimationKey({ kind: "player", motion: "move", facing: "up", hit: true }),
+    "player-hit-up"
   );
 });
 
@@ -137,7 +130,7 @@ test("animation registration is complete, frame-exact and idempotent", () => {
   registerOpeningCharacterAnimations(scene);
   registerOpeningCharacterAnimations(scene);
 
-  assert.equal(scene.created.length, 24);
+  assert.equal(scene.created.length, 12);
   const byKey = new Map(scene.created.map((animation) => [animation.key, animation]));
   assert.deepEqual(byKey.get("player-idle-down").frames, {
     sheetKey: TEXTURES.playerOpeningSheet,
@@ -154,16 +147,6 @@ test("animation registration is complete, frame-exact and idempotent", () => {
     byKey.get("player-move-left").frames,
     "right-facing player animation should mirror the full-size left-facing row"
   );
-  assert.deepEqual(
-    byKey.get("infectedStaff-hit-right").frames,
-    byKey.get("infectedStaff-hit-left").frames,
-    "right-facing infected animation should mirror the full-size left-facing row"
-  );
-  assert.deepEqual(byKey.get("infectedStaff-hit-up").frames, {
-    sheetKey: TEXTURES.infectedOpeningSheet,
-    start: 46,
-    end: 47
-  });
   assert.equal(byKey.get("player-idle-down").repeat, -1);
   assert.equal(byKey.get("player-move-down").frameRate, 8);
   assert.equal(byKey.get("player-hit-down").repeat, 0);
@@ -175,12 +158,11 @@ test("missing or incomplete sheets warn at most once per key and register nothin
   registerOpeningCharacterAnimations(missing);
   registerOpeningCharacterAnimations(missing);
   assert.equal(missing.created.length, 0);
-  assert.equal(missing.warnings.length, 2);
+  assert.equal(missing.warnings.length, 1);
   assert.match(missing.warnings[0], /player-opening-sheet/);
-  assert.match(missing.warnings[1], /infected-opening-sheet/);
 });
 
-test("presentation sync changes only animation-facing display state", () => {
+test("presentation sync changes only player display state and leaves enemies untouched", () => {
   const player = createSprite({
     kind: "player",
     sheetKey: TEXTURES.playerOpeningSheet,
@@ -216,9 +198,10 @@ test("presentation sync changes only animation-facing display state", () => {
   assert.equal(player.sprite.flipX, true);
   assert.equal(player.sprite.scaleX, 1);
   assert.equal(player.sprite.scaleY, 1);
-  assert.deepEqual(enemy.played, ["infectedStaff-hit-up"]);
+  assert.deepEqual(enemy.played, []);
   assert.equal(enemy.sprite.flipX, false);
-  assert.equal(enemy.sprite.presentationHitUntilMs, 1_120);
+  assert.equal(enemy.sprite.presentationHitUntilMs, 0);
+  assert.equal(enemy.sprite.presentationFacing, "down");
   assert.deepEqual(
     {
       width: player.sprite.body.width,
@@ -247,17 +230,10 @@ test("horizontal facing mirrors right without changing character scale", () => {
     scaleX: 1.2,
     scaleY: 1.2
   });
-  const enemy = createSprite({
-    kind: "infectedStaff",
-    sheetKey: TEXTURES.infectedOpeningSheet,
-    velocity: { x: -55, y: 0 },
-    scaleX: 1.15,
-    scaleY: 1.15
-  });
   const scene = {
     elapsedSurvivalMs: 0,
     player: player.sprite,
-    enemies: { getChildren: () => [enemy.sprite] }
+    enemies: { getChildren: () => [] }
   };
 
   syncCharacterPresentation(scene);
@@ -266,21 +242,13 @@ test("horizontal facing mirrors right without changing character scale", () => {
   assert.equal(player.sprite.flipX, true);
   assert.equal(player.sprite.scaleX, 1.2);
   assert.equal(player.sprite.scaleY, 1.2);
-  assert.equal(enemy.sprite.presentationFacing, "left");
-  assert.equal(enemy.sprite.flipX, false);
-  assert.equal(enemy.sprite.scaleX, 1.15);
-  assert.equal(enemy.sprite.scaleY, 1.15);
 
   player.sprite.body.velocity.x = -90;
-  enemy.sprite.body.velocity.x = 55;
   syncCharacterPresentation(scene);
 
   assert.equal(player.sprite.presentationFacing, "left");
   assert.equal(player.sprite.flipX, false);
-  assert.equal(enemy.sprite.presentationFacing, "right");
-  assert.equal(enemy.sprite.flipX, true);
   assert.equal(player.sprite.scaleX, 1.2);
-  assert.equal(enemy.sprite.scaleX, 1.15);
 });
 
 test("static fallbacks and later-wave textures are presentation-compatible", () => {

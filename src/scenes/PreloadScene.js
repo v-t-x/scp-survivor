@@ -7,6 +7,7 @@ import {
 } from "../assets/manifest.js";
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 import { registerOpeningCharacterAnimations } from "../art/characterPresentation.js";
+import { registerEnemyAnimations } from "../art/enemyPresentation.js";
 
 // PreloadScene — the normal startup entry for asset loading.
 //
@@ -45,6 +46,7 @@ export class PreloadScene extends Phaser.Scene {
     // asset above. Existence-checked per key, so real art is never overwritten.
     generateFallbackTextures(this);
     registerOpeningCharacterAnimations(this);
+    registerEnemyAnimations(this);
 
     this.scene.start("PrototypeScene");
   }

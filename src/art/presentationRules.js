@@ -44,6 +44,44 @@ export function applyDisplayScalePreservingBody(gameObject, scale) {
   return gameObject;
 }
 
+export function applyTextureAndScalePreservingBody(gameObject, textureKey, scale = 1) {
+  const body = gameObject.body;
+  if (!body) {
+    gameObject.setTexture(textureKey, 0);
+    gameObject.setScale(scale);
+    return gameObject;
+  }
+
+  // Match the effective body geometry Phaser would establish at the next
+  // Arcade Body preUpdate after any immediately preceding setScale().
+  body.updateFromGameObject();
+
+  const snapshot = {
+    x: body.position.x,
+    y: body.position.y,
+    width: body.width,
+    height: body.height,
+    isCircle: body.isCircle,
+    radius: body.radius
+  };
+
+  gameObject.setTexture(textureKey, 0);
+  gameObject.setScale(scale);
+
+  const scaleX = Math.abs(gameObject.scaleX) || 1;
+  const scaleY = Math.abs(gameObject.scaleY) || 1;
+  body.sourceWidth = snapshot.width / scaleX;
+  body.sourceHeight = snapshot.height / scaleY;
+  body.offset.set(
+    gameObject.displayOriginX + (snapshot.x - gameObject.x) / gameObject.scaleX,
+    gameObject.displayOriginY + (snapshot.y - gameObject.y) / gameObject.scaleY
+  );
+  body.updateFromGameObject();
+  body.isCircle = snapshot.isCircle;
+  body.radius = snapshot.radius;
+  return gameObject;
+}
+
 export function resetFacilityPresentation(facilityVisuals = []) {
   for (const visual of facilityVisuals) {
     if (visual.active) {

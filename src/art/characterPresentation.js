@@ -1,15 +1,9 @@
 import { TEXTURES } from "../assets/manifest.js";
 
-export const OPENING_ANIMATED_ENEMY_TYPES = Object.freeze(["infectedStaff"]);
-
 export const CHARACTER_SHEETS = Object.freeze({
   player: Object.freeze({
     sheetKey: TEXTURES.playerOpeningSheet,
     fallbackKey: TEXTURES.player
-  }),
-  infectedStaff: Object.freeze({
-    sheetKey: TEXTURES.infectedOpeningSheet,
-    fallbackKey: TEXTURES.enemyInfected
   })
 });
 
@@ -138,7 +132,4 @@ function syncSprite(scene, sprite, kind) {
 
 export function syncCharacterPresentation(scene) {
   syncSprite(scene, scene.player, "player");
-  for (const enemy of scene.enemies?.getChildren?.() ?? []) {
-    syncSprite(scene, enemy, enemy.enemyType);
-  }
 }
