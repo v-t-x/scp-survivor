@@ -344,31 +344,8 @@ test("texture swap snapshots an initial zero-scale stale body before restoring u
   }
 });
 
-test("texture swap without a physics body still applies texture and scale", () => {
-  const calls = [];
-  const gameObject = {
-    setTexture(key, frame) {
-      calls.push(["texture", key, frame]);
-      return this;
-    },
-    setScale(scale) {
-      calls.push(["scale", scale]);
-      return this;
-    }
-  };
-
-  assert.equal(
-    applyTextureAndScalePreservingBody(gameObject, "production-sheet", 1),
-    gameObject
-  );
-  assert.deepEqual(calls, [
-    ["texture", "production-sheet", 0],
-    ["scale", 1]
-  ]);
-});
-
-test("texture swap without a body forwards zero and non-finite scales unchanged", () => {
-  for (const targetScale of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+test("texture swap without a physics body still applies valid texture and scale values", () => {
+  for (const targetScale of [1, -1.5]) {
     const calls = [];
     const gameObject = {
       setTexture(key, frame) {
@@ -389,6 +366,60 @@ test("texture swap without a body forwards zero and non-finite scales unchanged"
       ["texture", "production-sheet", 0],
       ["scale", targetScale]
     ]);
+  }
+});
+
+test("texture swap rejects invalid scales before reading a missing body or mutating display state", () => {
+  for (const targetScale of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const calls = [];
+    let bodyReads = 0;
+    const gameObject = {
+      texture: { key: "fallback-texture" },
+      frame: 7,
+      scaleX: 1.25,
+      scaleY: -1.25,
+      get body() {
+        bodyReads += 1;
+        return undefined;
+      },
+      setTexture(key, frame) {
+        calls.push(["texture", key, frame]);
+        this.texture.key = key;
+        this.frame = frame;
+        return this;
+      },
+      setScale(scale) {
+        calls.push(["scale", scale]);
+        this.scaleX = scale;
+        this.scaleY = scale;
+        return this;
+      }
+    };
+    const before = {
+      textureKey: gameObject.texture.key,
+      frame: gameObject.frame,
+      scaleX: gameObject.scaleX,
+      scaleY: gameObject.scaleY
+    };
+
+    assert.throws(
+      () => applyTextureAndScalePreservingBody(gameObject, "production-sheet", targetScale),
+      {
+        name: "RangeError",
+        message: /finite, non-zero target scale/
+      }
+    );
+    assert.equal(bodyReads, 0, "invalid scale must be rejected before reading body");
+    assert.deepEqual(calls, []);
+    assert.deepEqual(
+      {
+        textureKey: gameObject.texture.key,
+        frame: gameObject.frame,
+        scaleX: gameObject.scaleX,
+        scaleY: gameObject.scaleY
+      },
+      before
+    );
   }
 });
 

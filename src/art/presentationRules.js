@@ -45,17 +45,17 @@ export function applyDisplayScalePreservingBody(gameObject, scale) {
 }
 
 export function applyTextureAndScalePreservingBody(gameObject, textureKey, scale = 1) {
+  if (!Number.isFinite(scale) || scale === 0) {
+    throw new RangeError(
+      "applyTextureAndScalePreservingBody requires a finite, non-zero target scale"
+    );
+  }
+
   const body = gameObject.body;
   if (!body) {
     gameObject.setTexture(textureKey, 0);
     gameObject.setScale(scale);
     return gameObject;
-  }
-
-  if (!Number.isFinite(scale) || scale === 0) {
-    throw new RangeError(
-      "applyTextureAndScalePreservingBody requires a finite, non-zero target scale when a physics body is present"
-    );
   }
 
   // Match the effective body geometry Phaser would establish at the next
