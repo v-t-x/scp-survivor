@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const mainPath = new URL("../src/main.js", import.meta.url);
 const systemsPath = new URL("../src/scene/systems.js", import.meta.url);
+const worldPath = new URL("../src/scene/world.js", import.meta.url);
 
 async function loadLifecycleSystems() {
   const source = await readFile(systemsPath, "utf8");
@@ -195,13 +196,19 @@ test("a rig creation failure preserves the title-screen lifecycle fallback", asy
 
 test("rig lifecycle source creates after the player, updates after character sync, and tears down safely", async () => {
   const mainSource = await readFile(mainPath, "utf8");
+  const worldSource = await readFile(worldPath, "utf8");
   const createPlayerIndex = mainSource.indexOf("this.createPlayer()");
   const createWeaponRigViewIndex = mainSource.indexOf("this.weaponRigView = createWeaponRigView");
   const syncCharacterIndex = mainSource.indexOf("syncCharacterPresentation(this)");
   const weaponRigUpdateIndex = mainSource.indexOf("this.updateWeaponRigPresentation(delta)");
+  const rigDepth = Number(mainSource.match(/createWeaponRigView\(this, \{ depth: (\d+) \}\)/)?.[1]);
+  const playerDepth = Number(worldSource.match(/this\.player\.setDepth\((\d+)\)/)?.[1]);
 
   assert.ok(createPlayerIndex < createWeaponRigViewIndex);
   assert.ok(syncCharacterIndex < weaponRigUpdateIndex);
+  assert.ok(Number.isFinite(rigDepth));
+  assert.ok(Number.isFinite(playerDepth));
+  assert.ok(rigDepth < playerDepth, "the full shoulder rig must remain behind the player silhouette");
   assert.match(mainSource, /weaponRigView\?\.destroy\(\)/);
   assert.match(mainSource, /Shoulder fire-control presentation disabled/);
   assert.match(mainSource, /this\.weaponRigView\s*=\s*null/);

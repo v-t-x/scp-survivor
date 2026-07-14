@@ -145,7 +145,7 @@ class PrototypeScene extends Phaser.Scene {
     this.weaponRigAimAngle = 0;
     this.weaponRigLastTargetAtMs = Number.NEGATIVE_INFINITY;
     try {
-      this.weaponRigView = createWeaponRigView(this, { depth: 16 });
+      this.weaponRigView = createWeaponRigView(this, { depth: 5 });
     } catch (error) {
       console.warn("Shoulder fire-control presentation disabled", error);
       this.weaponRigView = null;

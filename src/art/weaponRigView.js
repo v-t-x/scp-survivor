@@ -6,9 +6,11 @@ import {
 } from "./weaponRigPresentation.js";
 
 export const WEAPON_RIG_LAYOUT = Object.freeze({
-  shoulderX: 7,
-  shoulderY: -13,
-  moduleScale: 0.5,
+  shoulderX: 11,
+  shoulderY: -10,
+  moduleScale: 0.28,
+  statusScale: 0.62,
+  backpackScale: 0.65,
   muzzleDistance: 18,
   tracerDistance: 7
 });
@@ -19,6 +21,7 @@ const MODULE_TEXTURES = Object.freeze({
   tesla: TEXTURES.weaponRigTesla
 });
 const MODULE_IDS = Object.freeze(["pistol", "shotgun", "tesla"]);
+const NEAREST_FILTER = 1;
 const BREACHER_RECOIL_DISTANCE = 5;
 const BREACHER_RECOIL_DURATION_MS = 140;
 const BREACHER_RELOAD_DROP_Y = 6;
@@ -119,7 +122,7 @@ function getAnchor(snapshot) {
   };
 }
 
-export function createWeaponRigView(scene, { depth = 16 } = {}) {
+export function createWeaponRigView(scene, { depth = 5 } = {}) {
   const objects = [];
   const modules = [];
   let base;
@@ -128,26 +131,31 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
   let tracer;
 
   try {
+    for (const textureKey of Object.values(MODULE_TEXTURES)) {
+      scene.textures?.get?.(textureKey)?.setFilter?.(NEAREST_FILTER);
+    }
     base = scene.add.graphics();
     objects.push(base);
     base.setDepth(depth);
     status = scene.add.graphics();
     objects.push(status);
-    status.setDepth(depth + 1);
+    status.setDepth(depth);
     for (const weaponId of MODULE_IDS) {
       const module = scene.add.image(0, 0, MODULE_TEXTURES[weaponId]);
       objects.push(module);
-      module.setDepth(depth + 2);
+      module.setDepth(depth);
       modules.push(module);
     }
     muzzle = scene.add.graphics();
     objects.push(muzzle);
-    muzzle.setDepth(depth + 3);
+    muzzle.setDepth(depth + 4);
     tracer = scene.add.graphics();
     objects.push(tracer);
-    tracer.setDepth(depth + 3);
+    tracer.setDepth(depth + 4);
 
     drawBackpack(base);
+    base.setScale?.(WEAPON_RIG_LAYOUT.backpackScale);
+    status.setScale?.(WEAPON_RIG_LAYOUT.statusScale);
     for (const module of modules) {
       module.setOrigin?.(0.5, 0.5);
       module.setScale?.(WEAPON_RIG_LAYOUT.moduleScale);

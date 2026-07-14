@@ -42,7 +42,16 @@ function displayObject(type, args = []) {
 }
 
 function makeScene() {
-  const scene = { created: [], tweens: { created: [] } };
+  const scene = { created: [], textureFilters: [], tweens: { created: [] } };
+  scene.textures = {
+    get(key) {
+      return {
+        setFilter(value) {
+          scene.textureFilters.push([key, value]);
+        }
+      };
+    }
+  };
   scene.add = {
     graphics() {
       const object = displayObject("graphics");
@@ -117,9 +126,11 @@ test("weapon rig exposes its isolated controller contract and starts hidden", ()
 
 test("weapon rig locks the final low-ready layout without touching player physics", () => {
   assert.deepEqual(WEAPON_RIG_LAYOUT, {
-    shoulderX: 7,
-    shoulderY: -13,
-    moduleScale: 0.5,
+    shoulderX: 11,
+    shoulderY: -10,
+    moduleScale: 0.28,
+    statusScale: 0.62,
+    backpackScale: 0.65,
     muzzleDistance: 18,
     tracerDistance: 7
   });
@@ -146,6 +157,36 @@ test("weapon rig locks the final low-ready layout without touching player physic
     assert.equal(modules[index].y, 200 + WEAPON_RIG_LAYOUT.shoulderY);
   }
   assert.deepEqual(player, before);
+});
+
+test("weapon rig keeps the operator readable with a compact shoulder-side silhouette", () => {
+  const scene = makeScene();
+  const rig = createWeaponRigView(scene, { depth: 5 });
+  const [base, status, ...rest] = rig.objects;
+  const modules = rest.slice(0, 3);
+  const [muzzle, tracer] = rest.slice(3);
+
+  assert.ok(96 * WEAPON_RIG_LAYOUT.moduleScale < 48 * 1.2 / 2);
+  assert.ok(28 * WEAPON_RIG_LAYOUT.backpackScale < 20);
+  assert.ok(24 * WEAPON_RIG_LAYOUT.statusScale < 16);
+  assert.equal(base.scale, WEAPON_RIG_LAYOUT.backpackScale);
+  assert.equal(status.scale, WEAPON_RIG_LAYOUT.statusScale);
+  assert.equal(base.depth, 5, "backpack base stays behind the player at depth 6");
+  assert.equal(status.depth, 5, "status pivot stays behind the player silhouette");
+  assert.ok(modules.every((module) => module.depth === 5), "weapon art stays behind the player silhouette");
+  assert.deepEqual([muzzle.depth, tracer.depth], [9, 9]);
+});
+
+test("weapon rig pins every module spritesheet to nearest-neighbor filtering", () => {
+  const scene = makeScene();
+
+  createWeaponRigView(scene);
+
+  assert.deepEqual(scene.textureFilters, [
+    [TEXTURES.weaponRigPistol, 1],
+    [TEXTURES.weaponRigBreacher, 1],
+    [TEXTURES.weaponRigTesla, 1]
+  ]);
 });
 
 test("construction failures destroy every object created before add.graphics or add.image throws", () => {
@@ -176,8 +217,8 @@ test("update selects one direction sheet without runtime pixel-art rotation", ()
   assert.equal(breacher.visible, false);
   assert.equal(tesla.visible, false);
   assert.equal(pistol.frame, 2);
-  assert.equal(pistol.x, 107);
-  assert.equal(pistol.y, 187);
+  assert.equal(pistol.x, 111);
+  assert.equal(pistol.y, 190);
   assert.equal(pistol.calls.filter(([name]) => name === "setRotation").length, 0);
   assert.equal(pistol.alpha, 1);
 });
@@ -242,7 +283,7 @@ test("shotgun reload lowers the module into a distinct travel pose without alloc
     currentShells: 1,
     magazineSize: 4
   }, 16);
-  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [107, 187, 0]);
+  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [111, 190, 0]);
 
   rig.update({
     anchorX: 100,
@@ -256,7 +297,7 @@ test("shotgun reload lowers the module into a distinct travel pose without alloc
     magazineSize: 4
   }, 16);
 
-  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [107, 193, 3]);
+  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [111, 196, 3]);
   assert.equal(scene.created.length, objectCount);
 });
 
@@ -279,7 +320,7 @@ test("shotgun fire drives a reusable module recoil that pauses, replaces and res
   rig.fire(snapshot);
   rig.update(snapshot, 16);
 
-  assert.deepEqual([breacher.x, breacher.y], [102, 187]);
+  assert.deepEqual([breacher.x, breacher.y], [106, 190]);
   assert.equal(scene.created.length, objectCount);
   assert.equal(scene.tweens.created.length, 2);
   const [firstEffect, firstRecoil] = scene.tweens.created;
@@ -296,7 +337,7 @@ test("shotgun fire drives a reusable module recoil that pauses, replaces and res
   const secondRecoil = scene.tweens.created[3];
   secondRecoil.config.onComplete(secondRecoil);
   rig.update(snapshot, 16);
-  assert.deepEqual([breacher.x, breacher.y], [107, 187]);
+  assert.deepEqual([breacher.x, breacher.y], [111, 190]);
 });
 
 test("outage dims status indicators without dimming the physical module", () => {
@@ -324,7 +365,7 @@ test("fire tracer bridges from the shoulder muzzle back toward the center-origin
 
   const tracer = scene.created.at(-1);
   const line = tracer.commands.find(([name]) => name === "lineBetween");
-  assert.deepEqual(line, ["lineBetween", 125, 187, 118, 187]);
+  assert.deepEqual(line, ["lineBetween", 129, 190, 122, 190]);
   assert.ok(line[1] > line[3], "tracer endpoint must move back toward the player center");
 });
 
