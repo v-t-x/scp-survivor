@@ -18,7 +18,6 @@ const approvedImageAssets = [
   { key: "facility-observation-window", path: "assets/art/facility/observation-window.png", size: [96, 64] },
   { key: "facility-pipe-bank", path: "assets/art/facility/pipe-bank.png", size: [96, 64] },
   { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
-  { key: "enemy-infected", path: "assets/art/characters/infected-staff.png", size: [48, 48] },
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
   { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [96, 96] },
   { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [96, 96] },
@@ -37,13 +36,41 @@ const approvedCharacterSheets = [
     key: "player-opening-sheet",
     path: "assets/art/characters/player-opening-sheet.png",
     size: [576, 192]
-  },
-  {
-    key: "infected-opening-sheet",
-    path: "assets/art/characters/infected-opening-sheet.png",
-    size: [576, 192]
   }
 ];
+
+const approvedEnemySheets = [
+  { key: "r17-drifter", path: "assets/art/enemies/r17-drifter.png", size: [192, 48], frame: [48, 48], visibleExtent: 36 },
+  { key: "r17-rift-skimmer", path: "assets/art/enemies/r17-rift-skimmer.png", size: [192, 48], frame: [48, 48], visibleExtent: 28 },
+  { key: "r17-pulse-sac", path: "assets/art/enemies/r17-pulse-sac.png", size: [192, 48], frame: [48, 48], visibleExtent: 34 },
+  { key: "r17-carapace-gate", path: "assets/art/enemies/r17-carapace-gate.png", size: [256, 64], frame: [64, 64], visibleExtent: 52 },
+  { key: "r17-frame-gap", path: "assets/art/enemies/r17-frame-gap.png", size: [256, 64], frame: [64, 64], visibleExtent: 44 },
+  { key: "r17-brood-mass", path: "assets/art/enemies/r17-brood-mass.png", size: [256, 64], frame: [64, 64], visibleExtent: 56 },
+  { key: "r17-bud", path: "assets/art/enemies/r17-bud.png", size: [128, 32], frame: [32, 32], visibleExtent: 22 }
+];
+
+const approvedSpritesheets = [
+  ...approvedCharacterSheets.map(({ key, path }) => ({
+    key,
+    path,
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  })),
+  ...approvedEnemySheets.map(({ key, path, frame: [frameWidth, frameHeight] }) => ({
+    key,
+    path,
+    frameConfig: { frameWidth, frameHeight }
+  }))
+];
+
+const r17TextureKeys = {
+  r17Drifter: "r17-drifter",
+  r17RiftSkimmer: "r17-rift-skimmer",
+  r17PulseSac: "r17-pulse-sac",
+  r17CarapaceGate: "r17-carapace-gate",
+  r17FrameGap: "r17-frame-gap",
+  r17BroodMass: "r17-brood-mass",
+  r17Bud: "r17-bud"
+};
 
 function readPngSize(buffer) {
   assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
@@ -114,7 +141,7 @@ function decodeRgbaPng(buffer) {
 }
 
 function assertApprovedStaticImageAssets(assets) {
-  assert.equal(assets.length, 18);
+  assert.equal(assets.length, approvedImageAssets.length);
   assert.equal(
     new Set(assets.map(({ key }) => key)).size,
     assets.length,
@@ -138,6 +165,110 @@ function getFramePixels(pixels, sheetWidth, frameIndex) {
     pixels.copy(result, targetStart, sourceStart, sourceStart + frameWidth * 4);
   }
   return result;
+}
+
+function getEnemyFramePixels(pixels, sheetWidth, frameWidth, frameHeight, frameIndex) {
+  const result = Buffer.alloc(frameWidth * frameHeight * 4);
+  for (let y = 0; y < frameHeight; y += 1) {
+    const sourceStart = ((y * sheetWidth) + (frameIndex * frameWidth)) * 4;
+    pixels.copy(result, y * frameWidth * 4, sourceStart, sourceStart + frameWidth * 4);
+  }
+  return result;
+}
+
+function getEnemyFrameMetrics(framePixels, frameWidth, frameHeight) {
+  let minX = frameWidth;
+  let minY = frameHeight;
+  let maxX = -1;
+  let maxY = -1;
+  let visiblePixels = 0;
+  const colors = new Set();
+  const alphaValues = new Set();
+  for (let index = 0; index < frameWidth * frameHeight; index += 1) {
+    const offset = index * 4;
+    const alpha = framePixels[offset + 3];
+    alphaValues.add(alpha);
+    if (alpha === 0) continue;
+    const x = index % frameWidth;
+    const y = Math.floor(index / frameWidth);
+    visiblePixels += 1;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+    colors.add(`${framePixels[offset]},${framePixels[offset + 1]},${framePixels[offset + 2]}`);
+  }
+  assert.ok(maxX >= minX && maxY >= minY, "R-17 frame cannot be empty");
+  return {
+    visiblePixels,
+    colors,
+    alphaValues,
+    bbox: { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 },
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+    bottomY: maxY,
+    height: maxY - minY + 1
+  };
+}
+
+function getOpaqueComponentSizes(framePixels, frameWidth, frameHeight) {
+  const visited = new Uint8Array(frameWidth * frameHeight);
+  const sizes = [];
+  for (let start = 0; start < visited.length; start += 1) {
+    if (visited[start] || framePixels[start * 4 + 3] !== 255) continue;
+    let size = 0;
+    const pending = [start];
+    visited[start] = 1;
+    while (pending.length > 0) {
+      const index = pending.pop();
+      size += 1;
+      const x = index % frameWidth;
+      const y = Math.floor(index / frameWidth);
+      for (const [nextX, nextY] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight) continue;
+        const next = nextY * frameWidth + nextX;
+        if (visited[next] || framePixels[next * 4 + 3] !== 255) continue;
+        visited[next] = 1;
+        pending.push(next);
+      }
+    }
+    sizes.push(size);
+  }
+  return sizes;
+}
+
+function normalizeEnemyFrame(framePixels, frameWidth, frameHeight, bbox) {
+  const normalized = Buffer.alloc(frameWidth * frameHeight * 4);
+  const targetX = Math.round((frameWidth - bbox.width) / 2);
+  const targetY = frameHeight - bbox.height - 1;
+  for (let y = bbox.minY; y <= bbox.maxY; y += 1) {
+    for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
+      const sourceOffset = (y * frameWidth + x) * 4;
+      const targetOffset = ((targetY + y - bbox.minY) * frameWidth + targetX + x - bbox.minX) * 4;
+      framePixels.copy(normalized, targetOffset, sourceOffset, sourceOffset + 4);
+    }
+  }
+  return normalized;
+}
+
+function getEnemyPairDifference(firstFrame, secondFrame) {
+  let changedPixels = 0;
+  let alphaShapePixels = 0;
+  let visibleUnionPixels = 0;
+  for (let offset = 0; offset < firstFrame.length; offset += 4) {
+    const firstVisible = firstFrame[offset + 3] === 255;
+    const secondVisible = secondFrame[offset + 3] === 255;
+    if (!firstVisible && !secondVisible) continue;
+    visibleUnionPixels += 1;
+    if (firstVisible !== secondVisible) alphaShapePixels += 1;
+    if (!firstFrame.subarray(offset, offset + 4).equals(secondFrame.subarray(offset, offset + 4))) {
+      changedPixels += 1;
+    }
+  }
+  return {
+    changedPixelRatio: changedPixels / visibleUnionPixels,
+    alphaShapeDifferenceRatio: alphaShapePixels / visibleUnionPixels
+  };
 }
 
 function getVisibleFootY(framePixels) {
@@ -289,14 +420,13 @@ test("production manifest declares the approved static vertical slice", () => {
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
-test("production manifest declares exact opening character spritesheets", () => {
+test("production manifest declares the exact R-17 production spritesheet contract", () => {
   assert.equal(TEXTURES.playerOpeningSheet, "player-opening-sheet");
   assert.equal(TEXTURES.infectedOpeningSheet, "infected-opening-sheet");
-  assert.deepEqual(SPRITESHEET_ASSETS, approvedCharacterSheets.map(({ key, path }) => ({
-    key,
-    path,
-    frameConfig: { frameWidth: 48, frameHeight: 48 }
-  })));
+  for (const [property, key] of Object.entries(r17TextureKeys)) {
+    assert.equal(TEXTURES[property], key);
+  }
+  assert.deepEqual(SPRITESHEET_ASSETS, approvedSpritesheets);
 });
 
 test("production manifest contract rejects duplicate texture keys", () => {
@@ -344,6 +474,63 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
 
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
+    }
+  }
+});
+
+test("R-17 production sheets pass the four-frame animation gate", async () => {
+  for (const { key, path, size, frame: [frameWidth, frameHeight], visibleExtent } of approvedEnemySheets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    await access(absolute);
+    const buffer = await readFile(absolute);
+    assert.deepEqual(readPngSize(buffer), size, key);
+    const { width, height, pixels } = decodeRgbaPng(buffer);
+    assert.equal(width / frameWidth, 4, `${key} must contain exactly four horizontal frames`);
+    assert.equal(height, frameHeight, `${key} must contain exactly one frame row`);
+
+    const frames = [];
+    const metrics = [];
+    for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
+      const frame = getEnemyFramePixels(pixels, width, frameWidth, frameHeight, frameIndex);
+      const current = getEnemyFrameMetrics(frame, frameWidth, frameHeight);
+      assert.ok(current.alphaValues.size <= 2 && [...current.alphaValues].every((alpha) => alpha === 0 || alpha === 255), `${key} frame ${frameIndex} has soft alpha`);
+      assert.ok(current.colors.size <= 32, `${key} frame ${frameIndex} exceeds the 32-color production palette`);
+      assert.ok(current.bbox.minX > 0 && current.bbox.minY > 0 && current.bbox.maxX < frameWidth - 1 && current.bbox.maxY < frameHeight - 1, `${key} frame ${frameIndex} touches the canvas edge`);
+      assert.ok(getOpaqueComponentSizes(frame, frameWidth, frameHeight).every((componentSize) => componentSize >= 2), `${key} frame ${frameIndex} has a single-pixel component`);
+      frames.push(frame);
+      metrics.push(current);
+    }
+
+    const normalizedFrames = frames.map((frame, index) =>
+      normalizeEnemyFrame(frame, frameWidth, frameHeight, metrics[index].bbox)
+    );
+    assert.equal(new Set(normalizedFrames.map((frame) => createHash("sha256").update(frame).digest("hex"))).size, 4, `${key} must have four translation-normalized unique frames`);
+
+    const centersX = metrics.map(({ centerX }) => centerX);
+    const centersY = metrics.map(({ centerY }) => centerY);
+    const bottoms = metrics.map(({ bottomY }) => bottomY);
+    const heights = metrics.map(({ height }) => height);
+    const areas = metrics.map(({ visiblePixels }) => visiblePixels);
+    assert.ok(Math.max(...centersX) - Math.min(...centersX) <= 2, `${key} drifts horizontally`);
+    assert.ok(Math.max(...centersY) - Math.min(...centersY) <= 2, `${key} drifts vertically`);
+    assert.ok(Math.max(...bottoms) - Math.min(...bottoms) <= 2, `${key} changes hover baseline`);
+    assert.ok(Math.max(...heights) - Math.min(...heights) <= (frameHeight === 32 ? 3 : 4), `${key} changes visible height too much`);
+    assert.ok(Math.max(...areas) / Math.min(...areas) <= 1.2, `${key} breathes by scaling`);
+    assert.ok(metrics.every(({ bbox }) => Math.abs(Math.max(bbox.width, bbox.height) - visibleExtent) <= 1), `${key} visible extent is not normalized in the PNG`);
+
+    for (let firstIndex = 0; firstIndex < 4; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < 4; secondIndex += 1) {
+        const { changedPixelRatio, alphaShapeDifferenceRatio } = getEnemyPairDifference(
+          normalizedFrames[firstIndex],
+          normalizedFrames[secondIndex]
+        );
+        assert.ok(changedPixelRatio >= 0.03, `${key} frames ${firstIndex}<->${secondIndex} lack visible motion`);
+        assert.ok(alphaShapeDifferenceRatio >= 0.015, `${key} frames ${firstIndex}<->${secondIndex} lack alpha silhouette motion`);
+      }
+    }
+    for (const [firstIndex, secondIndex] of [[0, 1], [1, 2], [2, 3], [3, 0]]) {
+      const { changedPixelRatio } = getEnemyPairDifference(normalizedFrames[firstIndex], normalizedFrames[secondIndex]);
+      assert.ok(changedPixelRatio <= 0.65, `${key} frames ${firstIndex}->${secondIndex} break loop continuity`);
     }
   }
 });

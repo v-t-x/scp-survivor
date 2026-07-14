@@ -15,6 +15,13 @@ export const TEXTURES = {
   playerOpeningSheet: "player-opening-sheet",
   enemyInfected: "enemy-infected",
   infectedOpeningSheet: "infected-opening-sheet",
+  r17Drifter: "r17-drifter",
+  r17RiftSkimmer: "r17-rift-skimmer",
+  r17PulseSac: "r17-pulse-sac",
+  r17CarapaceGate: "r17-carapace-gate",
+  r17FrameGap: "r17-frame-gap",
+  r17BroodMass: "r17-brood-mass",
+  r17Bud: "r17-bud",
   enemyCrawler: "enemy-crawler",
   enemyDrone: "enemy-drone",
   eliteRiot: "elite-riot",
@@ -59,7 +66,6 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.facilityObservationWindow, path: "assets/art/facility/observation-window.png" },
   { key: TEXTURES.facilityPipeBank, path: "assets/art/facility/pipe-bank.png" },
   { key: TEXTURES.player, path: "assets/art/characters/player.png" },
-  { key: TEXTURES.enemyInfected, path: "assets/art/characters/infected-staff.png" },
   { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" },
   { key: TEXTURES.armoryRackBackdrop, path: "assets/art/menus/armory-rack-backdrop.png" },
   { key: TEXTURES.weaponPistolIcon, path: "assets/art/weapons/pistol.png" },
@@ -76,9 +82,39 @@ export const SPRITESHEET_ASSETS = [
     frameConfig: { frameWidth: 48, frameHeight: 48 }
   },
   {
-    key: TEXTURES.infectedOpeningSheet,
-    path: "assets/art/characters/infected-opening-sheet.png",
+    key: TEXTURES.r17Drifter,
+    path: "assets/art/enemies/r17-drifter.png",
     frameConfig: { frameWidth: 48, frameHeight: 48 }
+  },
+  {
+    key: TEXTURES.r17RiftSkimmer,
+    path: "assets/art/enemies/r17-rift-skimmer.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  },
+  {
+    key: TEXTURES.r17PulseSac,
+    path: "assets/art/enemies/r17-pulse-sac.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  },
+  {
+    key: TEXTURES.r17CarapaceGate,
+    path: "assets/art/enemies/r17-carapace-gate.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.r17FrameGap,
+    path: "assets/art/enemies/r17-frame-gap.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.r17BroodMass,
+    path: "assets/art/enemies/r17-brood-mass.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.r17Bud,
+    path: "assets/art/enemies/r17-bud.png",
+    frameConfig: { frameWidth: 32, frameHeight: 32 }
   }
 ];
 export const ATLAS_ASSETS = [];

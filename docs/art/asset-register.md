@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批正式素材的真实生产信息。20 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入。登记共计 27 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -13,6 +13,14 @@
 | player | PNG | `assets/art/characters/player.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P7](#p7-player)；无图像输入 | 首版因正视长比例被拒；第二版去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=46；共享色板量化；用色板内钢灰/棕色像素重绘 3×7 滑套、枪口和短握把 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 | 48×48 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | infected-staff | PNG | `assets/art/characters/infected-staff.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P8](#p8-infected-staff)；无图像输入 | 去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=46；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 | 48×48 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | scp-049 | PNG | `assets/art/characters/scp-049.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P9](#p9-scp-049)；无图像输入 | 前两版因正面立绘/错误冠饰被拒；第三版重生成高俯视素布兜帽；去色键、裁切、nearest 缩放、alpha 二值化；最后不透明行 y=78；共享色板量化 | SCP-049 衍生视觉；合并/发布须满足项目文档所述 CC BY-SA 3.0 署名与相同方式共享要求并再次复核；未使用第三方图像输入 | 条件候选；商业发布与分发方式须先完成许可复核 | 静态门禁候选 | 64×80 | 必须署名 [SCP-049](https://scp-wiki.wikidot.com/scp-049) 条目作者 Gabriel Jade 与 2018 重写合作者 djkaktus，并附 CC BY-SA 3.0；衍生发布须遵守相同方式共享。未使用条目原图。 |
+
+| r17-drifter | spritesheet PNG | `assets/art/enemies/r17-drifter.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P32](#p32-r17-drifter)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-0ea14189-2748-4028-b8f5-50a152ba373b.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-drifter.png` | exact chroma key；four equal cells；per-cell union alpha bbox；one shared nearest scale；common center/bottom baseline；binary alpha；no-dither <=32-color quantization；RGBA output 192x48 | Project-commissioned generation; approved lineup was the only image input; no third-party images; commercial release must recheck OpenAI output rights | candidate pending commercial review | R-17 animation gate admitted | 192x48, 4x48x48 | no third-party attribution currently; recheck OpenAI terms before commercial release. Rejected predecessor: `.superpowers/sdd/r17-assets/sources/r17-drifter-rejected-short-frame2.png` (initial original `C:\Users\24037\.codex\generated_images\019f5e8c-8742-77f0-80d3-e643979ff61d\exec-d86dea1b-1760-4a31-8b12-7a15bb75003b.png`), rejected for short frame 2. |
+| r17-rift-skimmer | spritesheet PNG | `assets/art/enemies/r17-rift-skimmer.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P33](#p33-r17-rift-skimmer)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-d25b5a45-2e24-4985-ad8e-ce38fdceeda1.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-rift-skimmer.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 192x48 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 192x48, 4x48x48 | Rejected retries retained, never production: `r17-rift-skimmer-rejected.png` (wrong pear-shaped result; original `C:\Users\24037\.codex\generated_images\019f5e8c-8742-77f0-80d3-e643979ff61d\exec-01bfb948-f6a5-4ea6-83fc-72f392975a3b.png`), `r17-rift-skimmer-rejected-thin-tips.png` (`...\exec-b6377d76-f6f1-41a2-ac4c-bc8b4679467b.png`, thin tips), `r17-rift-skimmer-rejected-area-variance.png` (`...\exec-bf130ba7-01fb-4ee1-9304-a546417ca565.png`, area ratio >1.20). |
+| r17-pulse-sac | spritesheet PNG | `assets/art/enemies/r17-pulse-sac.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P34](#p34-r17-pulse-sac)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-b1fdafc0-8ebe-41e7-81a8-c3c593a24166.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-pulse-sac.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 192x48 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 192x48, 4x48x48 | Rejected retries retained, never production: `r17-pulse-sac-rejected-low-silhouette-motion.png` (`...\exec-b4e52eb5-f241-4c77-89fa-d06e25c540d4.png`, alpha pair 1<->2 <0.015) and `r17-pulse-sac-rejected-unequal-envelope.png` (`...\exec-a956e1c8-2a58-423d-8eef-63c8b14cb15b.png`, extents 32/34/31/31). |
+| r17-carapace-gate | spritesheet PNG | `assets/art/enemies/r17-carapace-gate.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P35](#p35-r17-carapace-gate)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-e965b64f-51a5-4fef-b0e9-e1b45b63802b.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-carapace-gate.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 256x64 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 256x64, 4x64x64 | no third-party attribution currently; recheck OpenAI terms before commercial release. |
+| r17-frame-gap | spritesheet PNG | `assets/art/enemies/r17-frame-gap.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P36](#p36-r17-frame-gap)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-87988fa6-decd-47d3-9768-92e766ca9d48.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-frame-gap.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 256x64 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 256x64, 4x64x64 | no third-party attribution currently; recheck OpenAI terms before commercial release. |
+| r17-brood-mass | spritesheet PNG | `assets/art/enemies/r17-brood-mass.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P37](#p37-r17-brood-mass)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-75cca67a-fe50-4ef3-917f-f3bb0fc00069.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-brood-mass.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 256x64 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 256x64, 4x64x64 | no third-party attribution currently; recheck OpenAI terms before commercial release. |
+| r17-bud | spritesheet PNG | `assets/art/enemies/r17-bud.png` | OpenAI built-in `image_gen` + bundled chroma helper + Sharp | 2026-07-14 | [P31](#p31-r-17-common-production-prompt)+[P38](#p38-r17-bud)；accepted original `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3ad2300\exec-2ff87af1-292f-49bd-8f4c-46a4fb39df19.png`；audit source `.superpowers/sdd/r17-assets/sources/r17-bud.png` | same deterministic chroma/cell/shared-nearest/baseline/binary-alpha/<=32-color RGBA pipeline; final 128x32 | Project-commissioned generation; approved lineup only; no third-party images; recheck before commercial release | candidate pending commercial review | R-17 animation gate admitted | 128x32, 4x32x32 | Rejected retries retained, never production: `r17-bud-rejected-short-frame4.png` (`...\exec-359238e9-ac2c-4c4b-8b1f-ac934ec2f0d9.png`, short frame 4) and `r17-bud-rejected-area-variance.png` (`...\exec-671f4a03-3de3-42e8-9dc4-ff79db24a068.png`, area ratio >1.20). |
 
 ## 原始提示
 
@@ -509,3 +517,77 @@ Subject: one compact industrial electrical launcher with twin exposed copper ind
 - 其余 15 项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
 - AI 输出不是自动准入；只有本轮 production visual gate、来源审计和独立复审全部通过后，候选才能改为正式准入。
+
+## R-17 实际生成提示与准入记录
+
+这些素材为原创 R-17 异常殖民，不登记为现有 SCP 编号。项目整体的 SCP 衍生发布仍须在发布前按 `docs/licensing-and-commercialization.md` 复核 CC BY-SA 义务。基准 lineup 的原始输出是 `C:\Users\24037\.codex\generated_images\019f5e8c-8742-77f0-80d3-e643979ff61d\exec-e5f13954-551f-478d-a322-e667d2e3d7c1.png`，本地审计副本为 `.superpowers/sdd/r17-assets/reference/r17-lineup.png`。七张可接受 source board 全部按 SHA-256 与上表的 original 逐一匹配；`.superpowers/sdd/r17-assets/**` 仅为本地审计且不提交。
+
+### P30 R-17 lineup reference
+
+```text
+Use case: stylized-concept
+Asset type: visual lineup reference for seven production top-down 2D pixel-art enemy sprites in an industrial containment-horror game
+Primary request: exactly seven distinct legless non-humanoid castes of one original anomalous colony, arranged in one clean horizontal lineup with wide separation: pear-shaped floating drifter, flat needle-shaped rift skimmer, ring-bound pulse sac, broad crescent-armored carapace gate, discontinuous frame-gap organism, large multi-lobed brood mass, tiny tadpole-like bud
+Shared identity: dark graphite and restrained dried-red tissue, dirty off-white membranes, one cyan-white core organ per caste, fragments of Foundation-like containment clamps, electrodes, cables or stabilization rings; biological horror dominates, machinery and spatial anomalies are accents
+Readability: every silhouette must remain unmistakably different in grayscale and at game-sprite scale; no design may resemble a standing human, zombie, robot soldier, animal with legs or famous existing SCP
+Style/medium: authentic detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, limited 32-color family palette, crisp opaque edges, no antialiasing
+Camera/composition: high orthographic overhead game view, one complete isolated creature per slot, consistent lighting and material language, no overlap
+Backdrop: perfectly flat uniform solid #00ff00 chroma key
+Constraints: no text, labels, numbers, logos, watermark, floor, scenery, shadows, gradients, gore spray, exposed realistic organs, extra creatures or UI
+Avoid: 3D render, isometric, side view, front portrait, smooth painting, photorealism, chibi, generic zombie, generic alien, tentacle blob silhouettes that all look alike
+```
+
+### P31 R-17 common production prompt
+
+```text
+Asset type: four-frame source board for one production direction-neutral top-down 2D pixel-art enemy spritesheet
+Input image: use the approved R-17 lineup only for family palette, materials, camera and this caste's identity
+Composition: exactly four complete isolated frames of the SAME creature in one horizontal row, equal cells, identical scale, center point and hover baseline, generous separation, no borders
+Animation: a subtle seamless loop made by real local articulation of membranes, tendrils, core light and attached hardware; never animate by scaling, translating, rotating or mirroring the whole body
+Style: hard-edged orthographic top-down detailed pixel art, deliberate coarse clusters, maximum 32 colors, no antialiasing
+Backdrop: perfectly flat uniform #00ff00 chroma key
+Constraints: direction-neutral silhouette; no legs, no humanoid anatomy, no shadows, floor, text, labels, logos, watermark, soft alpha, extra creatures or scenery
+Avoid: 3D, isometric, side view, smooth illustration, frame-to-frame identity drift, changing camera, changing body size, duplicated frames
+```
+
+### P32 r17-drifter
+
+```text
+pear-shaped floating flesh sac, three short lower tendrils, one restrained cyan-white core; four phases of asymmetric breathing and tendril curl; target visible silhouette about 36 logical pixels
+```
+
+### P33 r17-rift-skimmer
+
+```text
+flat sharp spindle-shaped flesh body, split jaw seam, trailing neural filaments; four rapid fin-and-tail contractions without changing total length; target about 28 logical pixels
+```
+
+### P34 r17-pulse-sac
+
+```text
+round membrane sac surrounding an absorbed security camera, incomplete metal stabilization ring and electrodes; four core charge phases with minor ring vibration; target about 34 logical pixels
+```
+
+### P35 r17-carapace-gate
+
+```text
+broad crescent frontal carapace shielding a rear cyan-white core, thick trailing fibers and embedded containment clamps; four heavy shell-tension phases, front remains clearly readable; target about 52 logical pixels
+```
+
+### P36 r17-frame-gap
+
+```text
+discontinuous slabs of dark tissue around a luminous spinal line and clean spatial voids; four offset phases where fragments reconfigure locally but center and total envelope remain stable; target about 44 logical pixels
+```
+
+### P37 r17-brood-mass
+
+```text
+large multi-lobed colony around several breathing sacs, containment stakes and one dominant cyan-white core; four asynchronous lobe contractions with stable outer envelope; target about 56 logical pixels
+```
+
+### P38 r17-bud
+
+```text
+tiny embryo-like bud with one long tail filament, one tiny cyan-white core and a metal tag fragment; four fast tail-wave phases; target about 22 logical pixels
+```
