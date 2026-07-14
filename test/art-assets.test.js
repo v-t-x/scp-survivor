@@ -168,6 +168,16 @@ function getVisibleFootY(framePixels) {
   return footY;
 }
 
+function countOpaquePixels(framePixels, minX, minY, maxX, maxY) {
+  let count = 0;
+  for (let y = minY; y <= maxY; y += 1) {
+    for (let x = minX; x <= maxX; x += 1) {
+      if (framePixels[(y * 48 + x) * 4 + 3] === 255) count += 1;
+    }
+  }
+  return count;
+}
+
 function getAlphaBounds(framePixels) {
   let minX = 48;
   let minY = 48;
@@ -426,6 +436,47 @@ test("opening character sheets are exact RGBA 48-frame production assets", async
         assertMeaningfullyDifferentFramePairs(frames, `${key} ${motion} row ${row}`);
       }
     }
+  }
+});
+
+test("player opening sheet keeps the low-ready operator silhouette contract", async () => {
+  const absolute = fileURLToPath(
+    new URL("../public/assets/art/characters/player-opening-sheet.png", import.meta.url)
+  );
+  const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
+  assert.equal(width, 576);
+  assert.equal(height, 192);
+  assert.equal(width / 48, 12, "player sheet must keep twelve 48px columns");
+  assert.equal(height / 48, 4, "player sheet must keep four 48px rows");
+
+  const colors = new Set();
+  const alphaValues = new Set();
+  for (let offset = 0; offset < pixels.length; offset += 4) {
+    const alpha = pixels[offset + 3];
+    alphaValues.add(alpha);
+    if (alpha === 255) colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+  }
+  assert.ok(colors.size <= 32, "player sheet exceeds the 32-color production palette");
+  assert.deepEqual(alphaValues, new Set([0, 255]), "player sheet must use hard alpha");
+
+  for (let frameIndex = 0; frameIndex < 48; frameIndex += 1) {
+    assert.equal(
+      getVisibleFootY(getFramePixels(pixels, width, frameIndex)),
+      44,
+      `player frame ${frameIndex} must keep its foot baseline at local y=44`
+    );
+  }
+
+  for (let column = 0; column <= 9; column += 1) {
+    const frame = getFramePixels(pixels, width, 12 + column);
+    assert.ok(
+      countOpaquePixels(frame, 36, 0, 47, 47) <= 8,
+      `right-facing move frame ${column} retains a forward-firing silhouette`
+    );
+    assert.ok(
+      countOpaquePixels(frame, 15, 8, 32, 39) >= 220,
+      `right-facing move frame ${column} shrank below its operator torso/backpack volume`
+    );
   }
 });
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { TEXTURES } from "../src/assets/manifest.js";
-import { createWeaponRigView } from "../src/art/weaponRigView.js";
+import { createWeaponRigView, WEAPON_RIG_LAYOUT } from "../src/art/weaponRigView.js";
 
 function displayObject(type, args = []) {
   return {
@@ -113,6 +113,39 @@ test("weapon rig exposes its isolated controller contract and starts hidden", ()
     TEXTURES.weaponRigBreacher,
     TEXTURES.weaponRigTesla
   ]);
+});
+
+test("weapon rig locks the final low-ready layout without touching player physics", () => {
+  assert.deepEqual(WEAPON_RIG_LAYOUT, {
+    shoulderX: 7,
+    shoulderY: -13,
+    moduleScale: 0.5,
+    muzzleDistance: 18,
+    tracerDistance: 7
+  });
+  assert.equal(Object.isFrozen(WEAPON_RIG_LAYOUT), true);
+
+  const scene = makeScene();
+  const rig = createWeaponRigView(scene);
+  const modules = moduleImages(scene);
+  assert.ok(modules.every((module) => module.scale === WEAPON_RIG_LAYOUT.moduleScale));
+
+  const playerBody = Object.freeze({ width: 24, height: 24, x: 0, y: 0 });
+  const player = Object.freeze({ body: playerBody });
+  const before = structuredClone(player);
+  for (const [index, weaponId] of ["pistol", "shotgun", "tesla"].entries()) {
+    rig.update({
+      anchorX: 100,
+      anchorY: 200,
+      player,
+      weaponId,
+      aimAngle: 0,
+      hasTarget: true
+    }, 16);
+    assert.equal(modules[index].x, 100 + WEAPON_RIG_LAYOUT.shoulderX);
+    assert.equal(modules[index].y, 200 + WEAPON_RIG_LAYOUT.shoulderY);
+  }
+  assert.deepEqual(player, before);
 });
 
 test("construction failures destroy every object created before add.graphics or add.image throws", () => {
