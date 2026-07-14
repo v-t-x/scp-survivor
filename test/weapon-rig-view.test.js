@@ -226,6 +226,78 @@ test("status graphics represent pistol channels, shotgun shells and Tesla charge
   assert.ok(status.commands.some(([name]) => name === "strokeCircle"));
 });
 
+test("shotgun reload lowers the module into a distinct travel pose without allocating objects", () => {
+  const scene = makeScene();
+  const rig = createWeaponRigView(scene);
+  const [, breacher] = moduleImages(scene);
+  const objectCount = scene.created.length;
+
+  rig.update({
+    anchorX: 100,
+    anchorY: 200,
+    weaponId: "shotgun",
+    aimAngle: 0,
+    hasTarget: true,
+    isReloading: false,
+    currentShells: 1,
+    magazineSize: 4
+  }, 16);
+  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [107, 187, 0]);
+
+  rig.update({
+    anchorX: 100,
+    anchorY: 200,
+    weaponId: "shotgun",
+    aimAngle: 0,
+    hasTarget: true,
+    isReloading: true,
+    currentShells: 0,
+    magazineSize: 4
+  }, 16);
+
+  assert.deepEqual([breacher.x, breacher.y, breacher.frame], [107, 193, 3]);
+  assert.equal(scene.created.length, objectCount);
+});
+
+test("shotgun fire drives a reusable module recoil that pauses, replaces and resets", () => {
+  const scene = makeScene();
+  const rig = createWeaponRigView(scene);
+  const [, breacher] = moduleImages(scene);
+  const snapshot = {
+    anchorX: 100,
+    anchorY: 200,
+    weaponId: "shotgun",
+    aimAngle: 0,
+    hasTarget: true,
+    currentShells: 3,
+    magazineSize: 4
+  };
+  const objectCount = scene.created.length;
+
+  rig.update(snapshot, 16);
+  rig.fire(snapshot);
+  rig.update(snapshot, 16);
+
+  assert.deepEqual([breacher.x, breacher.y], [102, 187]);
+  assert.equal(scene.created.length, objectCount);
+  assert.equal(scene.tweens.created.length, 2);
+  const [firstEffect, firstRecoil] = scene.tweens.created;
+  assert.equal(firstRecoil.config.duration, 140);
+
+  rig.setPaused(true);
+  assert.deepEqual([firstEffect.pauseCount, firstRecoil.pauseCount], [1, 1]);
+  rig.setPaused(false);
+  assert.deepEqual([firstEffect.resumeCount, firstRecoil.resumeCount], [1, 1]);
+
+  rig.fire(snapshot);
+  assert.deepEqual([firstEffect.stopCount, firstRecoil.stopCount], [1, 1]);
+  assert.equal(scene.tweens.created.length, 4);
+  const secondRecoil = scene.tweens.created[3];
+  secondRecoil.config.onComplete(secondRecoil);
+  rig.update(snapshot, 16);
+  assert.deepEqual([breacher.x, breacher.y], [107, 187]);
+});
+
 test("outage dims status indicators without dimming the physical module", () => {
   const scene = makeScene();
   const rig = createWeaponRigView(scene);

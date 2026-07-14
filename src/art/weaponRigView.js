@@ -19,6 +19,9 @@ const MODULE_TEXTURES = Object.freeze({
   tesla: TEXTURES.weaponRigTesla
 });
 const MODULE_IDS = Object.freeze(["pistol", "shotgun", "tesla"]);
+const BREACHER_RECOIL_DISTANCE = 5;
+const BREACHER_RECOIL_DURATION_MS = 140;
+const BREACHER_RELOAD_DROP_Y = 6;
 
 const COLORS = Object.freeze({
   base: 0x111820,
@@ -160,6 +163,8 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
   const tweens = new Set();
   let presentationState = {};
   let effectTween = null;
+  let recoilTween = null;
+  const breacherRecoil = { distance: 0, directionX: 0, directionY: 0 };
   let paused = false;
   let destroyed = false;
 
@@ -174,12 +179,27 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
     setVisible(status, true);
     drawStatus(status, state);
 
-    const frame = state.mode === "travel" ? TRAVEL_DIRECTION_INDEX : state.directionIndex;
+    const isBreacherReloading = state.weaponId === "shotgun" && state.mode === "reloading";
+    const frame = state.mode === "travel" || isBreacherReloading
+      ? TRAVEL_DIRECTION_INDEX
+      : state.directionIndex;
     for (const [index, module] of modules.entries()) {
       const selected = state.weaponId === MODULE_IDS[index];
       setVisible(module, selected);
       if (!selected) continue;
-      setPosition(module, x + WEAPON_RIG_LAYOUT.shoulderX, y + WEAPON_RIG_LAYOUT.shoulderY);
+      let moduleX = x + WEAPON_RIG_LAYOUT.shoulderX;
+      let moduleY = y + WEAPON_RIG_LAYOUT.shoulderY;
+      if (MODULE_IDS[index] === "shotgun") {
+        if (isBreacherReloading) {
+          stopRecoilTween();
+          breacherRecoil.distance = 0;
+          moduleY += BREACHER_RELOAD_DROP_Y;
+        } else {
+          moduleX -= breacherRecoil.directionX * breacherRecoil.distance;
+          moduleY -= breacherRecoil.directionY * breacherRecoil.distance;
+        }
+      }
+      setPosition(module, moduleX, moduleY);
       module.setFrame?.(frame);
       setAlpha(module, 1);
     }
@@ -191,6 +211,13 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
     effectTween.stop?.();
     tweens.delete(effectTween);
     effectTween = null;
+  }
+
+  function stopRecoilTween() {
+    if (!recoilTween) return;
+    recoilTween.stop?.();
+    tweens.delete(recoilTween);
+    recoilTween = null;
   }
 
   function fire(snapshot = {}) {
@@ -242,6 +269,29 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
     tweens.add(createdTween);
     effectTween = createdTween;
     if (paused) createdTween.pause?.();
+
+    if (fireState.weaponId === "shotgun") {
+      stopRecoilTween();
+      breacherRecoil.distance = BREACHER_RECOIL_DISTANCE;
+      breacherRecoil.directionX = directionX;
+      breacherRecoil.directionY = directionY;
+      let createdRecoilTween;
+      createdRecoilTween = scene.tweens.add({
+        targets: breacherRecoil,
+        distance: 0,
+        duration: BREACHER_RECOIL_DURATION_MS,
+        ease: "Quad.Out",
+        onComplete: (completedTween) => {
+          const tween = completedTween ?? createdRecoilTween;
+          if (tween) tweens.delete(tween);
+          if (recoilTween === tween) recoilTween = null;
+          breacherRecoil.distance = 0;
+        }
+      });
+      tweens.add(createdRecoilTween);
+      recoilTween = createdRecoilTween;
+      if (paused) createdRecoilTween.pause?.();
+    }
   }
 
   function setPaused(nextPaused) {
@@ -259,6 +309,8 @@ export function createWeaponRigView(scene, { depth = 16 } = {}) {
     for (const tween of tweens) tween.stop?.();
     tweens.clear();
     effectTween = null;
+    recoilTween = null;
+    breacherRecoil.distance = 0;
     for (const object of objects) object.destroy?.();
   }
 
