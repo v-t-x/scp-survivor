@@ -1,8 +1,8 @@
 # SCP Survivor 多平台客户端设计
 
-**日期：** 2026-07-14  
-**状态：** 已批准进入实施计划阶段  
-**批准范围：** Windows 桌面测试客户端、Android 测试 APK、iOS/iPadOS 测试 App、微信小游戏技术验证与测试版本  
+**日期：** 2026-07-14
+**状态：** 已批准进入实施计划阶段
+**批准范围：** Windows 桌面测试客户端、Android 测试 APK、iOS/iPadOS 测试 App、微信小游戏技术验证与测试版本
 **不自动授权：** 正式上架、公开发布、签名证书采购、自动更新、商店接入、付费服务或商业发行
 
 ## 1. 目标
@@ -226,4 +226,3 @@ Windows 是最低风险起点，用于先建立可复用的构建、staging 和 
 - [Electron 安全建议](https://www.electronjs.org/docs/latest/tutorial/security)
 - [Android App 签名与 APK/App Bundle](https://developer.android.com/studio/publish/app-signing)
 - [Apple Xcode](https://developer.apple.com/xcode/)
-
