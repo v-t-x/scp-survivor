@@ -503,40 +503,135 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
   }
 });
 
+function classifyR17BudMaterial(red, green, blue) {
+  const channelMaximum = Math.max(red, green, blue);
+  const channelMinimum = Math.min(red, green, blue);
+  const channelSpread = channelMaximum - channelMinimum;
+
+  if (green >= 180 && blue >= 180 && green - red >= 45 && blue - red >= 45 && Math.abs(green - blue) <= 30) {
+    return "cyan";
+  }
+  if (channelMinimum >= 175 && channelMaximum <= 240 && channelSpread <= 30) {
+    return "steel";
+  }
+  if (red >= 90 && red - green >= 45 && red - blue >= 40) {
+    return "red";
+  }
+  if (channelMaximum <= 72 && channelSpread <= 24) {
+    return "charcoal";
+  }
+  return "other";
+}
+
+function getLargestUpperSteelComponent(materials, frameWidth, frameHeight, upperRegionMaxY) {
+  const visited = new Uint8Array(materials.length);
+  let largestComponent = 0;
+
+  for (let start = 0; start < materials.length; start += 1) {
+    const startY = Math.floor(start / frameWidth);
+    if (visited[start] || materials[start] !== "steel" || startY > upperRegionMaxY) continue;
+    const pending = [start];
+    visited[start] = 1;
+    let size = 0;
+
+    while (pending.length > 0) {
+      const index = pending.pop();
+      size += 1;
+      const x = index % frameWidth;
+      const y = Math.floor(index / frameWidth);
+      for (let nextY = y - 1; nextY <= y + 1; nextY += 1) {
+        for (let nextX = x - 1; nextX <= x + 1; nextX += 1) {
+          if (nextX === x && nextY === y) continue;
+          if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight || nextY > upperRegionMaxY) continue;
+          const next = nextY * frameWidth + nextX;
+          if (visited[next] || materials[next] !== "steel") continue;
+          visited[next] = 1;
+          pending.push(next);
+        }
+      }
+    }
+    largestComponent = Math.max(largestComponent, size);
+  }
+  return largestComponent;
+}
+
+function validateR17BudFrame(framePixels, frameWidth = 32, frameHeight = 32) {
+  const opaqueColors = new Set();
+  const materials = Array(frameWidth * frameHeight).fill(null);
+  const counts = { charcoal: 0, red: 0, steel: 0, cyan: 0, other: 0 };
+  let visiblePixels = 0;
+  let minY = frameHeight;
+  let maxY = -1;
+
+  for (let offset = 0; offset < framePixels.length; offset += 4) {
+    if (framePixels[offset + 3] !== 255) continue;
+    const pixelIndex = offset / 4;
+    const red = framePixels[offset];
+    const green = framePixels[offset + 1];
+    const blue = framePixels[offset + 2];
+    const material = classifyR17BudMaterial(red, green, blue);
+    const y = Math.floor(pixelIndex / frameWidth);
+    visiblePixels += 1;
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+    opaqueColors.add(`${red},${green},${blue}`);
+    materials[pixelIndex] = material;
+    counts[material] += 1;
+  }
+
+  const errors = [];
+  if (visiblePixels === 0) return { valid: false, errors: ["frame is empty"], counts, visiblePixels };
+  const upperRegionMaxY = minY + Math.floor((maxY - minY) * 0.4);
+  const steelTagComponentSize = getLargestUpperSteelComponent(materials, frameWidth, frameHeight, upperRegionMaxY);
+  if (opaqueColors.size < 4) errors.push("fewer than four opaque colors");
+  if (counts.charcoal / visiblePixels < 0.70) errors.push("charcoal organic body is below 70% of visible pixels");
+  if (counts.red < 2) errors.push("red tissue seams are absent");
+  if (steelTagComponentSize < 2 || steelTagComponentSize > 8) errors.push("small connected bright steel tag is absent from the upper region");
+  if (counts.cyan < 1) errors.push("cyan core is absent");
+  if (counts.cyan / visiblePixels > 0.12) errors.push("cyan core exceeds 12% of visible pixels");
+  return {
+    valid: errors.length === 0,
+    errors,
+    counts,
+    visiblePixels,
+    charcoalRatio: counts.charcoal / visiblePixels,
+    cyanRatio: counts.cyan / visiblePixels,
+    upperRegionMaxY,
+    steelTagComponentSize
+  };
+}
+
+test("R-17 bud semantic validator rejects dark red tissue and generic gray as charcoal and steel", () => {
+  const fakeFrame = Buffer.alloc(32 * 32 * 4);
+  const fakePalette = [
+    ...Array(90).fill([128, 50, 58, 255]),
+    ...Array(3).fill([112, 40, 48, 255]),
+    ...Array(2).fill([120, 120, 120, 255]),
+    ...Array(5).fill([151, 238, 238, 255])
+  ];
+  fakePalette.forEach((color, index) => {
+    const x = 11 + (index % 10);
+    const y = 11 + Math.floor(index / 10);
+    fakeFrame.set(color, (y * 32 + x) * 4);
+  });
+
+  const validation = validateR17BudFrame(fakeFrame);
+  assert.equal(classifyR17BudMaterial(128, 50, 58), "red");
+  assert.equal(classifyR17BudMaterial(120, 120, 120), "other");
+  assert.deepEqual(validation.counts, { charcoal: 0, red: 93, steel: 0, cyan: 5, other: 2 });
+  assert.equal(validation.valid, false, "93% dark red plus generic lower gray must not satisfy charcoal-body and upper steel-tag semantics");
+  assert.ok(validation.errors.some((message) => message.includes("charcoal organic body")));
+  assert.ok(validation.errors.some((message) => message.includes("bright steel tag")));
+});
+
 test("R-17 bud retains dominant dark tissue, red seams, a steel tag and a tiny cyan core", async () => {
   const absolute = fileURLToPath(new URL("../public/assets/art/enemies/r17-bud.png", import.meta.url));
   const { width, pixels } = decodeRgbaPng(await readFile(absolute));
 
   for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
     const frame = getEnemyFramePixels(pixels, width, 32, 32, frameIndex);
-    const opaqueColors = new Set();
-    let visiblePixels = 0;
-    let darkPixels = 0;
-    let redPixels = 0;
-    let steelPixels = 0;
-    let cyanPixels = 0;
-
-    for (let offset = 0; offset < frame.length; offset += 4) {
-      if (frame[offset + 3] !== 255) continue;
-      const red = frame[offset];
-      const green = frame[offset + 1];
-      const blue = frame[offset + 2];
-      const luminance = (red * 0.2126) + (green * 0.7152) + (blue * 0.0722);
-      const channelSpread = Math.max(red, green, blue) - Math.min(red, green, blue);
-      visiblePixels += 1;
-      opaqueColors.add(`${red},${green},${blue}`);
-      if (luminance <= 82) darkPixels += 1;
-      if (red >= 58 && red >= green + 18 && red >= blue + 10) redPixels += 1;
-      if (luminance >= 80 && luminance <= 190 && channelSpread <= 28) steelPixels += 1;
-      if (green >= 105 && blue >= 115 && green >= red + 28 && blue >= red + 35) cyanPixels += 1;
-    }
-
-    assert.ok(opaqueColors.size >= 4, `r17-bud frame ${frameIndex} collapses to fewer than four opaque colors`);
-    assert.ok(darkPixels / visiblePixels >= 0.45, `r17-bud frame ${frameIndex} lacks dominant dark tissue`);
-    assert.ok(redPixels >= 2, `r17-bud frame ${frameIndex} loses its red tissue seams`);
-    assert.ok(steelPixels >= 2, `r17-bud frame ${frameIndex} loses its steel tag`);
-    assert.ok(cyanPixels >= 1, `r17-bud frame ${frameIndex} loses its cyan core`);
-    assert.ok(cyanPixels / visiblePixels <= 0.18, `r17-bud frame ${frameIndex} lets the cyan core dominate`);
+    const validation = validateR17BudFrame(frame);
+    assert.deepEqual(validation.errors, [], `r17-bud frame ${frameIndex}: ${validation.errors.join("; ")}`);
   }
 });
 
