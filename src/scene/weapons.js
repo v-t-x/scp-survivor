@@ -81,8 +81,6 @@ export const weaponsMixin = {
 
 
   updateWeapons() {
-    this.weaponRigHasTarget = false;
-
     for (const weapon of Object.values(this.weapons)) {
       if (!weapon.unlocked) {
         continue;
@@ -112,25 +110,6 @@ export const weaponsMixin = {
 
     if (this.weaponMutations.teslaField && this.weapons.tesla.unlocked) {
       this.updateTeslaField();
-    }
-  },
-
-
-  notifyWeaponRigFire(snapshot) {
-    const frozenSnapshot = Object.freeze({ ...snapshot });
-    if (!this.weaponRigView) {
-      return;
-    }
-
-    try {
-      this.weaponRigView.fire(frozenSnapshot);
-    } catch (error) {
-      try {
-        this.weaponRigView.destroy?.();
-      } catch (destroyError) {
-        // Presentation teardown must not change the committed attack.
-      }
-      this.weaponRigView = null;
     }
   },
 
@@ -326,17 +305,6 @@ export const weaponsMixin = {
         weaponId: "pistol"
       });
     }
-    this.weaponRigHasTarget = true;
-    this.weaponRigAimAngle = baseAngle;
-    this.weaponRigLastTargetAtMs = this.elapsedSurvivalMs;
-    this.notifyWeaponRigFire({
-      weaponId: "pistol",
-      anchorX: this.player.x,
-      anchorY: this.player.y,
-      aimAngle: baseAngle,
-      firedAtMs: this.elapsedSurvivalMs,
-      projectileCount: projectileTotal
-    });
     return true;
   },
 
@@ -399,19 +367,6 @@ export const weaponsMixin = {
       weapon.nextAttackAtMs = weapon.reloadEndAtMs;
     }
 
-    this.weaponRigHasTarget = true;
-    this.weaponRigAimAngle = baseAngle;
-    this.weaponRigLastTargetAtMs = this.elapsedSurvivalMs;
-    this.notifyWeaponRigFire({
-      weaponId: "shotgun",
-      anchorX: this.player.x,
-      anchorY: this.player.y,
-      aimAngle: baseAngle,
-      firedAtMs: this.elapsedSurvivalMs,
-      currentShells: weapon.currentShells,
-      magazineSize: weapon.magazineSize,
-      isReloading: weapon.isReloading
-    });
     return true;
   },
 
@@ -428,12 +383,6 @@ export const weaponsMixin = {
     if (!firstTarget) {
       return false;
     }
-    const baseAngle = Phaser.Math.Angle.Between(
-      this.player.x,
-      this.player.y,
-      firstTarget.x,
-      firstTarget.y
-    );
 
     if (firstTarget.isBoss) {
       let currentOrigin = { x: this.player.x, y: this.player.y };
@@ -465,18 +414,6 @@ export const weaponsMixin = {
         currentOrigin = { x: firstTarget.x, y: firstTarget.y };
         currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
       }
-      this.weaponRigHasTarget = true;
-      this.weaponRigAimAngle = baseAngle;
-      this.weaponRigLastTargetAtMs = this.elapsedSurvivalMs;
-      this.notifyWeaponRigFire({
-        weaponId: "tesla",
-        anchorX: this.player.x,
-        anchorY: this.player.y,
-        aimAngle: baseAngle,
-        firedAtMs: this.elapsedSurvivalMs,
-        chainTargets: weapon.chainTargets,
-        cooldownRatio: 0
-      });
       return true;
     }
 
@@ -484,7 +421,6 @@ export const weaponsMixin = {
     let currentOrigin = { x: this.player.x, y: this.player.y };
     let currentTarget = firstTarget;
     let currentDamage = weapon.damage;
-    let completedChainTargets = 0;
 
     for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
       if (!currentTarget || hitEnemies.has(currentTarget) || !currentTarget.active) {
@@ -518,7 +454,6 @@ export const weaponsMixin = {
 
       currentOrigin = { x: currentTarget.x, y: currentTarget.y };
       currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
-      completedChainTargets += 1;
       currentTarget = this.findNearestEnemy(
         weapon.chainSearchRadius,
         currentOrigin.x,
@@ -527,18 +462,6 @@ export const weaponsMixin = {
       );
     }
 
-    this.weaponRigHasTarget = true;
-    this.weaponRigAimAngle = baseAngle;
-    this.weaponRigLastTargetAtMs = this.elapsedSurvivalMs;
-    this.notifyWeaponRigFire({
-      weaponId: "tesla",
-      anchorX: this.player.x,
-      anchorY: this.player.y,
-      aimAngle: baseAngle,
-      firedAtMs: this.elapsedSurvivalMs,
-      chainTargets: completedChainTargets,
-      cooldownRatio: 0
-    });
     return true;
   },
 
@@ -614,10 +537,6 @@ export const weaponsMixin = {
 
 
   spawnMuzzleFlash(directionAngle) {
-    if (this.weaponRigView) {
-      return;
-    }
-
     const flash = this.add.circle(
       this.player.x + Math.cos(directionAngle) * 10,
       this.player.y + Math.sin(directionAngle) * 10,

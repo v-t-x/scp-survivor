@@ -65,8 +65,8 @@ export const UPGRADE_DEFINITIONS = [
   },
   {
     key: "projectileCount",
-    name: "并联火控",
-    description: "增加一条同步模块通道。",
+    name: "额外弹丸",
+    description: "每次攻击额外发射一枚弹丸。",
     kind: "weapon",
     weaponId: "pistol",
     isAvailable: (scene) =>

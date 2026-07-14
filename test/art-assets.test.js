@@ -45,24 +45,6 @@ const approvedCharacterSheets = [
   }
 ];
 
-const approvedWeaponRigSheets = [
-  {
-    key: "weapon-rig-pistol",
-    path: "assets/art/weapons/rig-pistol.png",
-    size: { width: 768, height: 96, frameCount: 8 }
-  },
-  {
-    key: "weapon-rig-breacher",
-    path: "assets/art/weapons/rig-breacher.png",
-    size: { width: 768, height: 96, frameCount: 8 }
-  },
-  {
-    key: "weapon-rig-tesla",
-    path: "assets/art/weapons/rig-tesla.png",
-    size: { width: 768, height: 96, frameCount: 8 }
-  }
-];
-
 function readPngSize(buffer) {
   assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
   assert.equal(buffer.subarray(12, 16).toString("ascii"), "IHDR");
@@ -166,16 +148,6 @@ function getVisibleFootY(framePixels) {
     }
   }
   return footY;
-}
-
-function countOpaquePixels(framePixels, minX, minY, maxX, maxY) {
-  let count = 0;
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      if (framePixels[(y * 48 + x) * 4 + 3] === 255) count += 1;
-    }
-  }
-  return count;
 }
 
 function getAlphaBounds(framePixels) {
@@ -317,29 +289,14 @@ test("production manifest declares the approved static vertical slice", () => {
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
-test("production manifest declares exact character and weapon-rig spritesheets", () => {
+test("production manifest declares exact opening character spritesheets", () => {
   assert.equal(TEXTURES.playerOpeningSheet, "player-opening-sheet");
   assert.equal(TEXTURES.infectedOpeningSheet, "infected-opening-sheet");
-  assert.equal(TEXTURES.weaponRigPistol, "weapon-rig-pistol");
-  assert.equal(TEXTURES.weaponRigBreacher, "weapon-rig-breacher");
-  assert.equal(TEXTURES.weaponRigTesla, "weapon-rig-tesla");
-  assert.deepEqual(SPRITESHEET_ASSETS, [
-    ...approvedCharacterSheets.map(({ key, path }) => ({
-      key,
-      path,
-      frameConfig: { frameWidth: 48, frameHeight: 48 }
-    })),
-    ...approvedWeaponRigSheets.map(({ key, path }) => ({
-      key,
-      path,
-      frameConfig: { frameWidth: 96, frameHeight: 96 }
-    }))
-  ]);
-
-  const expected = new Map(approvedWeaponRigSheets.map(({ key, size }) => [key, size]));
-  for (const key of ["weapon-rig-pistol", "weapon-rig-breacher", "weapon-rig-tesla"]) {
-    assert.deepEqual(expected.get(key), { width: 768, height: 96, frameCount: 8 });
-  }
+  assert.deepEqual(SPRITESHEET_ASSETS, approvedCharacterSheets.map(({ key, path }) => ({
+    key,
+    path,
+    frameConfig: { frameWidth: 48, frameHeight: 48 }
+  })));
 });
 
 test("production manifest contract rejects duplicate texture keys", () => {
@@ -435,88 +392,6 @@ test("opening character sheets are exact RGBA 48-frame production assets", async
         );
         assertMeaningfullyDifferentFramePairs(frames, `${key} ${motion} row ${row}`);
       }
-    }
-  }
-});
-
-test("player opening sheet keeps the low-ready operator silhouette contract", async () => {
-  const absolute = fileURLToPath(
-    new URL("../public/assets/art/characters/player-opening-sheet.png", import.meta.url)
-  );
-  const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
-  assert.equal(width, 576);
-  assert.equal(height, 192);
-  assert.equal(width / 48, 12, "player sheet must keep twelve 48px columns");
-  assert.equal(height / 48, 4, "player sheet must keep four 48px rows");
-
-  const colors = new Set();
-  const alphaValues = new Set();
-  for (let offset = 0; offset < pixels.length; offset += 4) {
-    const alpha = pixels[offset + 3];
-    alphaValues.add(alpha);
-    if (alpha === 255) colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
-  }
-  assert.ok(colors.size <= 32, "player sheet exceeds the 32-color production palette");
-  assert.deepEqual(alphaValues, new Set([0, 255]), "player sheet must use hard alpha");
-
-  for (let frameIndex = 0; frameIndex < 48; frameIndex += 1) {
-    assert.equal(
-      getVisibleFootY(getFramePixels(pixels, width, frameIndex)),
-      44,
-      `player frame ${frameIndex} must keep its foot baseline at local y=44`
-    );
-  }
-
-  for (let column = 0; column <= 9; column += 1) {
-    const frame = getFramePixels(pixels, width, 12 + column);
-    assert.ok(
-      countOpaquePixels(frame, 36, 0, 47, 47) <= 8,
-      `right-facing move frame ${column} retains a forward-firing silhouette`
-    );
-    assert.ok(
-      countOpaquePixels(frame, 15, 8, 32, 39) >= 220,
-      `right-facing move frame ${column} shrank below its operator torso/backpack volume`
-    );
-  }
-});
-
-test("weapon-rig sheets are exact eight-frame hard-alpha production assets", async () => {
-  for (const { key, path, size } of approvedWeaponRigSheets) {
-    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
-    await access(absolute);
-    const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
-    assert.deepEqual({ width, height }, { width: size.width, height: size.height }, key);
-    assert.equal(width / 96, size.frameCount, `${key} must contain eight horizontal 96x96 frames`);
-
-    const colors = new Set();
-    const alphaValues = new Set();
-    for (let offset = 0; offset < pixels.length; offset += 4) {
-      const alpha = pixels[offset + 3];
-      alphaValues.add(alpha);
-      if (alpha === 255) colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
-    }
-    assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must use binary transparency`);
-    assert.ok(colors.size <= 32, `${key} exceeds the 32-color production palette`);
-  }
-});
-
-test("weapon-rig fallback sheets preserve the production spritesheet contract", async () => {
-  const source = await readFile(
-    fileURLToPath(new URL("../src/assets/fallbackTextureFactory.js", import.meta.url)),
-    "utf8"
-  );
-  for (const textureKey of ["weaponRigPistol", "weaponRigBreacher", "weaponRigTesla"]) {
-    const section = source.match(new RegExp(
-      `ensureTexture\\(scene, TEXTURES\\.${textureKey}, \\(\\) => \\{([\\s\\S]*?)\\n  \\}\\);`
-    ));
-    assert.ok(section, `${textureKey} must be guarded by ensureTexture`);
-    assert.match(section[1], new RegExp(`generateTexture\\(TEXTURES\\.${textureKey}, 768, 96\\)`));
-    for (let frame = 0; frame < 8; frame += 1) {
-      assert.match(
-        section[1],
-        new RegExp(`add\\(${frame}, 0, ${frame * 96}, 0, 96, 96\\)`),
-        `${textureKey} must register numeric frame ${frame}`
-      );
     }
   }
 });

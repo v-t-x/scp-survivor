@@ -37,9 +37,6 @@ export const TEXTURES = {
   weaponPistolIcon: "weapon-pistol-icon",
   weaponBreacherIcon: "weapon-breacher-icon",
   weaponTeslaIcon: "weapon-tesla-icon",
-  weaponRigPistol: "weapon-rig-pistol",
-  weaponRigBreacher: "weapon-rig-breacher",
-  weaponRigTesla: "weapon-rig-tesla",
   bullet: "bullet-circle",
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
@@ -82,21 +79,6 @@ export const SPRITESHEET_ASSETS = [
     key: TEXTURES.infectedOpeningSheet,
     path: "assets/art/characters/infected-opening-sheet.png",
     frameConfig: { frameWidth: 48, frameHeight: 48 }
-  },
-  {
-    key: TEXTURES.weaponRigPistol,
-    path: "assets/art/weapons/rig-pistol.png",
-    frameConfig: { frameWidth: 96, frameHeight: 96 }
-  },
-  {
-    key: TEXTURES.weaponRigBreacher,
-    path: "assets/art/weapons/rig-breacher.png",
-    frameConfig: { frameWidth: 96, frameHeight: 96 }
-  },
-  {
-    key: TEXTURES.weaponRigTesla,
-    path: "assets/art/weapons/rig-tesla.png",
-    frameConfig: { frameWidth: 96, frameHeight: 96 }
   }
 ];
 export const ATLAS_ASSETS = [];

@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录首批正式素材的真实生产信息。23 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
+本表记录首批正式素材的真实生产信息。20 项文件已完成尺寸与原图检查，目前结论均为“静态门禁候选”；只有实机静态门禁通过后才能改为正式准入。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -179,7 +179,7 @@ Avoid: crown, tiara, spikes around hood, gold headwear, royal costume, front ele
 | facility-hazard-stripe | PNG | `assets/art/facility/hazard-stripe.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P19](#p19-facility-hazard-stripe)；仅文本输入 | 原图 1254×1254 RGB；中心正方形裁切；nearest 精确缩至 32×32；MEDIANCUT 无抖动量化为 32 色；复制首行/列到末行/列形成逐像素闭合边界；转 8-bit RGBA，alpha 固定 255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | facility-observation-window | PNG | `assets/art/facility/observation-window.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P20](#p20-facility-observation-window)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,13,94,51)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 | 96×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | facility-pipe-bank | PNG | `assets/art/facility/pipe-bank.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P21](#p21-facility-pipe-bank)；仅文本输入 | 原图 1536×1024 RGB；官方 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；alpha 以 128 阈值二值化并按 bbox 裁切；nearest 等比缩入 92×60 内容区并居中至 96×64；MEDIANCUT 无抖动量化；8-bit RGBA；bbox `(2,16,94,48)`，32 个不透明色，alpha 仅 0/255 | 项目定制生成；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利；当前无第三方署名要求，若服务条款复核产生要求则补充 | 候选；商业发布前复核 | 静态门禁候选 | 96×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
-| player-opening-sheet | PNG spritesheet | `assets/art/characters/player-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ Node.js nearest/binary-alpha assembly | 2026-07-14 | 原概念源 [P22](#p22-player-opening-sheet)；补帧 [P25](#p25-player-idle-hit-remediation-source)；低姿态火控改版 [P30](#p30-player-low-ready-fire-control-remediation) | 低姿态 imagegen 源保存为 `.superpowers/sdd/task-6-imagegen-source.png`，唯一 reference 为改版前 `player-opening-sheet.png`；移除前伸开火枪械，改为贴近躯干的低姿态控制握把，不把肩部武器烘焙进角色帧；Node.js nearest 抽取至 48×48 单元并对齐脚底 y=44，量化至不超过 32 个可见色且 alpha 仅 0/255；最终输出 576×192、4×12 共 48 帧。右向移动帧 x=36..47 不透明像素均为 0，躯干/背包门禁最小 234 像素 | 项目定制生成；唯一 reference 为本项目既有定制生成素材；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求 | 候选；商业发布前复核 | 低姿态角色与独立肩部火控模块候选 | 576×192 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
+| player-opening-sheet | PNG spritesheet | `assets/art/characters/player-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ Node.js nearest/binary-alpha assembly | 2026-07-13 | 原概念源 [P22](#p22-player-opening-sheet)；补帧 [P25](#p25-player-idle-hit-remediation-source)；两次 walk 调用 [P26](#p26-player-walk-remediation-attempt-no-output)、[P29](#p29-player-walk-remediation-retry-no-output) 均无输出 | 补帧原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-1edce71f-7d84-477f-94c5-36e33f44ebaa.png`；以绿幕距离/绿色优势生成 binary alpha；4×6 alpha bbox 提取；idle 使用新源列 0–3，move 使用原源 idle/move 与新源列 0–3 共 6 个真实姿势，hit 使用新源列 4–5；nearest 等比缩入 40×42、渲染后脚底对齐 y=44；映射到原 player sheet 的 32 色 palette；输出 576×192、8-bit RGBA、alpha 0/255。工作源见 `.superpowers/sdd/opening-task-6-fix-sources/` | 项目定制生成；唯一 reference 为原项目定制生成源板；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求 | 候选；商业发布前复核 | 开局动画候选（真实动作帧修复） | 576×192 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | infected-opening-sheet | PNG spritesheet | `assets/art/characters/infected-opening-sheet.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露）+ Node.js nearest/binary-alpha assembly | 2026-07-13 | 原概念源 [P24](#p24-infected-opening-sheet-successful-source)；补帧 [P27](#p27-infected-idle-hit-remediation-source)、[P28](#p28-infected-walk-remediation-source) | idle/hit 原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-b6192a8e-30e2-472e-9424-22cb24026894.png`；walk 原图 `C:\Users\24037\.codex\generated_images\019f5a0e-95c3-72b0-969d-7fc51a88a89f\exec-4bb36632-a0dd-46e3-99d3-9127e6ac047a.png`；binary alpha 与 4×6 alpha bbox 提取；idle 列 0–3 / walk 列 0–5 / hit 列 4–5；nearest 等比缩入 40×42、脚底 y=44；映射到原 infected sheet 的 32 色 palette；输出 576×192、8-bit RGBA、alpha 0/255。工作源见 `.superpowers/sdd/opening-task-6-fix-sources/` | 项目定制生成；唯一 reference 为原项目定制生成源板；无第三方图像输入；未声明独立许可证，商业发布前复核 OpenAI 服务条款与输出权利；当前无第三方署名要求 | 候选；商业发布前复核 | 开局动画候选（真实动作帧修复） | 576×192 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 
 ### P13 title-facility-backdrop
@@ -454,14 +454,6 @@ Avoid: duplicates, chibi, oversized head, 3D, isometric, side-view, smooth paint
 
 开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
 
-### P30 player-low-ready-fire-control-remediation
-
-唯一图像 reference 为修改前的 `public/assets/art/characters/player-opening-sheet.png`。built-in imagegen 输出保存至 `.superpowers/sdd/task-6-imagegen-source.png`，再由 `.superpowers/sdd/normalize-task-6-player-sheet.mjs` 进行 nearest 单元抽取、脚底对齐、硬 alpha 与 32 色量化。正式素材测试锁定尺寸、网格、脚底、色数、alpha、前伸轮廓和躯干体量；处理过程不改角色显示比例、physics body 或玩法数据。
-
-```text
-Edit this exact 4-row by 12-column SCP Survivor player sprite sheet. Preserve the same Foundation operator, navy armor, backpack, helmet, palette, transparent background, exact 48x48 cell grid, four directional rows, twelve-frame movement timing, body scale and foot placement. Remove the prominently firing handheld firearm and replace it with a compact low-ready control grip or scanner held close to the torso. Do not add a shoulder weapon; that is rendered separately in game. Crisp high-detail pixel art, hard alpha, no text, no logo, no scenery, no soft blur, no frame reordering.
-```
-
 ### P10 weapon-pistol-icon
 
 ```text
@@ -510,57 +502,9 @@ Primary request: experimental Tesla launcher icon
 Subject: one compact industrial electrical launcher with twin exposed copper induction coils, central steel emitter fork, insulated grip, cable housing and two tiny cold-cyan charge cells; unmistakably electrical but still a handheld weapon
 ```
 
-## Task 2 肩载火控模块八方向 sheet
-
-三张 sheet 均使用 OpenAI built-in `image_gen` 单独生成，工具未暴露具体模型名；没有调用 CLI/API fallback。每次只使用同武器现有项目图标作为唯一图像参考，没有使用 SCP Wiki、素材包、用户截图或其他第三方图像。built-in 输出均为带浅灰棋盘底的 8-bit RGB PNG，因此没有把源文件直接当成透明成品。
-
-确定性规范化统一执行：按 `floor(frame × sourceWidth / 8)` 切分八个原生方向单元；移除 `min(R,G,B) >= 230` 且 `max(R,G,B) - min(R,G,B) <= 4` 的中性棋盘像素；逐格计算 alpha bbox；同一 sheet 取八格最大 bbox 计算单一 scale，使用 nearest-neighbor 缩入最长边 80px；每格水平中心对齐并把可见 bbox（含 pivot collar）底部统一放到 `y=84`，其余区域透明；输出 alpha 仅 `{0,255}`；以确定性加权最远点初始化和 6 次加权聚类生成最多 32 色调色板，无抖动；编码为精确 768×96、8-bit RGBA PNG。没有镜像、旋转、复制其他方向或运行时旋转。
-
-| Asset | Type | Path | Tool/model | Date | Reference and built-in output | Per-frame normalization | License/right basis | Commercial-use status | Admission | Final contract | Attribution requirement |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| weapon-rig-pistol | PNG spritesheet | `assets/art/weapons/rig-pistol.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P30](#p30-weapon-rig-pistol)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\pistol.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-b8069f2b-e74a-4b3a-bd75-b03a4a4e5365.png` | 源 1774×887 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 192×232、222×226、193×235、173×234、173×229、222×230、180×235、185×226；统一 nearest scale `0.3404`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
-| weapon-rig-breacher | PNG spritesheet | `assets/art/weapons/rig-breacher.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P31](#p31-weapon-rig-breacher)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\breacher.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-d4d7f1a9-e2dc-4378-9486-16b167773813.png` | 源 2172×724 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 237×176、272×176、217×180、246×176、228×173、225×177、207×180、237×176；统一 nearest scale `0.2941`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
-| weapon-rig-tesla | PNG spritesheet | `assets/art/weapons/rig-tesla.png` | OpenAI built-in `image_gen`（具体模型名未由工具暴露） | 2026-07-13 | [P32](#p32-weapon-rig-tesla)；唯一参考 `C:\scp-survivor-ui-art\public\assets\art\weapons\tesla.png`；输出 `C:\Users\24037\.codex\generated_images\019f5bfc-e79e-7273-92c4-e616dd0d4f09\exec-9644ee8b-5b53-42c8-9530-b3152dc47c5d.png` | 源 2172×724 RGB；E/SE/S/SW/W/NW/N/NE bbox 依次为 246×190、272×190、221×192、247×191、251×190、252×192、138×190、231×192；统一 nearest scale `0.2941`；逐格居中与 `y=84` pivot 对齐；32 色；hard alpha | 项目定制生成；唯一参考也是本项目定制生成图标；无第三方图像输入；未声明独立许可证，商业发布前复核服务条款与输出权利 | 候选；商业发布前复核 | 静态门禁候选 | 768×96 RGBA；8 个 96×96 frame；alpha `{0,255}`；≤32 色 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
-
-### P30 weapon-rig-pistol
-
-```text
-Use case: stylized-concept
-Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
-Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
-Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
-Subject: compact pistol module with sockets for five parallel channels.
-Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
-Avoid: scenery, text, soft blur, wrong perspective, unrecognizable pistol identity, human, logo, watermark, extra objects.
-```
-
-### P31 weapon-rig-breacher
-
-```text
-Use case: stylized-concept
-Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
-Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
-Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
-Subject: compact breacher module with a hydraulic recoil sleeve and box-feed interface.
-Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
-Avoid: scenery, text, soft blur, wrong perspective, unrecognizable breacher identity, human, logo, watermark, extra objects.
-```
-
-### P32 weapon-rig-tesla
-
-```text
-Use case: stylized-concept
-Asset type: production eight-direction shoulder-module spritesheet for SCP Survivor
-Input images: Image 1 is the sole weapon-identity, palette, and pixel-art style reference.
-Primary request: Edit this exact SCP Survivor weapon icon into a compact Foundation shoulder-mounted fire-control module head. Produce one horizontal eight-frame direction sheet in this exact order: east, south-east, south, south-west, west, north-west, north, north-east. Every cell is exactly 96x96 with identical center pivot, scale, lighting and silhouette volume. Preserve the weapon identity, dark naval-gray metal, unlit cyan/red indicator housings, crisp high-detail pixel-art edges, transparent background, no human, no floating parts, no text, no logo, no scenery. Active glow will be drawn separately in game. Add a short armored pivot collar at the center of every frame so it visibly mounts to a backpack actuator. Total canvas exactly 768x96.
-Subject: compact Tesla module with twin coils and eight small node lights.
-Constraints: exact 8 by 1 96x96-cell grid; each direction natively drawn; hard opaque pixel edges; clear transparent padding; no runtime-rotation look; no green; no semitransparent pixels; no glow.
-Avoid: scenery, text, soft blur, wrong perspective, unrecognizable Tesla identity, human, logo, watermark, extra objects.
-```
-
 ## 准入备注
 
-- 23 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
+- 20 项文件统一保存为 8-bit RGBA；自动测试要求不透明颜色不超过共享 32 色板、alpha 只能为 0/255。
 - `facility-floor`、`facility-service-floor`、`facility-hazard-stripe`、标题背景与军械库背景保持全不透明；三张地面 tile 另由自动测试逐像素验证上下与左右边缘相等。
 - 其余 15 项透明区域已经二值化为 alpha 0，避免缩放后出现绿色或半透明毛边。
 - 本批次没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像作为生成输入。
