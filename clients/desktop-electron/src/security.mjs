@@ -5,6 +5,16 @@ export const WINDOW_WEB_PREFERENCES = Object.freeze({
   webviewTag: false
 });
 
+export const WINDOW_OPTIONS = Object.freeze({
+  width: 1100,
+  height: 700,
+  minWidth: 960,
+  minHeight: 540,
+  show: false,
+  autoHideMenuBar: true,
+  webPreferences: WINDOW_WEB_PREFERENCES
+});
+
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
