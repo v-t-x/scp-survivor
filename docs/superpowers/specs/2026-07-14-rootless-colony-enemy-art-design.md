@@ -4,7 +4,7 @@
 
 分支：`feature/ui-art-overhaul`
 
-状态：等待项目所有者审阅
+状态：项目所有者已批准，等待按实施计划执行
 
 GPT 等级：Level 2（敌人整体视觉重定）
 
@@ -88,12 +88,12 @@ SCP-049 继续保持终局 Boss 身份、名称、玩法和现有美术，不纳
 
 ## 7. 技术接入
 
-- 保留现有 `TEXTURES` key，使玩法代码不需要因美术命名改变而修改敌人类型。
-- 将七套正式素材登记为 `SPRITESHEET_ASSETS`，程序化纹理继续作为缺失素材时的 fallback。
+- 保留现有七个 gameplay/fallback `TEXTURES` key，使玩法创建路径和程序化纹理合同不因美术命名改变；为七套正式 spritesheet 另增独立 production key。
+- 将七套 production key 登记为 `SPRITESHEET_ASSETS`。敌人仍先用原 fallback key 建立既有物理体；production sheet 完整时再由表现适配器换图并原样恢复物理体，缺失或帧数异常时继续使用程序化纹理。
 - 玩家继续使用现有 `player-opening-sheet` 和角色表现适配器。
 - `infectedStaff` 不再使用人形四方向 spritesheet；所有 R-17 型态改用独立的方向中立循环动画。
 - 新增窄职责的敌人表现适配器，只负责纹理选择、动画注册、播放和显示尺寸，不写入玩法状态。
-- 敌人创建后只进行一次固定显示尺寸设置，并使用现有的碰撞体保持规则；运行过程中不通过改变 scale 模拟呼吸。
+- 正式 PNG 内的可见轮廓直接规范化到目标显示尺寸，运行时 production scale 固定为 1；换图时必须保留换图前的世界空间碰撞体尺寸、半径、形状和位置。由于新旧纹理 display origin 不同，raw offset 允许仅为补偿 origin 而改变，但换算后的碰撞区域不得移动。运行过程中不通过改变 scale 模拟呼吸。
 - 甲壳门的正面装甲弧只读取既有 `facingAngle`，不得改变正面减伤计算。
 - 缺帧体、脉冲囊和母殖团的表现只读取既有瞬移、射击与分裂状态；缺少状态钩子时先使用通用循环，不得为了动画改变行为时序。
 
