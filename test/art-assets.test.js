@@ -72,6 +72,18 @@ const r17TextureKeys = {
   r17Bud: "r17-bud"
 };
 
+const legacyFallbackTextureKeys = {
+  player: "player-rect",
+  enemyInfected: "enemy-infected",
+  enemyCrawler: "enemy-crawler",
+  enemyDrone: "enemy-drone",
+  eliteRiot: "elite-riot",
+  eliteBlink: "elite-blink",
+  eliteBiomass: "elite-biomass",
+  biomassChild: "biomass-child",
+  enemyScp049: "enemy-scp049"
+};
+
 function readPngSize(buffer) {
   assert.equal(buffer.subarray(1, 4).toString("ascii"), "PNG");
   assert.equal(buffer.subarray(12, 16).toString("ascii"), "IHDR");
@@ -429,6 +441,19 @@ test("production manifest declares the exact R-17 production spritesheet contrac
   assert.deepEqual(SPRITESHEET_ASSETS, approvedSpritesheets);
 });
 
+test("legacy fallback texture keys remain exact and disjoint from R-17 production keys", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(legacyFallbackTextureKeys).map((property) => [property, TEXTURES[property]])),
+    legacyFallbackTextureKeys
+  );
+
+  const legacyValues = new Set(Object.values(legacyFallbackTextureKeys));
+  const r17Values = new Set(Object.values(r17TextureKeys));
+  assert.equal(legacyValues.size, Object.keys(legacyFallbackTextureKeys).length);
+  assert.equal(r17Values.size, 7);
+  assert.deepEqual([...legacyValues].filter((key) => r17Values.has(key)), []);
+});
+
 test("production manifest contract rejects duplicate texture keys", () => {
   const approvedAssets = [...expectedImageAssetPaths].map(([key, path]) => ({ key, path }));
   const duplicateAssets = approvedAssets.map((asset, index) =>
@@ -475,6 +500,43 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
     }
+  }
+});
+
+test("R-17 bud retains dominant dark tissue, red seams, a steel tag and a tiny cyan core", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/enemies/r17-bud.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+
+  for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 32, 32, frameIndex);
+    const opaqueColors = new Set();
+    let visiblePixels = 0;
+    let darkPixels = 0;
+    let redPixels = 0;
+    let steelPixels = 0;
+    let cyanPixels = 0;
+
+    for (let offset = 0; offset < frame.length; offset += 4) {
+      if (frame[offset + 3] !== 255) continue;
+      const red = frame[offset];
+      const green = frame[offset + 1];
+      const blue = frame[offset + 2];
+      const luminance = (red * 0.2126) + (green * 0.7152) + (blue * 0.0722);
+      const channelSpread = Math.max(red, green, blue) - Math.min(red, green, blue);
+      visiblePixels += 1;
+      opaqueColors.add(`${red},${green},${blue}`);
+      if (luminance <= 82) darkPixels += 1;
+      if (red >= 58 && red >= green + 18 && red >= blue + 10) redPixels += 1;
+      if (luminance >= 80 && luminance <= 190 && channelSpread <= 28) steelPixels += 1;
+      if (green >= 105 && blue >= 115 && green >= red + 28 && blue >= red + 35) cyanPixels += 1;
+    }
+
+    assert.ok(opaqueColors.size >= 4, `r17-bud frame ${frameIndex} collapses to fewer than four opaque colors`);
+    assert.ok(darkPixels / visiblePixels >= 0.45, `r17-bud frame ${frameIndex} lacks dominant dark tissue`);
+    assert.ok(redPixels >= 2, `r17-bud frame ${frameIndex} loses its red tissue seams`);
+    assert.ok(steelPixels >= 2, `r17-bud frame ${frameIndex} loses its steel tag`);
+    assert.ok(cyanPixels >= 1, `r17-bud frame ${frameIndex} loses its cyan core`);
+    assert.ok(cyanPixels / visiblePixels <= 0.18, `r17-bud frame ${frameIndex} lets the cyan core dominate`);
   }
 });
 
