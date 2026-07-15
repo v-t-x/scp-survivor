@@ -21,9 +21,41 @@ const [hudMixin, combatMixin] = await Promise.all([
   loadMixin("../src/scene/combat.js", "combatMixin", { BALANCE })
 ]);
 
+function assertNotificationSeesCommittedGameplay(pickupType, gameplay) {
+  assert.equal(gameplay.pickupActive, false, "notification is post-destroy");
+  if (pickupType === "combatStim") {
+    assert.equal(
+      gameplay.health,
+      Math.min(100, 40 + BALANCE.pickups.combatStim.healAmount),
+      "combat stim heal is committed before notification"
+    );
+    assert.equal(
+      gameplay.moveSpeedBuffMultiplier,
+      BALANCE.pickups.combatStim.speedMultiplier,
+      "combat stim speed buff is committed before notification"
+    );
+    assert.equal(
+      gameplay.activeStimUntilMs,
+      1_250 + BALANCE.pickups.combatStim.durationMs,
+      "combat stim deadline is committed before notification"
+    );
+  } else if (pickupType === "scp500") {
+    assert.equal(
+      gameplay.health,
+      Math.min(100, 40 + BALANCE.pickups.scp500.healAmount),
+      "SCP-500 heal is committed before notification"
+    );
+    assert.equal(gameplay.moveSpeedBuffMultiplier, 1, "SCP-500 does not change the speed buff");
+    assert.equal(gameplay.activeStimUntilMs, 0, "SCP-500 does not change the stim deadline");
+  }
+  assert.equal(gameplay.currentXp, 17, "presentation notification preserves XP");
+  assert.equal(gameplay.pickupRadius, 96, "presentation notification preserves pickup radius");
+}
+
 function runPickup(pickupType, notificationMode = "normal") {
   const events = [];
   const cues = [];
+  const notificationGameplay = [];
   const pickup = {
     active: true,
     pickupType,
@@ -37,6 +69,8 @@ function runPickup(pickupType, notificationMode = "normal") {
   const scene = {
     health: 40,
     maxHealth: 100,
+    currentXp: 17,
+    pickupRadius: 96,
     elapsedSurvivalMs: 1_250,
     moveSpeedBuffMultiplier: 1,
     activeStimUntilMs: 0,
@@ -59,7 +93,14 @@ function runPickup(pickupType, notificationMode = "normal") {
     scene.tacticalHudView = {
       notifyPickupCue(payload) {
         events.push("notify");
-        assert.equal(pickup.active, false, "notification is post-destroy");
+        notificationGameplay.push({
+          health: scene.health,
+          currentXp: scene.currentXp,
+          pickupRadius: scene.pickupRadius,
+          moveSpeedBuffMultiplier: scene.moveSpeedBuffMultiplier,
+          activeStimUntilMs: scene.activeStimUntilMs,
+          pickupActive: pickup.active
+        });
         cues.push(payload);
       }
     };
@@ -73,12 +114,19 @@ function runPickup(pickupType, notificationMode = "normal") {
   }
 
   combatMixin.handleSupplyPickupOverlap.call(scene, null, pickup);
+  if (notificationMode === "normal") {
+    assert.equal(notificationGameplay.length, 1, "pickup emits exactly one presentation notification");
+    assertNotificationSeesCommittedGameplay(pickupType, notificationGameplay[0]);
+  }
 
   return {
     events,
     cues,
+    notificationGameplay: notificationGameplay[0] ?? null,
     gameplay: {
       health: scene.health,
+      currentXp: scene.currentXp,
+      pickupRadius: scene.pickupRadius,
       moveSpeedBuffMultiplier: scene.moveSpeedBuffMultiplier,
       activeStimUntilMs: scene.activeStimUntilMs,
       soundEvents: scene.soundEvents,
@@ -104,6 +152,8 @@ test("combat stim commits effect, destroys pickup, then emits a 650ms cue", () =
   );
   assert.equal(result.gameplay.moveSpeedBuffMultiplier, BALANCE.pickups.combatStim.speedMultiplier);
   assert.equal(result.gameplay.activeStimUntilMs, 1_250 + BALANCE.pickups.combatStim.durationMs);
+  assert.equal(result.gameplay.currentXp, 17);
+  assert.equal(result.gameplay.pickupRadius, 96);
 });
 
 test("SCP-500 commits heal, destroys pickup, then emits a 650ms cue", () => {
@@ -119,6 +169,10 @@ test("SCP-500 commits heal, destroys pickup, then emits a 650ms cue", () => {
     result.gameplay.health,
     Math.min(100, 40 + BALANCE.pickups.scp500.healAmount)
   );
+  assert.equal(result.gameplay.moveSpeedBuffMultiplier, 1);
+  assert.equal(result.gameplay.activeStimUntilMs, 0);
+  assert.equal(result.gameplay.currentXp, 17);
+  assert.equal(result.gameplay.pickupRadius, 96);
 });
 
 test("missing notification, missing view, and throwing view preserve pickup gameplay", async (t) => {
