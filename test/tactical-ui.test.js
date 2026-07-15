@@ -8,9 +8,15 @@ import {
   getTerminalButtonPalette
 } from "../src/ui/tacticalUi.js";
 
-function createDisplayObject(type) {
+function throwConfiguredFailure(failure, object, method) {
+  const configured = failure.configuration;
+  if (!configured || configured.type !== object.type || configured.method !== method) return;
+  throw new Error(`configuration failed: ${object.type}.${method}`);
+}
+
+function createDisplayObject(type, failure = {}) {
   const handlers = new Map();
-  return {
+  const object = {
     type,
     calls: [],
     destroyed: false,
@@ -26,6 +32,7 @@ function createDisplayObject(type) {
       return this;
     },
     setOrigin(...args) {
+      throwConfiguredFailure(failure, this, "setOrigin");
       this.calls.push(["setOrigin", ...args]);
       return this;
     },
@@ -116,11 +123,26 @@ function createDisplayObject(type) {
       this.destroyed = true;
     }
   };
+  Object.defineProperty(object, "listenerCount", {
+    get: () => handlers.size
+  });
+  return object;
 }
 
-function createScene() {
+function createScene(options = {}) {
   const objects = [];
+  const addCounts = new Map();
+  const failure = {
+    configuration: options.configurationFailure
+      ? { ...options.configurationFailure }
+      : null
+  };
   const add = (type, factory) => (...args) => {
+    const occurrence = (addCounts.get(type) ?? 0) + 1;
+    addCounts.set(type, occurrence);
+    if (options.addFailure?.type === type && options.addFailure.occurrence === occurrence) {
+      throw new Error(`add failed: ${type}#${occurrence}`);
+    }
     const object = factory(...args);
     objects.push(object);
     return object;
@@ -128,15 +150,23 @@ function createScene() {
   return {
     objects,
     add: {
-      graphics: add("graphics", () => createDisplayObject("graphics")),
-      rectangle: add("rectangle", (x, y, width, height, fill, alpha) => ({
-        ...createDisplayObject("rectangle"), x, y, width, height, fill, alpha
-      })),
-      text: add("text", (x, y, text, style) => ({
-        ...createDisplayObject("text"), x, y, text, style
-      }))
+      graphics: add("graphics", () => createDisplayObject("graphics", failure)),
+      rectangle: add("rectangle", (x, y, width, height, fill, alpha) => Object.assign(
+        createDisplayObject("rectangle", failure),
+        { x, y, width, height, fill, alpha }
+      )),
+      text: add("text", (x, y, text, style) => Object.assign(
+        createDisplayObject("text", failure),
+        { x, y, text, style }
+      ))
     }
   };
+}
+
+function assertSceneRolledBack(scene) {
+  assert.equal(scene.objects.length > 0, true);
+  assert.equal(scene.objects.every((object) => object.destroyed), true);
+  assert.equal(scene.objects.every((object) => object.listenerCount === 0), true);
 }
 
 test("terminal button states are visibly distinct", () => {
@@ -300,4 +330,31 @@ test("terminal button construction rolls back objects and listeners when registr
   );
   assert.equal(scene.objects.every((object) => object.destroyed), true);
   assert.equal(hitArea.listenersRemoved, true);
+});
+
+for (const { type, occurrence } of [
+  { type: "rectangle", occurrence: 1 },
+  { type: "graphics", occurrence: 2 }
+]) {
+  test(`terminal button owns earlier objects when add ${type} #${occurrence} throws`, () => {
+    const scene = createScene({ addFailure: { type, occurrence } });
+
+    assert.throws(
+      () => createTerminalButton(scene, { width: 120, text: "AUTHORIZE" }),
+      new RegExp(`add failed: ${type}#${occurrence}`)
+    );
+    assertSceneRolledBack(scene);
+  });
+}
+
+test("terminal button owns its label before origin configuration can throw", () => {
+  const scene = createScene({
+    configurationFailure: { type: "text", method: "setOrigin" }
+  });
+
+  assert.throws(
+    () => createTerminalButton(scene, { width: 120, text: "AUTHORIZE" }),
+    /configuration failed: text\.setOrigin/
+  );
+  assertSceneRolledBack(scene);
 });

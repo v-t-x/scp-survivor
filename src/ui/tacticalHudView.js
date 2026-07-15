@@ -51,17 +51,22 @@ function setHudDisplay(object, depth) {
   return object;
 }
 
+function trackCreatedObject(tracker, object) {
+  tracker.add(object);
+  return object;
+}
+
 function createHudText(scene, tracker, container, x, y, text, style, depth) {
-  const label = setHudDisplay(scene.add.text(x, y, text, style), depth).setOrigin(0, 0);
-  tracker.add(label);
+  const label = trackCreatedObject(tracker, scene.add.text(x, y, text, style));
+  setHudDisplay(label, depth).setOrigin(0, 0);
   container.add([label]);
   return label;
 }
 
 function createHudGraphic(scene, tracker, container, depth, draw) {
-  const graphic = setHudDisplay(scene.add.graphics(), depth);
+  const graphic = trackCreatedObject(tracker, scene.add.graphics());
+  setHudDisplay(graphic, depth);
   draw(graphic);
-  tracker.add(graphic);
   container.add([graphic]);
   return graphic;
 }
@@ -79,6 +84,7 @@ export function createTacticalHudView(scene, {
   let destroyed = false;
   let gameplayVisible = true;
   let facilityCollapsed = false;
+  let facilityExpanded = false;
   let pickupCueUntilMs = -1;
 
   try {
@@ -87,8 +93,8 @@ export function createTacticalHudView(scene, {
       const region = regions?.[regionKey];
       if (!region) throw new Error(`Missing tactical HUD region: ${regionKey}`);
       const depth = regionKey === "facility" ? FACILITY_DEPTH : HUD_DEPTH;
-      const container = setHudDisplay(scene.add.container(region.x, region.y), depth);
-      tracker.add(container);
+      const container = trackCreatedObject(tracker, scene.add.container(region.x, region.y));
+      setHudDisplay(container, depth);
       regionViews[regionKey] = { container };
     }
 
@@ -137,47 +143,65 @@ export function createTacticalHudView(scene, {
     });
     tracker.add(facilityLamp.objects);
     facility.container.add(facilityLamp.objects);
-    const eventBannerContainer = setHudDisplay(scene.add.container(28, 0), FACILITY_DEPTH);
-    tracker.add(eventBannerContainer);
+    const eventBannerTitle = createHudText(
+      scene,
+      tracker,
+      facility.container,
+      28,
+      7,
+      "",
+      textStyle,
+      FACILITY_DEPTH
+    );
+    const eventBannerContainer = trackCreatedObject(tracker, scene.add.container(28, 0));
+    setHudDisplay(eventBannerContainer, FACILITY_DEPTH);
     facility.container.add([eventBannerContainer]);
     const eventBannerBg = createHudGraphic(scene, tracker, eventBannerContainer, FACILITY_DEPTH, (graphic) => {
       graphic.fillStyle(THEME.terminal.panelRaised, 1);
-      graphic.fillRect?.(0, 0, regions.facility.width - 28, regions.facility.height);
+      graphic.fillRect?.(0, 23, regions.facility.width - 28, regions.facility.height - 23);
     });
-    const eventBannerTitle = createHudText(scene, tracker, eventBannerContainer, 8, 7, "", textStyle, FACILITY_DEPTH);
     const eventBannerDetail = createHudText(scene, tracker, eventBannerContainer, 8, 27, "", mutedStyle, FACILITY_DEPTH);
+    eventBannerContainer.setVisible(false);
+    eventBannerBg.setVisible(false);
+    eventBannerDetail.setVisible(false);
 
     const levelText = createHudText(scene, tracker, vitals.container, 12, 9, "", textStyle, HUD_DEPTH);
     const statsVitals = createHudText(scene, tracker, vitals.container, 88, 9, "", textStyle, HUD_DEPTH);
-    const xpBarBackground = setHudDisplay(
-      scene.add.rectangle(88, 40, 160, 8, THEME.terminal.disabled, 1),
-      HUD_DEPTH
+    const xpBarBackground = trackCreatedObject(
+      tracker,
+      scene.add.rectangle(88, 40, 160, 8, THEME.terminal.disabled, 1)
     );
-    tracker.add(xpBarBackground);
+    setHudDisplay(xpBarBackground, HUD_DEPTH);
     vitals.container.add([xpBarBackground]);
-    const xpBarFill = setHudDisplay(
-      scene.add.rectangle(88, 40, 160, 8, THEME.terminal.contained, 1),
-      HUD_DEPTH
+    const xpBarFill = trackCreatedObject(
+      tracker,
+      scene.add.rectangle(88, 40, 160, 8, THEME.terminal.contained, 1)
     );
-    tracker.add(xpBarFill);
+    setHudDisplay(xpBarFill, HUD_DEPTH);
     vitals.container.add([xpBarFill]);
     const xpText = createHudText(scene, tracker, vitals.container, 12, 34, "", mutedStyle, HUD_DEPTH);
 
-    const weaponImage = setHudDisplay(
-      scene.add.image(36, 39, TEXTURES.weaponPistolIcon).setDisplaySize(WEAPON_ICON_SIZE, WEAPON_ICON_SIZE),
-      HUD_DEPTH
+    const weaponImage = trackCreatedObject(
+      tracker,
+      scene.add.image(36, 39, TEXTURES.weaponPistolIcon)
     );
-    tracker.add(weaponImage);
+    weaponImage.setDisplaySize(WEAPON_ICON_SIZE, WEAPON_ICON_SIZE);
+    setHudDisplay(weaponImage, HUD_DEPTH);
     weapon.container.add([weaponImage]);
     const weaponHudText = createHudText(scene, tracker, weapon.container, 70, 10, "", textStyle, HUD_DEPTH);
     const weaponDetailText = createHudText(scene, tracker, weapon.container, 70, 31, "", mutedStyle, HUD_DEPTH);
     const weaponDashText = createHudText(scene, tracker, weapon.container, 70, 52, "", mutedStyle, HUD_DEPTH);
 
-    const pauseHitArea = setHudDisplay(scene.add.rectangle(60, 15, 96, 30, 0x000000, 0), HUD_DEPTH)
-      .setInteractive({ useHandCursor: true });
-    const muteHitArea = setHudDisplay(scene.add.rectangle(60, 51, 96, 26, 0x000000, 0), HUD_DEPTH)
-      .setInteractive({ useHandCursor: true });
-    tracker.add(pauseHitArea, muteHitArea);
+    const pauseHitArea = trackCreatedObject(
+      tracker,
+      scene.add.rectangle(60, 15, 96, 30, 0x000000, 0)
+    );
+    setHudDisplay(pauseHitArea, HUD_DEPTH).setInteractive({ useHandCursor: true });
+    const muteHitArea = trackCreatedObject(
+      tracker,
+      scene.add.rectangle(60, 51, 96, 26, 0x000000, 0)
+    );
+    setHudDisplay(muteHitArea, HUD_DEPTH).setInteractive({ useHandCursor: true });
     system.container.add([pauseHitArea, muteHitArea]);
     const pauseButtonLabel = createHudText(scene, tracker, system.container, 12, 4, "", textStyle, HUD_DEPTH);
     const muteText = createHudText(scene, tracker, system.container, 12, 37, "", mutedStyle, HUD_DEPTH);
@@ -191,15 +215,19 @@ export function createTacticalHudView(scene, {
       onToggleMute();
     });
 
-    const pickupWorldGraphic = scene.add.graphics().setDepth(HUD_DEPTH - 1).setScrollFactor(1).setVisible(false);
-    tracker.add(pickupWorldGraphic);
-    const outageDarknessRt = setHudDisplay(scene.add.renderTexture(0, 0, 960, 540), FACILITY_DEPTH)
-      .setVisible(false);
-    tracker.add(outageDarknessRt);
+    const pickupWorldGraphic = trackCreatedObject(tracker, scene.add.graphics());
+    pickupWorldGraphic.setDepth(HUD_DEPTH - 1).setScrollFactor(1).setVisible(false);
+    const outageDarknessRt = trackCreatedObject(
+      tracker,
+      scene.add.renderTexture(0, 0, 960, 540)
+    );
+    setHudDisplay(outageDarknessRt, FACILITY_DEPTH).setVisible(false);
     facility.container.add([outageDarknessRt]);
-    const outageLightSprite = setHudDisplay(scene.add.image(292, 24, TEXTURES.powerOutageLight), FACILITY_DEPTH)
-      .setVisible(false);
-    tracker.add(outageLightSprite);
+    const outageLightSprite = trackCreatedObject(
+      tracker,
+      scene.add.image(292, 24, TEXTURES.powerOutageLight)
+    );
+    setHudDisplay(outageLightSprite, FACILITY_DEPTH).setVisible(false);
     facility.container.add([outageLightSprite]);
 
     const refs = {
@@ -229,6 +257,15 @@ export function createTacticalHudView(scene, {
       system: system.container
     });
 
+    function syncFacilityVisibility() {
+      facility.container.setVisible(gameplayVisible);
+      eventBannerTitle.setVisible(true);
+      const showExpanded = facilityExpanded && !facilityCollapsed;
+      eventBannerContainer.setVisible(showExpanded);
+      eventBannerBg.setVisible(showExpanded);
+      eventBannerDetail.setVisible(showExpanded);
+    }
+
     function update(presentation = {}) {
       if (destroyed) return;
       const { mission: missionData = {}, vitals: vitalsData = {}, weapon: weaponData = {}, facility: facilityData = {}, system: systemData = {}, pickup: pickupData = {} } = presentation;
@@ -248,9 +285,14 @@ export function createTacticalHudView(scene, {
       }
 
       facilityLamp.setState(facilityData.tone === "danger" ? "danger" : facilityData.tone === "warning" ? "warning" : "contained");
-      eventBannerTitle.setText(facilityData.title ?? "").setColor(toneColor(facilityData.tone));
+      facilityExpanded = facilityData.expanded === true;
+      const facilityTitle = facilityData.title ?? "";
+      const facilityDetail = facilityData.detail ?? "";
+      eventBannerTitle
+        .setText(facilityExpanded ? facilityTitle : `${facilityTitle} // ${facilityDetail}`)
+        .setColor(toneColor(facilityData.tone));
       eventBannerDetail.setText(facilityData.detail ?? "");
-      eventBannerContainer.setVisible(facilityData.expanded === true);
+      syncFacilityVisibility();
       outageDarknessRt.setVisible(facilityData.tone === "warning");
       outageLightSprite.setVisible(facilityData.tone === "warning");
 
@@ -277,15 +319,15 @@ export function createTacticalHudView(scene, {
       update,
       setGameplayVisible(visible) {
         gameplayVisible = visible === true;
-        for (const regionKey of ["mission", "vitals", "weapon", "facility"]) {
-          regionViews[regionKey].container.setVisible(gameplayVisible && (regionKey !== "facility" || !facilityCollapsed));
+        for (const regionKey of ["mission", "vitals", "weapon", "system"]) {
+          regionViews[regionKey].container.setVisible(gameplayVisible);
         }
-        regionViews.system.container.setVisible(gameplayVisible);
+        syncFacilityVisibility();
         if (!gameplayVisible) pickupWorldGraphic.setVisible(false);
       },
       setFacilityCollapsed(collapsed) {
         facilityCollapsed = collapsed === true;
-        facility.container.setVisible(gameplayVisible && !facilityCollapsed);
+        syncFacilityVisibility();
       },
       notifyPickupCue({ nowMs = 0, durationMs = 0 } = {}) {
         pickupCueUntilMs = Math.max(0, nowMs) + Math.max(0, durationMs);

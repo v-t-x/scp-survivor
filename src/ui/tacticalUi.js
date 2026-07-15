@@ -158,14 +158,18 @@ export function createTerminalButton(scene, options = {}) {
 
   try {
     const frame = scene.add.graphics();
+    objects.push(frame);
     const hitArea = scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0);
+    objects.push(hitArea);
     const label = scene.add.text(x + THEME.layout.panelPadding, y + height / 2, text, {
       color: THEME.text.primary,
       fontFamily: THEME.font.label,
       fontSize: THEME.fontSize.weaponHud
-    }).setOrigin(0, 0.5);
+    });
+    objects.push(label);
+    label.setOrigin(0, 0.5);
     const signal = scene.add.graphics();
-    objects.push(frame, hitArea, label, signal);
+    objects.push(signal);
     let currentState = state;
     let restingState = state === "armed" ? "armed" : "idle";
     let destroyed = false;

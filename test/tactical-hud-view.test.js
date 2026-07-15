@@ -27,6 +27,15 @@ const EXPECTED_REF_KEYS = [
   "xpText"
 ];
 
+function throwConfiguredFailure(failure, object, method) {
+  const configured = failure.configuration;
+  if (!configured || configured.type !== object.type || configured.method !== method) return;
+  configured.seen = (configured.seen ?? 0) + 1;
+  if (configured.seen === (configured.occurrence ?? 1)) {
+    throw new Error(`configuration failed: ${object.type}.${method}`);
+  }
+}
+
 function createDisplayObject(type, initial = {}, failure = {}) {
   const handlers = new Map();
   const object = {
@@ -40,18 +49,22 @@ function createDisplayObject(type, initial = {}, failure = {}) {
     visible: true,
     ...initial,
     setDepth(value) {
+      throwConfiguredFailure(failure, this, "setDepth");
       this.depth = value;
       return this;
     },
     setScrollFactor(value) {
+      throwConfiguredFailure(failure, this, "setScrollFactor");
       this.scrollFactor = value;
       return this;
     },
     setOrigin(...args) {
+      throwConfiguredFailure(failure, this, "setOrigin");
       this.origin = args;
       return this;
     },
     setVisible(value) {
+      throwConfiguredFailure(failure, this, "setVisible");
       this.visible = value;
       return this;
     },
@@ -78,6 +91,7 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       return this;
     },
     setDisplaySize(width, height) {
+      throwConfiguredFailure(failure, this, "setDisplaySize");
       this.displayWidth = width;
       this.displayHeight = height;
       this.calls.push(["setDisplaySize", width, height]);
@@ -90,6 +104,7 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       return this;
     },
     setInteractive(options) {
+      throwConfiguredFailure(failure, this, "setInteractive");
       this.interactive = true;
       this.interactiveOptions = options;
       return this;
@@ -165,6 +180,7 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       return this;
     },
     add(children) {
+      for (const child of children) child.parentContainer = this;
       this.children = [...(this.children ?? []), ...children];
       return this;
     },
@@ -184,7 +200,10 @@ function createScene(options = {}) {
   const objects = [];
   const failure = {
     listenerEvent: options.listenerEvent,
-    remainingListenerFailures: options.listenerFailures ?? 0
+    remainingListenerFailures: options.listenerFailures ?? 0,
+    configuration: options.configurationFailure
+      ? { ...options.configurationFailure }
+      : null
   };
   const add = (type, factory) => (...args) => {
     const object = factory(...args);
@@ -235,6 +254,19 @@ function createScene(options = {}) {
     }
   };
   return scene;
+}
+
+function isEffectivelyVisible(object) {
+  for (let current = object; current; current = current.parentContainer) {
+    if (current.visible === false) return false;
+  }
+  return true;
+}
+
+function assertSceneRolledBack(scene) {
+  assert.equal(scene.objects.length > 0, true);
+  assert.equal(scene.objects.every((object) => object.destroyed), true);
+  assert.equal(scene.objects.every((object) => object.listenerCount === 0), true);
 }
 
 function presentation(overrides = {}) {
@@ -449,19 +481,44 @@ test("missing weapon textures retain the existing fallback image", () => {
   assert.equal(weaponImage.visible, true);
 });
 
-test("facility collapse and gameplay visibility only change existing display state", () => {
+test("facility keeps its single-line status while collapse only hides expanded warning detail", () => {
   const scene = createScene();
   const view = createView(scene);
   const before = [...view.objects];
+  const stable = presentation();
+
+  view.update(stable);
+  assert.equal(view.regions.facility.container.visible, true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
+  assert.equal(view.refs.eventBannerTitle.text, `${stable.facility.title} // ${stable.facility.detail}`);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerBg), false);
 
   view.update(presentation({
     activeFacilityEvent: { type: "powerOutage", warning: "电力系统不稳定。" }
   }));
-  view.setFacilityCollapsed(true);
-  view.setGameplayVisible(false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerBg), true);
 
+  view.setFacilityCollapsed(true);
+  assert.equal(view.regions.facility.container.visible, true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerBg), false);
+
+  view.setFacilityCollapsed(false);
+  assert.equal(view.regions.facility.container.visible, true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), true);
+
+  view.setGameplayVisible(false);
   assert.equal(view.regions.facility.container.visible, false);
   assert.equal(view.regions.mission.container.visible, false);
+
+  view.setGameplayVisible(true);
+  assert.equal(view.regions.facility.container.visible, true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), true);
   assert.equal(view.objects.every((object, index) => object === before[index]), true);
 });
 
@@ -490,3 +547,24 @@ test("constructor rollback destroys already-created objects and unregisters list
   assert.equal(scene.objects.every((object) => object.destroyed), true);
   assert.equal(scene.objects.every((object) => object.listenerCount === 0), true);
 });
+
+for (const { type, method } of [
+  { type: "container", method: "setDepth" },
+  { type: "container", method: "setScrollFactor" },
+  { type: "text", method: "setOrigin" },
+  { type: "image", method: "setDisplaySize" },
+  { type: "rectangle", method: "setInteractive" },
+  { type: "graphics", method: "setVisible" },
+  { type: "renderTexture", method: "setVisible" },
+  { type: "image", method: "setVisible" }
+]) {
+  test(`constructor owns ${type} before ${method} can throw`, () => {
+    const scene = createScene({ configurationFailure: { type, method } });
+
+    assert.throws(
+      () => createView(scene),
+      new RegExp(`configuration failed: ${type}\\.${method}`)
+    );
+    assertSceneRolledBack(scene);
+  });
+}
