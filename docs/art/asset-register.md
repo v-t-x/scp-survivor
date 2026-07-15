@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入。登记共计 27 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
+本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查。登记共计 33 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -599,4 +599,114 @@ Original: `C:\Users\24037\.codex\generated_images\019f5c42-ddb0-73d2-889d-cf86d3
 
 ```text
 Replace the four frames in this exact 1x4 horizontal spritesheet with a materially readable small R-17 bud that survives nearest-neighbor reduction to a 22-pixel-tall sprite. Preserve four equal frame cells, flat background exactly #00FF00, no transparency, no text, no shadow, no scenery, no perspective, no 3D. The creature must be legless and floating, with a LARGE broad dark charcoal/black organic tissue body making up at least 70 percent of its visible area, a thick near-black outer contour, muted red tissue seams/tendrils, one obvious small steel containment tag/collar, and a TINY cyan-white core no more than roughly 12 percent of the body area. Do not let the cyan core dominate. Use chunky high-contrast pixel clusters and thick shapes that remain visibly separate at 22 pixels: dark body, red tissue, steel tag, and tiny cyan core must all survive. Keep the same exact creature, part count, 22-pixel envelope, center, bottom baseline and total opaque area across all frames within 5 percent. Animate only gentle bending of the same thick tendrils and subtle body pulse; every frame silhouette must differ from all other frames without adding/removing parts. Crisp limited-palette top-down pixel art, fixed-size loop.
+```
+
+## 设施环境纵切 Task 1 真实生成与筛选记录
+
+以下六项均在 2026-07-15 以 OpenAI built-in `image_gen` 完成，仅文本输入；工具未公开具体模型名，故不推断模型名称。没有使用用户截图、SCP Wiki 图片、素材包或其他第三方图像作为输入；没有使用 CLI/API fallback。原始和中间文件均留在 `.superpowers/sdd/facility-assets/sources/`，该目录与 1×/4× contact sheet 均为本地审计物，不暂存。
+
+| Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| facility-combat-floor | PNG | `assets/art/facility/combat-floor.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P40](#p40-facility-combat-floor)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-f27b942d-cda0-4988-a559-fec6f3a06d56.png`；audit raw `sources/combat-floor-raw.png`；raw SHA-256 `D1453C62677DD7E3AD9524AF47390F17AA9DA18E78C02E2F2FFCF1D44A88E002` | 无手绘；`normalize_pixel_asset.py --fit cover --alpha opaque --colors 32 --seam-wrap`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `D17F66213177DE86516EF56D3B29AC6664F7F94697EA4C63588FFED169B64140`；2×2 seam 图已审查 | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、色数、alpha、接缝与视觉审查通过；不等同于商业发布准入 | 128×128 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| facility-entry-threshold | PNG | `assets/art/facility/entry-threshold.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P41](#p41-facility-entry-threshold)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-eb6c4656-3275-45d4-8f3c-8c16936bb73f.png`；audit raw `sources/entry-threshold-raw.png`；raw SHA-256 `23A5ECB2D251C6272E903BAE7F843D02EA9E5A38B541685278B2C4622A866ED4` | 无手绘；`normalize_pixel_asset.py --fit cover --alpha opaque --colors 32`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `B6BC68CD27504594644AC50CA3CE1678CF2C2E9BA5575E3800B122061D973F3D` | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、色数、alpha 与视觉审查通过；不等同于商业发布准入 | 128×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| facility-maintenance-deck | PNG | `assets/art/facility/maintenance-deck.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P42](#p42-facility-maintenance-deck)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-1cfc47ec-0246-4625-b1b4-15f9110b5cb9.png`；audit raw `sources/maintenance-deck-raw.png`；raw SHA-256 `8FCB07505E27C6094F31D965F0605518A0B28C36E409FB3A88D737A2E68E7FE0` | 无手绘；`normalize_pixel_asset.py --fit cover --alpha opaque --colors 32 --seam-wrap`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `8CFA9F9399ADC3403A48C2D417836E84D0F2F51782CB52487D24118311A70BAB`；2×2 seam 图已审查 | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、色数、alpha、接缝与视觉审查通过；不等同于商业发布准入 | 128×128 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| facility-wall-bank | PNG | `assets/art/facility/wall-bank.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P43](#p43-facility-wall-bank)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-8e0b337e-a003-47fd-97d0-86d71a073ad9.png`；audit raw `sources/wall-bank-raw.png`；raw SHA-256 `8077C453C741A6B5BED4003A0B09769D84F4C23B7BE84920D3176155380C916A` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill` 输出 `sources/wall-bank-cutout.png` SHA-256 `2CB854F0C3C6612A21ADC65C694AE1FD8AADDE52868DDCF732D3BBA9173F6F96`；随后 `normalize_pixel_asset.py --fit contain --alpha binary --colors 32`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `EA4272AF5CB5445709F7DE218E0FFA93F01AC9590C1538668200550807126FAE` | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、二值 alpha、无绿边、色数与视觉审查通过；不等同于商业发布准入 | 128×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| facility-power-junction | PNG | `assets/art/facility/power-junction.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P44](#p44-facility-power-junction)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-f2f222b9-ecb2-4616-8ce2-b33a6d592eee.png`；audit raw `sources/power-junction-raw.png`；raw SHA-256 `671C847DA0CB1F39679F6462B7949DE6429B7CD21F939201E948056ED08B88B9` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill` 输出 `sources/power-junction-cutout.png` SHA-256 `F414CB00874A11D719F9920131C8C7D20A9E3210BB9E47CFDCC675D97196642A`；随后 `normalize_pixel_asset.py --fit contain --alpha binary --colors 32`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `B8F5AB5591801EFAA437344E2161B4A2DA1B6FD926A9DA117D59E51F83687546` | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、二值 alpha、无绿边、色数与视觉审查通过；不等同于商业发布准入 | 96×96 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| facility-contamination-trail | PNG | `assets/art/facility/contamination-trail.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/normalize_pixel_asset.py` | 2026-07-15 | [P45](#p45-facility-contamination-trail)；original `C:\Users\24037\.codex\generated_images\019f6452-0dbb-7d13-9d19-326bd0d5a388\exec-29364643-61fe-466a-999d-9f68b9ba7a1d.png`；audit raw `sources/contamination-trail-raw.png`；raw SHA-256 `7DB208754B835357147987DE16BE5C285C94CA761E92EE380DD538177E0C0BCB` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill` 输出 `sources/contamination-trail-cutout.png` SHA-256 `162694949248E6816CB77CBCF46B5319A19C36A3D91EA2CC61DED60619EA6C93`；随后 `normalize_pixel_asset.py --fit contain --alpha binary --colors 32`，Pillow nearest、无抖动量化、8-bit RGBA；final SHA-256 `F6DBE86BD5D6DFBF67F171E19E79CFEFD5E89610F17469D7D87B1B10A5F0272F` | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 1 正式生产素材准入：合同、二值 alpha、无绿边、色数与视觉审查通过；不等同于商业发布准入 | 64×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+
+### 处理与审计产物
+
+- 正式 PNG：`public/assets/art/facility/{combat-floor,entry-threshold,maintenance-deck,wall-bank,power-junction,contamination-trail}.png`。
+- 原始、去底中间物与 SHA 审计副本：`.superpowers/sdd/facility-assets/sources/`；不暂存。
+- 1×/4× contact sheet：`.superpowers/sdd/facility-assets/facility-modules-contact-sheet-{1x,4x}.png`；SHA-256 分别为 `F1E547AD79B2BBB5E5ACEA936E2FC86A9858867D30F94A7BB585F61EF146A190`、`DFDCE4ABCCE3DD6F30F5CC4B20DC45D3F86882A14DB775E17698E1B4679E5C88`；不暂存。
+- 可平铺两项的 2×2 seam 审查图：`combat-floor-seam-2x2.png`、`maintenance-deck-seam-2x2.png`；逐像素首末边界与视觉检查均通过。
+
+### 筛选与失败尝试
+
+- P40–P45 每项均在首次 built-in 输出后通过视觉筛选；没有被拒绝或中断的图像候选，因此不存在额外失败源文件。
+- 透明三项先保留 raw，再由 bundled helper 去绿；最终 normalizer 将 alpha 强制为 0/255，并把透明像素 RGB 清零。没有改用 CLI/API 或模型 fallback。
+- 一次 Windows `.NET System.Drawing` 尺寸诊断在归档前停止，未改变任何候选内容、未生成新的素材候选；后续使用任务指定 Python runtime 完成尺寸、hash 与像素验证。
+
+### P40 facility-combat-floor
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility room module, to be normalized to a 128 by 128 pixel PNG
+Primary request: one quiet, low-noise central combat floor tile that fills the entire square edge to edge; cold grey-blue industrial metal panels, restrained 16-pixel modular seams, sparse tiny wear marks, subtle inset bolts only
+Scene/backdrop: the floor itself fills the entire frame with no separate backdrop
+Camera/composition: exact orthographic straight-down overhead game view, square tile, all four edges designed to repeat cleanly, no dominant center motif
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, strict 16px module grid, maximum 32-color cold grey-blue metal palette with only a tiny muted amber accent
+Lighting/mood: flat controlled Foundation underground facility light, professional and oppressive
+Constraints: fully opaque edge-to-edge module; hard edges; no text, letters, numbers, logos, people, creatures, weapons, furniture, obstacles, pickups, decals, blood, warning sign, floor shadow, gradients, soft light, antialiasing, transparency, isometric or 3D perspective, watermark
+Avoid: busy noise, a visible border around the tile, a central prop, smooth painting, photorealism, 3D render, UI frame
+```
+
+### P41 facility-entry-threshold
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility room module, to be normalized to a 128 by 64 pixel PNG
+Primary request: one heavy left-side facility entrance threshold that fills a wide two-to-one frame edge to edge; thick cold grey-blue metal sill, worn but readable yellow-and-black warning stripe band, recessed dark door channel and small structural bolts
+Scene/backdrop: the threshold itself fills the whole frame with no separate backdrop
+Camera/composition: exact orthographic straight-down overhead game view, horizontal 16px modular grid, wide low-profile module, no perspective
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, maximum 32 colors, cold grey-blue metal with a small restrained amber warning accent
+Lighting/mood: flat controlled Foundation underground facility light, professional and oppressive
+Constraints: fully opaque edge-to-edge module; hard edges; no text, letters, numbers, logos, people, creatures, weapons, furniture, pickups, blood, soft light, gradients, antialiasing, transparency, isometric or 3D perspective, watermark
+Avoid: front-facing door elevation, a freestanding prop, smooth painting, photorealism, 3D render, UI frame
+```
+
+### P42 facility-maintenance-deck
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility room module, to be normalized to a 128 by 128 pixel PNG
+Primary request: one maintenance-deck floor module that fills the entire square edge to edge; cold grey-blue metal plates, shallow cable troughs, rectangular inspection covers, bolts and restrained maintenance scuffs
+Scene/backdrop: the floor itself fills the entire frame with no separate backdrop
+Camera/composition: exact orthographic straight-down overhead game view, square tile, 16px modular grid, designed to repeat cleanly at all four edges, no obstacle silhouette and no central focal prop
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, maximum 32 colors, cold grey-blue metal with tiny muted amber maintenance accents
+Lighting/mood: flat controlled Foundation underground facility light, professional and oppressive
+Constraints: fully opaque edge-to-edge module; hard edges; no text, letters, numbers, logos, people, creatures, weapons, furniture, pickups, blood, warning sign, floor shadow, gradients, soft light, antialiasing, transparency, isometric or 3D perspective, watermark
+Avoid: a busy scene, a visible border around the tile, a central machine, smooth painting, photorealism, 3D render, UI frame
+```
+
+### P43 facility-wall-bank
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility wall/equipment module, to be normalized to a 128 by 64 pixel PNG with binary transparency
+Primary request: one wide low-profile wall-bank equipment group: cold grey-blue containment wall plate, exposed pipes, cable conduits, a few small indicator lights and maintenance housings; a single coherent horizontal facility object, not a room
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key green background for local removal
+Camera/composition: exact orthographic straight-down overhead game view, wide two-to-one footprint, 16px module grid, generous green padding around all sides, no perspective
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, maximum 32 colors, cold grey-blue metal with restrained amber and cyan status lights
+Lighting/mood: flat controlled Foundation underground facility light, professional and oppressive
+Constraints: keep the object fully separated from the background with crisp opaque hard edges; no #00ff00 on object; no shadows, gradients, floor plane, reflections, text, letters, numbers, logos, people, creatures, weapons, furniture, pickups, blood, antialiasing, soft alpha, isometric or 3D perspective, watermark
+Avoid: a full opaque rectangle, front elevation, a standalone UI panel, smooth painting, photorealism, 3D render, UI frame
+```
+
+### P44 facility-power-junction
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility power-node module, to be normalized to a 96 by 96 pixel PNG with binary transparency
+Primary request: one compact Foundation power junction seen directly from above: square grey-blue breaker box, cable ports, thick short conduits, two small amber indicator lights and one restrained cyan power indicator; readable as a controllable-looking infrastructure object but with no text
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key green background for local removal
+Camera/composition: exact orthographic straight-down overhead game view, compact square footprint on a 16px module grid, generous green padding on all sides, no perspective
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, maximum 32 colors, cold grey-blue metal with restrained amber and cyan details
+Lighting/mood: flat controlled Foundation underground facility light, professional and oppressive
+Constraints: keep the object fully separated from the background with crisp opaque hard edges; no #00ff00 on object; no shadows, gradients, floor plane, reflections, text, letters, numbers, logos, people, creatures, weapons, furniture, pickups, blood, antialiasing, soft alpha, isometric or 3D perspective, watermark
+Avoid: a full opaque rectangle, front elevation, a UI icon, smooth painting, photorealism, 3D render, UI frame
+```
+
+### P45 facility-contamination-trail
+
+```text
+Use case: stylized-concept
+Asset type: source art for a production 2D Phaser top-down facility contamination module, to be normalized to a 64 by 64 pixel PNG with binary transparency
+Primary request: one restrained small anomalous contamination trail: low-profile irregular dark red and muted purple residue with a few connected drag marks and granular fragments; clearly a floor stain, not a barrier, pickup, body part or enemy
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key green background for local removal
+Camera/composition: exact orthographic straight-down overhead game view, compact asymmetric 16px module-grid footprint, generous green padding around all sides, low visual coverage
+Style/medium: authentic detailed 2D pixel art, deliberate coarse hard pixel clusters, maximum 32 colors, dark red-purple residue with near-black edges and no glow
+Lighting/mood: restrained industrial containment-horror, controlled and readable
+Constraints: keep the residue fully separated from the background with crisp opaque hard edges; no #00ff00 in the residue; no shadows, gradients, floor plane, reflections, text, letters, numbers, logos, people, creatures, recognizable organs, gore, weapons, furniture, pickups, antialiasing, soft alpha, isometric or 3D perspective, watermark
+Avoid: a giant puddle, bright neon liquid, blood splatter gore, a full opaque rectangle, smooth painting, photorealism, 3D render, UI frame
 ```

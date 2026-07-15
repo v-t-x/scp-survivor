@@ -146,7 +146,13 @@ test("every opening facility texture has an existence-guarded fallback", async (
     "facilityServiceFloor",
     "facilityHazardStripe",
     "facilityObservationWindow",
-    "facilityPipeBank"
+    "facilityPipeBank",
+    "facilityCombatFloor",
+    "facilityEntryThreshold",
+    "facilityMaintenanceDeck",
+    "facilityWallBank",
+    "facilityPowerJunction",
+    "facilityContaminationTrail"
   ]) {
     assert.match(source, new RegExp(`ensureTexture\\(scene, TEXTURES\\.${key}`));
   }

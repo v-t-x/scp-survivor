@@ -17,6 +17,12 @@ const approvedImageAssets = [
   { key: "facility-hazard-stripe", path: "assets/art/facility/hazard-stripe.png", size: [32, 32] },
   { key: "facility-observation-window", path: "assets/art/facility/observation-window.png", size: [96, 64] },
   { key: "facility-pipe-bank", path: "assets/art/facility/pipe-bank.png", size: [96, 64] },
+  { key: "facility-combat-floor", path: "assets/art/facility/combat-floor.png", size: [128, 128] },
+  { key: "facility-entry-threshold", path: "assets/art/facility/entry-threshold.png", size: [128, 64] },
+  { key: "facility-maintenance-deck", path: "assets/art/facility/maintenance-deck.png", size: [128, 128] },
+  { key: "facility-wall-bank", path: "assets/art/facility/wall-bank.png", size: [128, 64] },
+  { key: "facility-power-junction", path: "assets/art/facility/power-junction.png", size: [96, 96] },
+  { key: "facility-contamination-trail", path: "assets/art/facility/contamination-trail.png", size: [64, 64] },
   { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
   { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [96, 96] },
@@ -37,6 +43,15 @@ const approvedCharacterSheets = [
     path: "assets/art/characters/player-opening-sheet.png",
     size: [576, 192]
   }
+];
+
+const facilityRoomModuleAssets = [
+  { property: "facilityCombatFloor", key: "facility-combat-floor", path: "assets/art/facility/combat-floor.png", size: [128, 128], alpha: "opaque", seamWrap: true },
+  { property: "facilityEntryThreshold", key: "facility-entry-threshold", path: "assets/art/facility/entry-threshold.png", size: [128, 64], alpha: "opaque", seamWrap: false },
+  { property: "facilityMaintenanceDeck", key: "facility-maintenance-deck", path: "assets/art/facility/maintenance-deck.png", size: [128, 128], alpha: "opaque", seamWrap: true },
+  { property: "facilityWallBank", key: "facility-wall-bank", path: "assets/art/facility/wall-bank.png", size: [128, 64], alpha: "binary", seamWrap: false },
+  { property: "facilityPowerJunction", key: "facility-power-junction", path: "assets/art/facility/power-junction.png", size: [96, 96], alpha: "binary", seamWrap: false },
+  { property: "facilityContaminationTrail", key: "facility-contamination-trail", path: "assets/art/facility/contamination-trail.png", size: [64, 64], alpha: "binary", seamWrap: false }
 ];
 
 const approvedEnemySheets = [
@@ -429,6 +444,9 @@ test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.facilityHazardStripe, "facility-hazard-stripe");
   assert.equal(TEXTURES.facilityObservationWindow, "facility-observation-window");
   assert.equal(TEXTURES.facilityPipeBank, "facility-pipe-bank");
+  for (const { property, key } of facilityRoomModuleAssets) {
+    assert.equal(TEXTURES[property], key);
+  }
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
@@ -499,6 +517,34 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
 
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
+    }
+  }
+});
+
+test("facility room module PNGs match their frozen alpha and seam contracts", async () => {
+  for (const { key, path, size, alpha, seamWrap } of facilityRoomModuleAssets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
+    assert.deepEqual([width, height], size, key);
+
+    const colors = new Set();
+    const alphaValues = new Set();
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const currentAlpha = pixels[offset + 3];
+      alphaValues.add(currentAlpha);
+      if (currentAlpha === 0) {
+        assert.deepEqual([...pixels.subarray(offset, offset + 3)], [0, 0, 0], `${key} has chroma-key residue`);
+      } else {
+        colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      }
+    }
+    assert.ok(colors.size <= 32, `${key} exceeds the 32-color production palette`);
+    assert.deepEqual(alphaValues, alpha === "opaque" ? new Set([255]) : new Set([0, 255]), `${key} alpha contract`);
+
+    if (seamWrap) {
+      const pixel = (x, y) => pixels.subarray((y * width + x) * 4, (y * width + x + 1) * 4);
+      for (let y = 0; y < height; y += 1) assert.deepEqual(pixel(0, y), pixel(width - 1, y), `${key} horizontal seam at ${y}`);
+      for (let x = 0; x < width; x += 1) assert.deepEqual(pixel(x, 0), pixel(x, height - 1), `${key} vertical seam at ${x}`);
     }
   }
 });

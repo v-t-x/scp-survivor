@@ -191,6 +191,99 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.facilityPipeBank, 96, 64);
   });
 
+  ensureTexture(scene, TEXTURES.facilityCombatFloor, () => {
+    graphics.clear();
+    graphics.fillStyle(0x18212c, 1);
+    graphics.fillRect(0, 0, 128, 128);
+    graphics.lineStyle(1, 0x2d3a49, 1);
+    for (let x = 0; x <= 128; x += 16) graphics.lineBetween(x, 0, x, 128);
+    for (let y = 0; y <= 128; y += 16) graphics.lineBetween(0, y, 128, y);
+    graphics.fillStyle(0x22303e, 1);
+    graphics.fillRect(16, 16, 8, 8);
+    graphics.fillRect(96, 80, 8, 8);
+    graphics.generateTexture(TEXTURES.facilityCombatFloor, 128, 128);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityEntryThreshold, () => {
+    graphics.clear();
+    graphics.fillStyle(0x222b35, 1);
+    graphics.fillRect(0, 0, 128, 64);
+    graphics.fillStyle(0x111820, 1);
+    graphics.fillRect(0, 20, 128, 24);
+    graphics.fillStyle(0x9d772c, 1);
+    for (let x = -16; x < 128; x += 32) {
+      graphics.fillTriangle(x, 44, x + 12, 44, x + 28, 20);
+    }
+    graphics.lineStyle(2, 0x596779, 1);
+    graphics.strokeRect(1, 1, 126, 62);
+    graphics.generateTexture(TEXTURES.facilityEntryThreshold, 128, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityMaintenanceDeck, () => {
+    graphics.clear();
+    graphics.fillStyle(0x202b37, 1);
+    graphics.fillRect(0, 0, 128, 128);
+    graphics.fillStyle(0x151d26, 1);
+    graphics.fillRect(0, 16, 128, 12);
+    graphics.fillRect(0, 84, 128, 12);
+    graphics.fillStyle(0x4d6073, 1);
+    graphics.fillRect(0, 20, 128, 2);
+    graphics.fillRect(0, 88, 128, 2);
+    graphics.lineStyle(2, 0x435668, 1);
+    graphics.strokeRect(40, 40, 48, 32);
+    graphics.fillStyle(0x6f7e8c, 1);
+    graphics.fillRect(46, 48, 36, 3);
+    graphics.fillRect(46, 61, 36, 3);
+    graphics.generateTexture(TEXTURES.facilityMaintenanceDeck, 128, 128);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityWallBank, () => {
+    graphics.clear();
+    graphics.fillStyle(0x25313d, 1);
+    graphics.fillRect(6, 12, 116, 42);
+    graphics.fillStyle(0x121922, 1);
+    graphics.fillRect(14, 20, 100, 26);
+    graphics.fillStyle(0x647486, 1);
+    graphics.fillRect(18, 24, 88, 4);
+    graphics.fillRect(18, 38, 88, 4);
+    graphics.fillStyle(0xb27d2e, 1);
+    graphics.fillRect(62, 28, 8, 10);
+    graphics.fillStyle(0x7ed5d6, 1);
+    graphics.fillRect(24, 31, 5, 5);
+    graphics.fillRect(98, 31, 5, 5);
+    graphics.generateTexture(TEXTURES.facilityWallBank, 128, 64);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityPowerJunction, () => {
+    graphics.clear();
+    graphics.fillStyle(0x27323d, 1);
+    graphics.fillRect(18, 18, 60, 60);
+    graphics.fillStyle(0x101720, 1);
+    graphics.fillRect(26, 26, 44, 44);
+    graphics.lineStyle(4, 0x6a7988, 1);
+    graphics.lineBetween(0, 24, 24, 36);
+    graphics.lineBetween(72, 58, 96, 70);
+    graphics.fillStyle(0xc58f32, 1);
+    graphics.fillRect(42, 34, 20, 6);
+    graphics.fillStyle(0x78d9d6, 1);
+    graphics.fillCircle(52, 54, 7);
+    graphics.generateTexture(TEXTURES.facilityPowerJunction, 96, 96);
+  });
+
+  ensureTexture(scene, TEXTURES.facilityContaminationTrail, () => {
+    graphics.clear();
+    graphics.fillStyle(0x522838, 1);
+    graphics.fillCircle(34, 34, 15);
+    graphics.fillCircle(20, 42, 8);
+    graphics.fillCircle(48, 24, 7);
+    graphics.fillStyle(0x2c1729, 1);
+    graphics.fillCircle(30, 30, 7);
+    graphics.fillCircle(43, 37, 5);
+    graphics.fillRect(12, 47, 12, 4);
+    graphics.fillRect(46, 18, 8, 3);
+    graphics.generateTexture(TEXTURES.facilityContaminationTrail, 64, 64);
+  });
+
   ensureTexture(scene, TEXTURES.weaponPistolIcon, () => {
     graphics.clear();
     graphics.fillStyle(0x202832, 1);
