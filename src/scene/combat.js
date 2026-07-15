@@ -259,17 +259,23 @@ export const combatMixin = {
     if (!pickup.active) {
       return;
     }
+    let cueReason = null;
     if (pickup.pickupType === "combatStim") {
       this.health = Math.min(this.maxHealth, this.health + BALANCE.pickups.combatStim.healAmount);
       this.moveSpeedBuffMultiplier = BALANCE.pickups.combatStim.speedMultiplier;
       this.activeStimUntilMs = this.elapsedSurvivalMs + BALANCE.pickups.combatStim.durationMs;
       this.updateUI();
+      cueReason = "combatStim";
     } else if (pickup.pickupType === "scp500") {
       this.health = Math.min(this.maxHealth, this.health + BALANCE.pickups.scp500.healAmount);
       this.playSound("pickupHeal");
       this.updateUI();
+      cueReason = "scp500";
     }
     pickup.destroy();
+    if (cueReason) {
+      this.notifyPickupRadiusCue?.(cueReason);
+    }
   },
 
 

@@ -1,10 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { BALANCE } from "../src/config/balance.js";
 import { HUD_REGIONS } from "../src/art/openingVisualContract.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { getHudPresentation } from "../src/ui/hudPresentation.js";
 import { createTacticalHudView } from "../src/ui/tacticalHudView.js";
+
+async function loadHudMixin() {
+  const source = await readFile(new URL("../src/scene/hud.js", import.meta.url), "utf8");
+  const declaration = "export const hudMixin =";
+  const start = source.indexOf(declaration);
+  assert.notEqual(start, -1, "hudMixin export must exist");
+  const body = source.slice(start).replace(declaration, "const hudMixin =");
+  return Function(`${body}\nreturn hudMixin;`)();
+}
+
+const hudMixin = await loadHudMixin();
 
 const EXPECTED_REGION_KEYS = ["mission", "facility", "vitals", "weapon", "system"];
 const EXPECTED_REF_KEYS = [
@@ -425,16 +437,122 @@ test("pickup radius remains a single world-space graphic around the live player 
   assert.equal(movedCircle.includes(320), false);
 });
 
-test("pickup cues use presentation time without timers and expire back to hidden", () => {
+test("first pickup presentation establishes a hidden radius baseline without a cue", () => {
   const scene = createScene();
   const view = createView(scene);
 
-  view.notifyPickupCue({ reason: "build", nowMs: 100, durationMs: 300 });
-  view.update(presentation({ elapsedSurvivalMs: 399, buildPanelVisible: false }));
+  view.update(presentation({ elapsedSurvivalMs: 100, pickupRadius: 72 }));
+  view.update(presentation({ elapsedSurvivalMs: 749, pickupRadius: 72 }));
+
+  assert.equal(view.pickupWorldGraphic.visible, false);
+  assert.equal(
+    view.pickupWorldGraphic.calls.some(([name]) => name === "strokeCircle"),
+    false
+  );
+});
+
+test("pickup radius changes show a cue for 650ms and clear exactly at expiry", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  view.update(presentation({ elapsedSurvivalMs: 100, pickupRadius: 72 }));
+
+  view.update(presentation({ elapsedSurvivalMs: 200, pickupRadius: 96 }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+  assert.deepEqual(
+    view.pickupWorldGraphic.calls.findLast(([name]) => name === "strokeCircle"),
+    ["strokeCircle", 400, 260, 96]
+  );
+
+  view.update(presentation({ elapsedSurvivalMs: 849, pickupRadius: 96 }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+  const clearsBeforeExpiry = view.pickupWorldGraphic.calls.filter(([name]) => name === "clear").length;
+
+  view.update(presentation({ elapsedSurvivalMs: 850, pickupRadius: 96 }));
+  assert.equal(view.pickupWorldGraphic.visible, false);
+  assert.equal(
+    view.pickupWorldGraphic.calls.filter(([name]) => name === "clear").length,
+    clearsBeforeExpiry + 1
+  );
+  assert.deepEqual(view.pickupWorldGraphic.calls.at(-1), ["clear"]);
+});
+
+test("explicit pickup cues use presentation time without timers and expire exactly", () => {
+  const scene = createScene();
+  let timerCalls = 0;
+  scene.time = {
+    delayedCall() {
+      timerCalls += 1;
+    }
+  };
+  const view = createView(scene);
+  view.update(presentation({ elapsedSurvivalMs: 100 }));
+
+  view.notifyPickupCue({ reason: "combatStim", nowMs: 500, durationMs: 650 });
+  view.update(presentation({ elapsedSurvivalMs: 1_149, buildPanelVisible: false }));
   assert.equal(view.pickupWorldGraphic.visible, true);
 
-  view.update(presentation({ elapsedSurvivalMs: 401, buildPanelVisible: false }));
+  view.update(presentation({ elapsedSurvivalMs: 1_150, buildPanelVisible: false }));
   assert.equal(view.pickupWorldGraphic.visible, false);
+  assert.equal(timerCalls, 0);
+});
+
+test("build panel visibility and unexpired cues compose without leaving a permanent ring", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  view.update(presentation({ elapsedSurvivalMs: 100, buildPanelVisible: true }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+
+  view.update(presentation({ elapsedSurvivalMs: 200, buildPanelVisible: false }));
+  assert.equal(view.pickupWorldGraphic.visible, false);
+
+  view.notifyPickupCue({ reason: "scp500", nowMs: 300, durationMs: 650 });
+  view.update(presentation({ elapsedSurvivalMs: 400, buildPanelVisible: true }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+
+  view.update(presentation({ elapsedSurvivalMs: 949, buildPanelVisible: false }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+  view.update(presentation({ elapsedSurvivalMs: 950, buildPanelVisible: false }));
+  assert.equal(view.pickupWorldGraphic.visible, false);
+});
+
+test("overlapping pickup cues never shorten the active deadline", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  view.update(presentation({ elapsedSurvivalMs: 50 }));
+
+  view.notifyPickupCue({ reason: "radius-change", nowMs: 100, durationMs: 650 });
+  view.notifyPickupCue({ reason: "scp500", nowMs: 200, durationMs: 100 });
+  view.update(presentation({ elapsedSurvivalMs: 749 }));
+  assert.equal(view.pickupWorldGraphic.visible, true);
+
+  view.update(presentation({ elapsedSurvivalMs: 750 }));
+  assert.equal(view.pickupWorldGraphic.visible, false);
+});
+
+test("legacy per-frame pickup updates do not trigger or renew a tactical cue", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  const notifyPickupCue = view.notifyPickupCue;
+  let notificationCalls = 0;
+  view.notifyPickupCue = (...args) => {
+    notificationCalls += 1;
+    return notifyPickupCue(...args);
+  };
+  view.update(presentation({ elapsedSurvivalMs: 100 }));
+  const hudFacade = {
+    elapsedSurvivalMs: 100,
+    _hudPresentation: { pickup: { nowMs: 100 } },
+    tacticalHudView: view
+  };
+
+  for (const nowMs of [100, 101, 102]) {
+    hudFacade.elapsedSurvivalMs = nowMs;
+    hudFacade._hudPresentation = { pickup: { nowMs } };
+    hudMixin.updatePickupRadiusIndicator.call(hudFacade);
+    view.update(presentation({ elapsedSurvivalMs: nowMs }));
+    assert.equal(view.pickupWorldGraphic.visible, false);
+  }
+  assert.equal(notificationCalls, 1, "the legacy shim is not called every frame");
 });
 
 test("pickup cue clock is nested under pickup and absent from the presentation root", () => {
@@ -452,9 +570,9 @@ test("pickup cue clock is nested under pickup and absent from the presentation r
   view.update(beforeExpiry);
   assert.equal(view.pickupWorldGraphic.visible, true);
 
-  const afterExpiry = presentation({ elapsedSurvivalMs: 601, buildPanelVisible: false });
+  const afterExpiry = presentation({ elapsedSurvivalMs: 600, buildPanelVisible: false });
   assert.equal(Object.hasOwn(afterExpiry, "nowMs"), false);
-  assert.equal(afterExpiry.pickup.nowMs, 601);
+  assert.equal(afterExpiry.pickup.nowMs, 600);
   view.update(afterExpiry);
   assert.equal(view.pickupWorldGraphic.visible, false);
 });

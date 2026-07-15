@@ -7,6 +7,7 @@ import { selectTimelineHudContainers } from "./hudPresentation.js";
 const HUD_DEPTH = 45;
 const FACILITY_DEPTH = 58;
 const WEAPON_ICON_SIZE = 48;
+const PICKUP_RADIUS_CUE_DURATION_MS = 650;
 
 function toneColor(tone) {
   return {
@@ -86,6 +87,7 @@ export function createTacticalHudView(scene, {
   let facilityCollapsed = false;
   let facilityExpanded = false;
   let pickupCueUntilMs = -1;
+  let previousPickupRadius;
 
   try {
     const regionViews = {};
@@ -299,13 +301,32 @@ export function createTacticalHudView(scene, {
       pauseButtonLabel.setText(systemData.pauseLabel ?? "").setColor(toneColor(systemData.tone));
       muteText.setText(systemData.muteLabel ?? "").setColor(toneColor(systemData.tone));
 
-      const cueActive = pickupCueUntilMs >= pickupData.nowMs;
-      const pickupVisible = gameplayVisible && (pickupData.buildPanelVisible === true || cueActive);
-      pickupWorldGraphic.setVisible(pickupVisible);
-      if (pickupVisible && scene.player) {
+      const pickupNowMs = Number.isFinite(pickupData.nowMs)
+        ? Math.max(0, pickupData.nowMs)
+        : 0;
+      const pickupRadius = Number.isFinite(pickupData.radius)
+        ? Math.max(0, pickupData.radius)
+        : 0;
+      if (previousPickupRadius === undefined) {
+        previousPickupRadius = pickupRadius;
+      } else if (pickupRadius !== previousPickupRadius) {
+        previousPickupRadius = pickupRadius;
+        pickupCueUntilMs = Math.max(
+          pickupCueUntilMs,
+          pickupNowMs + PICKUP_RADIUS_CUE_DURATION_MS
+        );
+      }
+      const cueActive = pickupNowMs < pickupCueUntilMs;
+      const pickupVisible = gameplayVisible
+        && scene.player
+        && (pickupData.buildPanelVisible === true || cueActive);
+      pickupWorldGraphic.setVisible(Boolean(pickupVisible));
+      if (pickupVisible) {
         pickupWorldGraphic.clear();
         pickupWorldGraphic.lineStyle(2, THEME.terminal.contained, 0.75);
-        pickupWorldGraphic.strokeCircle(scene.player.x, scene.player.y, pickupData.radius ?? 0);
+        pickupWorldGraphic.strokeCircle(scene.player.x, scene.player.y, pickupRadius);
+      } else {
+        pickupWorldGraphic.clear();
       }
     }
 
@@ -323,14 +344,20 @@ export function createTacticalHudView(scene, {
           regionViews[regionKey].container.setVisible(gameplayVisible);
         }
         syncFacilityVisibility();
-        if (!gameplayVisible) pickupWorldGraphic.setVisible(false);
+        if (!gameplayVisible) {
+          pickupWorldGraphic.setVisible(false);
+          pickupWorldGraphic.clear();
+        }
       },
       setFacilityCollapsed(collapsed) {
         facilityCollapsed = collapsed === true;
         syncFacilityVisibility();
       },
       notifyPickupCue({ nowMs = 0, durationMs = 0 } = {}) {
-        pickupCueUntilMs = Math.max(0, nowMs) + Math.max(0, durationMs);
+        const safeDurationMs = Number.isFinite(durationMs) ? Math.max(0, durationMs) : 0;
+        if (safeDurationMs <= 0) return;
+        const safeNowMs = Number.isFinite(nowMs) ? Math.max(0, nowMs) : 0;
+        pickupCueUntilMs = Math.max(pickupCueUntilMs, safeNowMs + safeDurationMs);
       },
       destroy() {
         if (destroyed) return;

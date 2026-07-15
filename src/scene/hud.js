@@ -30,6 +30,7 @@ export const hudMixin = {
       this.teardownHud();
     }
     this._hudTornDown = false;
+    this._pickupRadiusIndicatorSyncDone = false;
     const baselineObjects = this.snapshotHudObjectIdentities();
     let view;
 
@@ -210,9 +211,11 @@ export const hudMixin = {
       },
       setGameplayVisible(visible) {
         if (destroyed) return;
-        for (const target of [...timelineContainers, refs.muteText, refs.pauseButton, refs.pauseButtonLabel, refs.pickupRadiusIndicator]) {
+        for (const target of [...timelineContainers, refs.muteText, refs.pauseButton, refs.pauseButtonLabel]) {
           target?.setVisible?.(visible);
         }
+        refs.pickupRadiusIndicator?.clear?.();
+        refs.pickupRadiusIndicator?.setVisible?.(false);
       },
       setFacilityCollapsed(collapsed) {
         if (destroyed || collapsed !== true) return;
@@ -224,12 +227,9 @@ export const hudMixin = {
         });
       },
       notifyPickupCue() {
-        if (destroyed || !scene.player) return;
+        if (destroyed) return;
         refs.pickupRadiusIndicator.clear?.();
-        refs.pickupRadiusIndicator.fillStyle?.(0x50d66c, 0.1);
-        refs.pickupRadiusIndicator.lineStyle?.(1, 0x50d66c, 0.35);
-        refs.pickupRadiusIndicator.fillCircle?.(scene.player.x, scene.player.y, scene.pickupRadius);
-        refs.pickupRadiusIndicator.strokeCircle?.(scene.player.x, scene.player.y, scene.pickupRadius);
+        refs.pickupRadiusIndicator.setVisible?.(false);
       },
       destroy() {
         if (destroyed) return;
@@ -521,6 +521,7 @@ export const hudMixin = {
 
     this.pickupRadiusIndicator = this.add.graphics();
     this.pickupRadiusIndicator.setDepth(4);
+    this.pickupRadiusIndicator.setVisible(false);
 
     this.eventBannerContainer = this.add.container(0, 0);
     this.eventBannerContainer.setDepth(64);
@@ -854,14 +855,31 @@ export const hudMixin = {
   },
 
 
+  notifyPickupRadiusCue(reason, nowMs = this.elapsedSurvivalMs) {
+    try {
+      this.tacticalHudView?.notifyPickupCue({ reason, nowMs, durationMs: 650 });
+    } catch {
+      // Presentation failures must not affect pickup gameplay.
+    }
+  },
+
+
   updatePickupRadiusIndicator() {
+    if (this._pickupRadiusIndicatorSyncDone) {
+      return;
+    }
+    this._pickupRadiusIndicatorSyncDone = true;
     const nowMs = this._hudPresentation?.pickup?.nowMs
       ?? Math.max(0, Number.isFinite(this.elapsedSurvivalMs) ? this.elapsedSurvivalMs : 0);
-    this.tacticalHudView?.notifyPickupCue?.({
-      reason: "legacy-update",
-      nowMs,
-      durationMs: 0
-    });
+    try {
+      this.tacticalHudView?.notifyPickupCue?.({
+        reason: "legacy-update",
+        nowMs,
+        durationMs: 0
+      });
+    } catch {
+      // The compatibility shim must stay gameplay-safe.
+    }
   },
 
 
