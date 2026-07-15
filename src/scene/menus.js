@@ -25,10 +25,24 @@ function releaseMissionDisplayObject(object) {
   if (!object) return;
   try {
     object.disableInteractive?.();
+  } catch {
+    // Continue releasing the object even if its input plugin is already gone.
+  }
+  try {
     object.removeInteractive?.();
+  } catch {
+    // Continue through destruction so partially initialized objects cannot leak.
+  }
+  try {
     object.destroy?.();
+  } catch {
+    // Listener cleanup still runs when a partially initialized destroy hook fails.
   } finally {
-    object.removeAllListeners?.();
+    try {
+      object.removeAllListeners?.();
+    } catch {
+      // Teardown is best-effort after the object itself has been destroyed.
+    }
   }
 }
 
@@ -364,8 +378,12 @@ function createResultTerminalController(scene, {
 function createMinimalResultFallback(scene, { tone, onRestart }) {
   const objects = [];
   const objectSet = new Set();
+  let container = null;
+  let interactiveObject = null;
+  let pointerdownHandler = null;
   let destroyed = false;
   let activated = false;
+  let committed = false;
 
   const own = (object) => {
     if (object && !objectSet.has(object)) {
@@ -374,6 +392,20 @@ function createMinimalResultFallback(scene, { tone, onRestart }) {
     }
     return object;
   };
+  const releaseRejected = (object) => {
+    if (!object) return;
+    if (objectSet.delete(object)) {
+      const index = objects.indexOf(object);
+      if (index >= 0) objects.splice(index, 1);
+    }
+    if (container === object) container = null;
+    releaseMissionDisplayObject(object);
+  };
+  const releaseAll = () => {
+    for (const object of [...objects].reverse()) {
+      releaseMissionDisplayObject(object);
+    }
+  };
   const attempt = (factory, configure) => {
     let object = null;
     try {
@@ -381,121 +413,154 @@ function createMinimalResultFallback(scene, { tone, onRestart }) {
       configure(object);
       return object;
     } catch {
+      releaseRejected(object);
       return null;
     }
   };
 
-  let container = attempt(
-    () => scene.add.container(0, 0),
-    (object) => configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0)
-  );
-  const addToContainer = (object) => {
-    if (!object || !container) return;
-    try {
-      container.add(object);
-    } catch {
-      // Screen-fixed fallback objects remain usable without a parent container.
-    }
-  };
-
-  const backdrop = attempt(
-    () => scene.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      0x000000,
-      0.82
-    ),
-    (object) => {
-      configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0);
-      addToContainer(object);
-    }
-  );
-  const hitArea = attempt(
-    () => scene.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      170,
-      52,
-      tone === "danger" ? THEME.terminal.danger : THEME.terminal.contained,
-      1
-    ),
-    (object) => {
-      configureMissionObject(object, RESULT_OVERLAY_DEPTH + 1, 0);
-      addToContainer(object);
-      object.setInteractive({ useHandCursor: true });
-    }
-  );
-  const label = attempt(
-    () => scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "返回行动准备", {
-      fontFamily: THEME.font.label,
-      fontSize: "18px",
-      fontStyle: "bold",
-      color: THEME.text.onButton
-    }),
-    (object) => {
-      configureMissionObject(object, RESULT_OVERLAY_DEPTH + 2, 0, [0.5, 0.5]);
-      addToContainer(object);
-    }
-  );
-
-  const interactiveObject = hitArea ?? label ?? backdrop;
-  if (!interactiveObject) {
-    for (const object of [...objects].reverse()) {
+  try {
+    container = attempt(
+      () => scene.add.container(0, 0),
+      (object) => configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0)
+    );
+    const addToContainer = (object) => {
+      if (!object || !container) return;
       try {
-        releaseMissionDisplayObject(object);
+        container.add(object);
       } catch {
-        // Release everything possible before reporting an unusable fallback.
+        // Screen-fixed fallback objects remain usable without a parent container.
       }
-    }
-    throw new Error("Unable to create an interactive result fallback.");
-  }
-  if (interactiveObject !== hitArea) {
-    interactiveObject.setInteractive({ useHandCursor: true });
-  }
+    };
 
-  const restart = {
-    objects: [interactiveObject, label].filter(Boolean),
-    hitArea: interactiveObject,
-    label,
-    setState(state) {
-      if (state === "disabled") interactiveObject.disableInteractive?.();
-    },
-    destroy() {
-      interactiveObject.disableInteractive?.();
-    }
-  };
-  interactiveObject.on("pointerdown", () => {
-    if (activated || destroyed || !interactiveObject.interactive) return;
-    activated = true;
-    restart.setState("disabled");
-    onRestart();
-  });
+    const backdrop = attempt(
+      () => scene.add.rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        0x000000,
+        0.82
+      ),
+      (object) => {
+        configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0);
+        addToContainer(object);
+      }
+    );
+    const hitArea = attempt(
+      () => scene.add.rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        170,
+        52,
+        tone === "danger" ? THEME.terminal.danger : THEME.terminal.contained,
+        1
+      ),
+      (object) => {
+        configureMissionObject(object, RESULT_OVERLAY_DEPTH + 1, 0);
+        addToContainer(object);
+      }
+    );
+    const label = attempt(
+      () => scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "返回行动准备", {
+        fontFamily: THEME.font.label,
+        fontSize: "18px",
+        fontStyle: "bold",
+        color: THEME.text.onButton
+      }),
+      (object) => {
+        configureMissionObject(object, RESULT_OVERLAY_DEPTH + 2, 0, [0.5, 0.5]);
+        addToContainer(object);
+      }
+    );
 
-  if (!container) container = interactiveObject;
-  const controller = {
-    container,
-    content: container,
-    objects,
-    actions: { restart },
-    restartButton: restart,
-    tone,
-    fallback: true,
-    destroy() {
-      if (destroyed) return;
-      destroyed = true;
-      restart.setState("disabled");
-      for (const object of [...objects].reverse()) {
+    const disableInteraction = () => {
+      try {
+        interactiveObject?.disableInteractive?.();
+      } catch {
+        // The local activation guard still prevents a duplicate restart.
+      }
+    };
+    pointerdownHandler = () => {
+      if (activated || destroyed) return;
+      activated = true;
+      disableInteraction();
+      onRestart();
+    };
+
+    const installCandidate = (candidate) => {
+      if (!candidate || !objectSet.has(candidate)) return false;
+      try {
+        candidate.setInteractive({ useHandCursor: true });
+        candidate.on("pointerdown", pointerdownHandler);
+        interactiveObject = candidate;
+        return true;
+      } catch {
         try {
-          releaseMissionDisplayObject(object);
+          candidate.off?.("pointerdown", pointerdownHandler);
         } catch {
-          // Continue releasing the rest of the fallback.
+          // Releasing the candidate below removes any partially added listeners.
         }
+        releaseRejected(candidate);
+        return false;
       }
+    };
+
+    for (const candidate of [hitArea, label, backdrop]) {
+      if (installCandidate(candidate)) break;
     }
-  };
-  return controller;
+
+    if (!interactiveObject) {
+      activated = true;
+      destroyed = true;
+      releaseAll();
+      onRestart();
+      return null;
+    }
+
+    const activeLabel = objectSet.has(label) ? label : null;
+    const restart = {
+      objects: [...new Set([interactiveObject, activeLabel].filter(Boolean))],
+      hitArea: interactiveObject,
+      label: activeLabel,
+      setState(state) {
+        if (state === "disabled") disableInteraction();
+      },
+      destroy() {
+        disableInteraction();
+      }
+    };
+
+    if (!container) container = interactiveObject;
+    const controller = {
+      container,
+      content: container,
+      objects,
+      actions: { restart },
+      restartButton: restart,
+      tone,
+      fallback: true,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        restart.setState("disabled");
+        try {
+          interactiveObject?.off?.("pointerdown", pointerdownHandler);
+        } catch {
+          // Object release below clears any listener that remains.
+        }
+        releaseAll();
+        interactiveObject = null;
+        pointerdownHandler = null;
+      }
+    };
+    committed = true;
+    return controller;
+  } finally {
+    if (!committed && !destroyed) {
+      destroyed = true;
+      releaseAll();
+    }
+  }
 }
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
@@ -1091,7 +1156,18 @@ export const menusMixin = {
         onRestart: restart
       });
     } catch {
-      controller = createMinimalResultFallback(this, { tone, onRestart: restart });
+      try {
+        controller = createMinimalResultFallback(this, { tone, onRestart: restart });
+      } catch {
+        restart();
+        controller = null;
+      }
+    }
+
+    if (!controller) {
+      this.resultOverlayController = null;
+      this.resultOverlay = null;
+      return null;
     }
 
     controller.resultType = type;

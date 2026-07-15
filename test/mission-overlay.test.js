@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { menusMixin } from "../src/scene/menus.js";
 
-function createEmitter(target = {}) {
+function createEmitter(target = {}, hooks = {}) {
   const handlers = new Map();
   Object.assign(target, {
     on(event, handler, context) {
       handlers.set(event, [...(handlers.get(event) ?? []), { handler, context }]);
+      hooks.afterOn?.(this, event);
       return this;
     },
     off(event, handler, context) {
@@ -45,7 +46,7 @@ function createDisplayObject(scene, type, properties = {}) {
     type,
     active: true,
     destroyed: false,
-    interactive: false,
+    input: null,
     visible: true,
     alpha: 1,
     parentContainer: null,
@@ -63,12 +64,17 @@ function createDisplayObject(scene, type, properties = {}) {
       return this;
     },
     setInteractive(options) {
-      this.interactive = true;
+      this.input ??= {};
+      this.input.enabled = true;
       this.interactiveOptions = options;
+      scene.maybeFailInteraction("setInteractive", this);
       return this;
     },
-    disableInteractive() { this.interactive = false; return this; },
-    removeInteractive() { this.interactive = false; return this; },
+    disableInteractive() {
+      if (this.input) this.input.enabled = false;
+      return this;
+    },
+    removeInteractive() { this.input = null; return this; },
     setStrokeStyle(...args) { this.calls.push(["setStrokeStyle", ...args]); return this; },
     setFillStyle(...args) { this.calls.push(["setFillStyle", ...args]); return this; },
     setStyle(style) { this.style = { ...this.style, ...style }; return this; },
@@ -104,6 +110,10 @@ function createDisplayObject(scene, type, properties = {}) {
       this.destroyed = true;
       return this;
     }
+  }, {
+    afterOn(object, event) {
+      scene.maybeFailInteraction("on", object, event);
+    }
   });
 
   if (type === "container") {
@@ -128,6 +138,10 @@ function createDisplayObject(scene, type, properties = {}) {
 
 function createScene(options = {}) {
   const addCounts = new Map();
+  const interactionFailures = (options.interactionFailures ?? []).map((failure) => ({
+    ...failure,
+    remaining: failure.times ?? 1
+  }));
   let failureConsumed = false;
   const scene = {
     created: [],
@@ -175,6 +189,20 @@ function createScene(options = {}) {
         return tween;
       }
     }
+  };
+
+  scene.maybeFailInteraction = (method, object, event) => {
+    const failure = interactionFailures.find((candidate) => (
+      candidate.remaining > 0
+      && candidate.method === method
+      && (candidate.event === undefined || candidate.event === event)
+      && (candidate.type === undefined || candidate.type === object.type)
+      && (candidate.width === undefined || candidate.width === object.width)
+      && (candidate.height === undefined || candidate.height === object.height)
+    ));
+    if (!failure) return;
+    failure.remaining -= 1;
+    throw new Error(`forced ${method}${event ? ` ${event}` : ""} failure`);
   };
 
   const add = (type, factory) => (...args) => {
@@ -237,7 +265,7 @@ function assertSingleOwner(scene, controller, scrollFactor) {
 function assertReleased(objects) {
   assert.equal(objects.every(({ destroyed }) => destroyed), true);
   assert.equal(objects.every(({ listenerCount }) => listenerCount === 0), true);
-  assert.equal(objects.every(({ interactive }) => interactive === false), true);
+  assert.equal(objects.every(({ input }) => input?.enabled !== true), true);
 }
 
 function resultButton(scene) {
@@ -384,7 +412,7 @@ for (const result of [
     restart.hitArea.emit("pointerdown");
     restart.hitArea.emit("pointerdown");
     assert.equal(scene.restartCount, 1);
-    assert.equal(restart.hitArea.interactive, false);
+    assert.equal(restart.hitArea.input?.enabled ?? false, false);
     assert.equal(scene.resultOverlay, null);
     assert.equal(scene.resultOverlayController, null);
     assertReleased(controller.objects);
@@ -423,7 +451,7 @@ for (const result of [
     assert.equal(controller.fallback, true);
     assert.equal(scene.resultOverlay, controller.container);
     assertTextIncludes(controller.objects, "返回行动准备");
-    assert.equal(controller.actions.restart.hitArea.interactive, true);
+    assert.equal(controller.actions.restart.hitArea.input?.enabled, true);
     const partialObjects = scene.created.filter((object) => !controller.objects.includes(object));
     assertReleased(partialObjects);
 
@@ -436,3 +464,75 @@ for (const result of [
     assertReleased(controller.objects);
   });
 }
+
+test("fallback releases a candidate whose setInteractive throws and promotes a real-shape input", () => {
+  const scene = createScene({
+    failOnce: { type: "image", occurrence: 1 },
+    interactionFailures: [
+      { method: "setInteractive", type: "rectangle", width: 170, height: 52 }
+    ]
+  });
+
+  scene.showGameOverOverlay();
+
+  const controller = scene.resultOverlayController;
+  assert.ok(controller, "a later fallback candidate must remain available");
+  const failedHitArea = scene.created.find(
+    ({ type, width, height }) => type === "rectangle" && width === 170 && height === 52
+  );
+  assertReleased([failedHitArea]);
+  assert.equal(controller.actions.restart.hitArea.type, "text");
+  assert.equal(controller.actions.restart.hitArea.input?.enabled, true);
+
+  controller.actions.restart.hitArea.emit("pointerdown");
+  controller.actions.restart.hitArea.emit("pointerdown");
+  assert.equal(scene.restartCount, 1);
+  assert.equal(scene.resultOverlay, null);
+  assert.equal(scene.resultOverlayController, null);
+  assertReleased(scene.created);
+});
+
+test("fallback releases a candidate whose pointer listener registration throws and promotes another", () => {
+  const scene = createScene({
+    failOnce: { type: "image", occurrence: 1 },
+    interactionFailures: [
+      { method: "on", event: "pointerdown", type: "rectangle", width: 170, height: 52 }
+    ]
+  });
+
+  scene.showVictoryOverlay();
+
+  const controller = scene.resultOverlayController;
+  assert.ok(controller, "a listener failure must not escape fallback construction");
+  const failedHitArea = scene.created.find(
+    ({ type, width, height }) => type === "rectangle" && width === 170 && height === 52
+  );
+  assertReleased([failedHitArea]);
+  assert.equal(controller.actions.restart.hitArea.type, "text");
+  assert.equal(controller.actions.restart.hitArea.listenerCount, 1);
+
+  controller.actions.restart.hitArea.emit("pointerdown");
+  controller.actions.restart.hitArea.emit("pointerdown");
+  assert.equal(scene.restartCount, 1);
+  assert.equal(scene.resultOverlay, null);
+  assert.equal(scene.resultOverlayController, null);
+  assertReleased(scene.created);
+});
+
+test("fallback candidate exhaustion cleans every object and performs one guarded restart", () => {
+  const scene = createScene({
+    failOnce: { type: "image", occurrence: 1 },
+    interactionFailures: [
+      { method: "on", event: "pointerdown", type: "rectangle", width: 170, height: 52 },
+      { method: "on", event: "pointerdown", type: "text" },
+      { method: "on", event: "pointerdown", type: "rectangle", width: 960, height: 540 }
+    ]
+  });
+
+  assert.doesNotThrow(() => scene.showGameOverOverlay());
+
+  assert.equal(scene.restartCount, 1);
+  assert.equal(scene.resultOverlay, null);
+  assert.equal(scene.resultOverlayController, null);
+  assertReleased(scene.created);
+});
