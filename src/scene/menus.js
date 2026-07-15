@@ -1296,6 +1296,23 @@ export const menusMixin = {
   },
 
 
+  teardownTerminalOverlays() {
+    for (const teardown of [
+      this.cancelLevelUpResolutionTimer,
+      this.destroyLevelUpOverlay,
+      this.hidePauseOverlay,
+      this.destroyResultOverlay,
+      this.destroyBuildPanel
+    ]) {
+      try {
+        teardown?.call(this);
+      } catch {
+        // One failed subsystem must not strand the remaining Scene overlays.
+      }
+    }
+  },
+
+
   getFinalSurvivalTimeSeconds() {
     return (this.elapsedSurvivalMs / 1000).toFixed(1);
   },

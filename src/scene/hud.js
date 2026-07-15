@@ -14,6 +14,8 @@ import {
 import { THEME } from "../ui/theme.js";
 import { createTacticalHudView } from "../ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
+import { createTerminalOverlay } from "../ui/terminalOverlay.js";
+import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
 
 const HUD_DEPTH = 45;
 const FACILITY_HUD_DEPTH = 58;
@@ -576,6 +578,7 @@ export const hudMixin = {
     this._hudTornDown = true;
     this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
     this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+    this.teardownTerminalOverlays?.();
     this.tacticalHudView?.destroy?.();
     this.tacticalHudView = null;
     this.gameplayHudContainers = [];
@@ -603,39 +606,344 @@ export const hudMixin = {
 
 
   createBuildPanel() {
-    this.buildPanel = this.add.container(0, 0);
-    this.buildPanel.setDepth(56);
-    this.buildPanel.setScrollFactor(0);
-    this.buildPanel.setVisible(false);
+    this.destroyBuildPanel();
 
-    const panelBackground = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      500,
-      560,
-      0x000000,
-      0.78
-    );
-    panelBackground.setStrokeStyle(2, 0x4060a0);
-
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 250, "当前构筑 (TAB)", {
-      fontSize: "28px",
-      color: "#ffffff"
-    });
-    title.setOrigin(0.5);
-
-    this.buildPanelText = this.add.text(
-      GAME_WIDTH / 2 - 220,
-      GAME_HEIGHT / 2 - 218,
-      "",
-      {
-        fontSize: "16px",
-        color: "#e9f0ff",
-        lineSpacing: 6
+    let controller = null;
+    try {
+      controller = this.createTerminalBuildPanel();
+    } catch {
+      try {
+        controller = this.createLegacyBuildPanel();
+      } catch {
+        controller = null;
       }
-    );
+    }
 
-    this.buildPanel.add([panelBackground, title, this.buildPanelText]);
+    this.buildPanelController = controller;
+    if (controller) {
+      this.buildPanel = controller.container;
+      this.buildPanelText = controller.summaryText ?? null;
+      controller.setVisible(false);
+      return;
+    }
+
+    this.buildPanelText = null;
+    this.buildPanel = this.createNoopBuildPanel();
+  },
+
+
+  createNoopBuildPanel() {
+    return {
+      visible: false,
+      setVisible() {
+        this.visible = false;
+        return this;
+      },
+      destroy() {
+        this.visible = false;
+      }
+    };
+  },
+
+
+  createTerminalBuildPanel() {
+    let terminal = null;
+    const ownedObjects = [];
+    let destroyed = false;
+
+    const releaseOwned = () => {
+      for (const object of [...ownedObjects].reverse()) {
+        try {
+          object.disableInteractive?.();
+          object.removeInteractive?.();
+          object.destroy?.();
+        } catch {
+          // Continue releasing the remainder of the build transaction.
+        } finally {
+          object.removeAllListeners?.();
+        }
+      }
+      ownedObjects.length = 0;
+    };
+
+    try {
+      terminal = createTerminalOverlay(this, {
+        x: 0,
+        y: 0,
+        width: 900,
+        height: 470,
+        depth: 56,
+        scrollFactor: 0,
+        eyebrow: "SITE-19 // OPERATOR LOADOUT",
+        title: "当前构筑",
+        subtitle: "TAB 关闭 // 实时装备与异常协议摘要",
+        tone: "standard",
+        surfaceTextureKey: TEXTURES.terminalSurfaceGrid
+      });
+
+      const own = (object, parent = terminal.content) => {
+        ownedObjects.push(object);
+        object.setDepth(57);
+        object.setScrollFactor(0);
+        parent?.add(object);
+        return object;
+      };
+      const addHeading = (x, y, text, color = THEME.text.contained) => {
+        const heading = own(this.add.text(x, y, text, {
+          fontFamily: THEME.font.label,
+          fontSize: "13px",
+          fontStyle: "bold",
+          color
+        }));
+        return heading;
+      };
+      const rowRefs = new Map();
+      const addRow = ({ id, x, y, iconKey }) => {
+        const icon = own(this.add.image(x, y, iconKey));
+        icon.setDisplaySize(22, 22);
+        const text = own(this.add.text(x + 18, y, "", {
+          fontFamily: THEME.font.mono,
+          fontSize: "12px",
+          color: THEME.text.secondary
+        }));
+        text.setOrigin(0, 0.5);
+        rowRefs.set(id, text);
+      };
+
+      addHeading(62, 138, "主武器");
+      const weaponIcons = {
+        pistol: TEXTURES.weaponPistolIcon,
+        shotgun: TEXTURES.weaponBreacherIcon,
+        tesla: TEXTURES.weaponTeslaIcon
+      };
+      ["pistol", "shotgun", "tesla"].forEach((weaponId, index) => {
+        addRow({
+          id: `weapon:${weaponId}`,
+          x: 72,
+          y: 172 + index * 32,
+          iconKey: weaponIcons[weaponId]
+        });
+      });
+
+      addHeading(62, 280, "常规强化");
+      const genericUpgrades = UPGRADE_DEFINITIONS.filter(
+        (upgrade) => upgrade.kind === "generic" && upgrade.isMutation !== true
+      );
+      genericUpgrades.forEach((upgrade, index) => {
+        addRow({
+          id: `upgrade:${upgrade.key}`,
+          x: 72,
+          y: 312 + index * 32,
+          iconKey: UPGRADE_PRESENTATION[upgrade.key].textureKey
+        });
+      });
+
+      addHeading(342, 138, "武器协议", THEME.text.warning ?? THEME.text.secondary);
+      const weaponUpgrades = UPGRADE_DEFINITIONS.filter(
+        (upgrade) => upgrade.kind === "weapon" && upgrade.isMutation !== true
+      );
+      weaponUpgrades.forEach((upgrade, index) => {
+        addRow({
+          id: `upgrade:${upgrade.key}`,
+          x: 352,
+          y: 172 + index * 31,
+          iconKey: UPGRADE_PRESENTATION[upgrade.key].textureKey
+        });
+      });
+
+      addHeading(662, 138, "异常突变", THEME.text.critical);
+      const mutations = UPGRADE_DEFINITIONS.filter((upgrade) => upgrade.isMutation === true);
+      mutations.forEach((upgrade, index) => {
+        addRow({
+          id: `upgrade:${upgrade.key}`,
+          x: 672,
+          y: 172 + index * 36,
+          iconKey: UPGRADE_PRESENTATION[upgrade.key].textureKey
+        });
+      });
+
+      const summaryText = own(this.add.text(662, 310, "", {
+        fontFamily: THEME.font.mono,
+        fontSize: "12px",
+        color: THEME.text.muted
+      }));
+
+      const controller = {
+        mode: "terminal",
+        container: terminal.container,
+        content: terminal.content,
+        objects: [...terminal.objects, ...ownedObjects],
+        rowRefs,
+        summaryText,
+        setVisible: (visible) => terminal.setVisible(visible === true),
+        update: () => {
+          for (const weaponId of ["pistol", "shotgun", "tesla"]) {
+            rowRefs.get(`weapon:${weaponId}`)?.setText(this.getBuildWeaponLine(weaponId));
+          }
+          for (const upgrade of UPGRADE_DEFINITIONS) {
+            rowRefs.get(`upgrade:${upgrade.key}`)?.setText(this.getBuildUpgradeLine(upgrade));
+          }
+          summaryText.setText(`行动员 // ${this.selectedWeaponId ?? "未选择"}`);
+        },
+        destroy: () => {
+          if (destroyed) return;
+          destroyed = true;
+          releaseOwned();
+          terminal.destroy();
+        }
+      };
+      controller.update();
+      return controller;
+    } catch (error) {
+      destroyed = true;
+      releaseOwned();
+      terminal?.destroy?.();
+      throw error;
+    }
+  },
+
+
+  createLegacyBuildPanel() {
+    const objects = [];
+    let destroyed = false;
+    const own = (object) => {
+      objects.push(object);
+      return object;
+    };
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      for (const object of [...objects].reverse()) {
+        try {
+          object.disableInteractive?.();
+          object.removeInteractive?.();
+          object.destroy?.();
+        } catch {
+          // Continue rolling back the complete legacy transaction.
+        } finally {
+          object.removeAllListeners?.();
+        }
+      }
+    };
+
+    try {
+      const container = own(this.add.container(0, 0));
+      container.setDepth(56);
+      container.setScrollFactor(0);
+      container.setVisible(false);
+
+      const panelBackground = own(this.add.rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        500,
+        500,
+        0x000000,
+        0.78
+      ));
+      panelBackground.setStrokeStyle(2, 0x4060a0);
+      const title = own(this.add.text(GAME_WIDTH / 2, 42, "当前构筑 (TAB)", {
+        fontFamily: THEME.font.display,
+        fontSize: "28px",
+        color: THEME.text.primary
+      }));
+      title.setOrigin(0.5);
+      const text = own(this.add.text(48, 78, "", {
+        fontFamily: THEME.font.body,
+        fontSize: "16px",
+        color: THEME.text.secondary,
+        lineSpacing: 6
+      }));
+      container.add([panelBackground, title, text]);
+
+      const controller = {
+        mode: "legacy",
+        container,
+        content: container,
+        objects,
+        summaryText: text,
+        setVisible(visible) {
+          container.setVisible(visible === true);
+        },
+        update: () => text.setText(this.getLegacyBuildPanelText()),
+        destroy
+      };
+      controller.update();
+      return controller;
+    } catch (error) {
+      destroy();
+      throw error;
+    }
+  },
+
+
+  getBuildWeaponLine(weaponId) {
+    const weapon = this.weapons?.[weaponId];
+    if (!weapon) return `${weaponId}  未配置`;
+    if (weapon.unlocked === false) return `${weapon.name ?? weaponId}  未解锁`;
+    if (weaponId === "pistol") {
+      return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)} / ${weapon.cooldownMs.toFixed(0)}ms`;
+    }
+    if (weaponId === "shotgun") {
+      return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)}x${weapon.pelletCount}`;
+    }
+    return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)} / 链${weapon.chainTargets}`;
+  },
+
+
+  getBuildUpgradeLine(upgrade) {
+    if (upgrade.isMutation === true) {
+      const active = this.weaponMutations?.[upgrade.key] === true;
+      return `${upgrade.name}  ${active ? "已激活" : "未激活"}`;
+    }
+    const level = this.upgradeLevels?.[upgrade.key] ?? 0;
+    const value = {
+      damage: this.weapons?.[this.selectedWeaponId]?.damage?.toFixed?.(1),
+      attackSpeed: this.weapons?.[this.selectedWeaponId]?.cooldownMs?.toFixed?.(0),
+      moveSpeed: this.playerMoveSpeed?.toFixed?.(0),
+      maxHealth: this.maxHealth,
+      projectileCount: this.projectileCount,
+      penetration: this.bulletPenetration,
+      pickupRadius: this.pickupRadius?.toFixed?.(0),
+      emergencyHeal: this.health,
+      breacherKnockback: this.weapons?.shotgun?.knockbackStrength?.toFixed?.(0),
+      breacherSuppression: this.weapons?.shotgun?.staggerDurationMs?.toFixed?.(0),
+      breacherMagazine: this.weapons?.shotgun?.magazineSize,
+      teslaChains: this.weapons?.tesla?.chainTargets,
+      teslaCooldown: this.weapons?.tesla?.cooldownMs?.toFixed?.(0)
+    }[upgrade.key];
+    return `${upgrade.name}  Lv ${level}${value === undefined ? "" : `  ${value}`}`;
+  },
+
+
+  getLegacyBuildPanelText() {
+    const pistol = this.weapons.pistol;
+    const shotgun = this.weapons.shotgun;
+    const tesla = this.weapons.tesla;
+    const attacksPerSecond = (1000 / pistol.cooldownMs).toFixed(2);
+    const upgradeLines = UPGRADE_DEFINITIONS.map(
+      (upgrade) => `${upgrade.name}：Lv ${this.upgradeLevels[upgrade.key]}`
+    ).join("\n");
+    return [
+      `伤害倍率：x${(pistol.damage / BALANCE.weapons.pistol.baseDamage).toFixed(2)}`,
+      `攻击冷却：${pistol.cooldownMs.toFixed(0)} ms (${attacksPerSecond}/秒)`,
+      `移动速度：${this.playerMoveSpeed.toFixed(0)}`,
+      `最大生命值：${this.maxHealth}`,
+      `弹丸数量：${this.projectileCount}`,
+      `弹丸穿透：${this.bulletPenetration}`,
+      `拾取范围：${this.pickupRadius.toFixed(0)}`,
+      "",
+      "武器",
+      `- 手枪 Lv ${pistol.currentLevel}：伤害 ${pistol.damage.toFixed(1)}，冷却 ${pistol.cooldownMs.toFixed(0)}ms`,
+      shotgun.unlocked
+        ? `- 突破器 Lv ${shotgun.currentLevel}：伤害 ${shotgun.damage.toFixed(1)} x ${shotgun.pelletCount}`
+        : "- 突破器：未解锁",
+      tesla.unlocked
+        ? `- 特斯拉 Lv ${tesla.currentLevel}：伤害 ${tesla.damage.toFixed(1)}，链击 ${tesla.chainTargets}`
+        : "- 特斯拉：未解锁",
+      "",
+      "升级等级",
+      upgradeLines
+    ].join("\n");
   },
 
 
@@ -644,7 +952,10 @@ export const hudMixin = {
       return;
     }
 
-    this.buildPanel.setVisible(!this.buildPanel.visible);
+    if (!this.buildPanel?.setVisible) {
+      return;
+    }
+    this.buildPanel.setVisible(this.buildPanel.visible !== true);
     if (this.buildPanel.visible) {
       this.updateBuildPanelText();
     }
@@ -652,44 +963,35 @@ export const hudMixin = {
 
 
   hideBuildPanel() {
-    if (this.buildPanel) {
-      this.buildPanel.setVisible(false);
-    }
+    this.buildPanel?.setVisible?.(false);
   },
 
 
   updateBuildPanelText() {
-    const pistol = this.weapons.pistol;
-    const shotgun = this.weapons.shotgun;
-    const tesla = this.weapons.tesla;
-    const attacksPerSecond = (1000 / pistol.cooldownMs).toFixed(2);
-    const upgradeLines = UPGRADE_DEFINITIONS.map(
-      (upgrade) => `${upgrade.name}：Lv ${this.upgradeLevels[upgrade.key]}`
-    ).join("\n");
+    this.buildPanelController?.update?.();
+  },
 
-    this.buildPanelText.setText(
-      [
-        `伤害倍率：x${(pistol.damage / BALANCE.weapons.pistol.baseDamage).toFixed(2)}`,
-        `攻击冷却：${pistol.cooldownMs.toFixed(0)} ms (${attacksPerSecond}/秒)`,
-        `移动速度：${this.playerMoveSpeed.toFixed(0)}`,
-        `最大生命值：${this.maxHealth}`,
-        `弹丸数量：${this.projectileCount}`,
-        `弹丸穿透：${this.bulletPenetration}`,
-        `拾取范围：${this.pickupRadius.toFixed(0)}`,
-        "",
-        `武器`,
-        `- 手枪 Lv ${pistol.currentLevel}：伤害 ${pistol.damage.toFixed(1)}，冷却 ${pistol.cooldownMs.toFixed(0)}ms`,
-        shotgun.unlocked
-          ? `- 突破器 Lv ${shotgun.currentLevel}：伤害 ${shotgun.damage.toFixed(1)} x ${shotgun.pelletCount}，冷却 ${shotgun.cooldownMs.toFixed(0)}ms，弹药 ${shotgun.currentShells}/${shotgun.magazineSize}，装填 ${shotgun.reloadDurationMs}ms`
-          : `- 突破器：未解锁`,
-        tesla.unlocked
-          ? `- 特斯拉 Lv ${tesla.currentLevel}：伤害 ${tesla.damage.toFixed(1)}，链击 ${tesla.chainTargets}，冷却 ${tesla.cooldownMs.toFixed(0)}ms，射程 ${tesla.range.toFixed(0)}`
-          : `- 特斯拉：未解锁`,
-        "",
-        "升级等级",
-        upgradeLines
-      ].join("\n")
-    );
+
+  destroyBuildPanel() {
+    const controller = this.buildPanelController;
+    const panel = this.buildPanel;
+    this.buildPanelController = null;
+    this.buildPanelText = null;
+    this.buildPanel = this.createNoopBuildPanel();
+
+    if (controller) {
+      try {
+        controller.destroy?.();
+      } catch {
+        // References are already cleared; Scene teardown can continue.
+      }
+      return;
+    }
+    try {
+      panel?.destroy?.(true);
+    } catch {
+      // Legacy and no-op panels are best-effort teardown targets.
+    }
   },
 
 

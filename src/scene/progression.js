@@ -571,7 +571,8 @@ export const progressionMixin = {
     }
     this.updateUI();
 
-    this.time.delayedCall(120, () => {
+    this.levelUpResolutionTimer = this.time.delayedCall(120, () => {
+      this.levelUpResolutionTimer = null;
       if (this.pendingLevelUps > 0) {
         this.showLevelUpOverlay();
         return;
@@ -617,7 +618,8 @@ export const progressionMixin = {
     this.updateUI();
     this.playSound("levelUp");
 
-    this.time.delayedCall(160, () => {
+    this.levelUpResolutionTimer = this.time.delayedCall(160, () => {
+      this.levelUpResolutionTimer = null;
       if (this.pendingLevelUps > 0) {
         this.showLevelUpOverlay();
         return;
@@ -633,25 +635,31 @@ export const progressionMixin = {
 
 
   destroyLevelUpCards() {
-    for (const card of this.levelUpCards ?? []) {
-      card?.disableInteractive?.();
-      card?.destroy?.();
-    }
-    for (const object of this.levelUpCardObjects ?? []) {
-      if (object?.active) object.destroy();
-    }
+    const cards = this.levelUpCards ?? [];
+    const objects = this.levelUpCardObjects ?? [];
     this.levelUpCards = [];
     this.levelUpCardObjects = [];
+    for (const card of cards) {
+      try {
+        card?.disableInteractive?.();
+        card?.destroy?.();
+      } catch {
+        // Continue releasing the complete card transaction.
+      }
+    }
+    for (const object of objects) {
+      try {
+        if (object?.active) object.destroy();
+      } catch {
+        // A Scene shutdown must not retain the remaining card references.
+      }
+    }
   },
 
 
   destroyLevelUpButtons() {
-    for (const controller of this.levelUpButtonControllers ?? []) {
-      controller?.destroy?.();
-    }
-    for (const object of this.levelUpButtonObjects ?? []) {
-      if (object?.active) object.destroy();
-    }
+    const controllers = this.levelUpButtonControllers ?? [];
+    const objects = this.levelUpButtonObjects ?? [];
     this.levelUpButtonControllers = [];
     this.levelUpButtonObjects = [];
     this.levelUpRerollButtonController = null;
@@ -659,19 +667,49 @@ export const progressionMixin = {
     this.levelUpRerollLabel = null;
     this.levelUpSkipButtonController = null;
     this.levelUpSkipButton = null;
+    for (const controller of controllers) {
+      try {
+        controller?.destroy?.();
+      } catch {
+        // Continue releasing the complete button transaction.
+      }
+    }
+    for (const object of objects) {
+      try {
+        if (object?.active) object.destroy();
+      } catch {
+        // A Scene shutdown must not retain the remaining button references.
+      }
+    }
   },
 
 
   destroyLevelUpOverlay() {
-    this.destroyLevelUpCards();
-    this.destroyLevelUpButtons();
-    if (this.levelUpOverlayController) {
-      this.levelUpOverlayController.destroy();
-    } else if (this.levelUpOverlay?.active) {
-      this.levelUpOverlay.destroy(true);
-    }
+    const controller = this.levelUpOverlayController;
+    const overlay = this.levelUpOverlay;
     this.levelUpOverlayController = null;
     this.levelUpOverlay = null;
+    this.destroyLevelUpCards();
+    this.destroyLevelUpButtons();
+    try {
+      if (controller) {
+        controller.destroy();
+      } else if (overlay?.active) {
+        overlay.destroy(true);
+      }
+    } catch {
+      // References are already cleared; unified teardown can continue safely.
+    }
+  },
+
+
+  cancelLevelUpResolutionTimer() {
+    try {
+      this.levelUpResolutionTimer?.remove?.(false);
+    } catch {
+      // Scene shutdown must continue even if Phaser already released the timer.
+    }
+    this.levelUpResolutionTimer = null;
   },
 
 
