@@ -416,20 +416,15 @@ test("timeline HUD selector excludes system and preserves corruption target orde
   assert.equal(selected.includes(containers.system), false);
 });
 
-test("HUD integration keeps compatibility aliases and presentation delegation", async () => {
+test("HUD integration imports the tactical view and keeps presentation delegation", async () => {
   const [hud, timeline, systems] = await Promise.all([
     readFile(new URL("../src/scene/hud.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/timeline.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8")
   ]);
-  for (const name of ["mission", "vitals", "weapon", "facility"]) {
-    assert.match(hud, new RegExp(`this\\.${name}HudContainer\\s*=\\s*this\\.add\\.container\\(HUD_REGIONS\\.${name}\\.x, HUD_REGIONS\\.${name}\\.y\\)`));
-  }
-  assert.match(hud, /createTacticalPanel/);
-  assert.match(hud, /this\.gameplayHudContainers\s*=\s*\[/);
-  assert.match(hud, /this\.weaponIcon\s*=\s*this\.add\.image\(/);
-  assert.match(hud, /this\.statsText\s*=\s*this\.healthValueText/);
-  assert.match(hud, /this\.phaseText\s*=\s*this\.missionDetailText/);
+  assert.match(hud, /import \{ createTacticalHudView \} from "\.\.\/ui\/tacticalHudView\.js"/);
+  assert.match(hud, /this\.tacticalHudView\s*=\s*view/);
+  assert.match(hud, /this\.gameplayHudContainers\s*=\s*\[\.\.\.view\.timelineContainers\]/);
   assert.doesNotMatch(timeline, /this\.phaseText\.setText/);
   assert.match(systems, /this\.collapseFacilityHud\(\)/);
 
@@ -437,14 +432,9 @@ test("HUD integration keeps compatibility aliases and presentation delegation", 
   const updateEnd = hud.indexOf("updateWeaponHud() {", updateStart);
   const updateMethod = hud.slice(updateStart, updateEnd);
   assert.match(updateMethod, /getHudPresentation/);
-  assert.match(updateMethod, /applyHudPresentation/);
+  assert.match(updateMethod, /this\.tacticalHudView\?\.update\?\.\(presentation\)/);
   assert.match(updateMethod, /isMissionActive:\s*this\.isMissionActive\s*&&\s*!this\.isGameOver/);
   assert.doesNotMatch(updateMethod, /\.setText\(|\.setFillStyle\(|\.setVisible\(/);
-
-  const applyStart = hud.indexOf("applyHudPresentation(presentation) {");
-  const applyEnd = hud.indexOf("applyFacilityHudPresentation", applyStart);
-  const applyMethod = hud.slice(applyStart, applyEnd);
-  assert.match(applyMethod, /container\.setVisible\(mission\.active\)/);
 
   const teardownStart = hud.indexOf("teardownHud() {");
   const teardownEnd = hud.indexOf("updateMuteText() {", teardownStart);

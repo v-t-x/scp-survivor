@@ -12,6 +12,7 @@ import {
   selectTimelineHudContainers
 } from "../ui/hudPresentation.js";
 import { THEME } from "../ui/theme.js";
+import { createTacticalHudView } from "../ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
 
 const HUD_DEPTH = 45;
@@ -25,7 +26,216 @@ const DASH_BAR_WIDTH = 72;
 export const hudMixin = {
 
   createUI() {
+    if (this.tacticalHudView && !this._hudTornDown) {
+      this.teardownHud();
+    }
     this._hudTornDown = false;
+    const baselineObjects = new Set(this.children?.list ?? []);
+    let view;
+
+    try {
+      view = createTacticalHudView(this, {
+        regions: HUD_REGIONS,
+        onTogglePause: () => this.togglePause?.(),
+        onToggleMute: () => {}
+      });
+    } catch {
+      this.destroyHudObjectsSince(baselineObjects);
+      try {
+        this.createLegacyHud();
+        view = this.createLegacyHudView(baselineObjects);
+      } catch {
+        this.destroyHudObjectsSince(baselineObjects);
+        view = this.createNoopHudView();
+      }
+    }
+
+    this.tacticalHudView = view;
+    this.installHudAliases(view);
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
+    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
+    this.updateMuteText();
+  },
+
+
+  installHudAliases(view) {
+    this.missionHudContainer = view.regions.mission.container;
+    this.facilityHudContainer = view.regions.facility.container;
+    this.vitalsHudContainer = view.regions.vitals.container;
+    this.weaponHudContainer = view.regions.weapon.container;
+    this.systemHudContainer = view.regions.system.container;
+    for (const [name, object] of Object.entries(view.refs)) {
+      this[name] = object;
+    }
+    this.gameplayHudContainers = [...view.timelineContainers];
+    this.timelineHudBasePositions = view.timelineContainers.map(
+      (container) => [container, container.x, container.y]
+    );
+  },
+
+
+  collectHudObjectsSince(baselineObjects) {
+    const collected = [];
+    const seen = new Set();
+    const visit = (object) => {
+      if (!object || seen.has(object)) return;
+      seen.add(object);
+      collected.push(object);
+      for (const child of object.list ?? object.children ?? []) visit(child);
+    };
+    for (const object of this.children?.list ?? []) {
+      if (!baselineObjects.has(object)) visit(object);
+    }
+    return collected;
+  },
+
+
+  destroyHudObjectsSince(baselineObjects) {
+    const objects = this.collectHudObjectsSince(baselineObjects);
+    for (const object of [...objects].reverse()) {
+      object?.removeAllListeners?.();
+      object?.disableInteractive?.();
+      object?.removeInteractive?.();
+      if (object?.active !== false) object?.destroy?.(true);
+    }
+  },
+
+
+  createNoopHudView() {
+    const createNoopObject = () => {
+      const object = {
+        active: false,
+        visible: false,
+        x: 0,
+        y: 0
+      };
+      for (const method of [
+        "clear", "destroy", "disableInteractive", "erase", "fill",
+        "removeAllListeners", "removeInteractive", "setAlpha", "setColor",
+        "setFillStyle", "setPosition", "setText", "setVisible"
+      ]) {
+        object[method] = () => object;
+      }
+      return object;
+    };
+    const regions = Object.fromEntries(
+      ["mission", "facility", "vitals", "weapon", "system"]
+        .map((name) => [name, { container: createNoopObject() }])
+    );
+    const refs = Object.fromEntries(
+      [
+        "statsText", "levelText", "xpBarBackground", "xpBarFill", "xpText",
+        "weaponHudText", "phaseText", "muteText", "pauseButton", "pauseButtonLabel",
+        "pickupRadiusIndicator", "eventBannerContainer", "eventBannerBg",
+        "eventBannerTitle", "eventBannerDetail", "outageDarknessRt", "outageLightSprite"
+      ].map((name) => [name, createNoopObject()])
+    );
+    return {
+      mode: "noop",
+      objects: [],
+      regions,
+      refs,
+      timelineContainers: Object.freeze([]),
+      controls: {
+        pauseHitArea: refs.pauseButton,
+        muteHitArea: refs.muteText
+      },
+      update() {},
+      setGameplayVisible() {},
+      setFacilityCollapsed() {},
+      notifyPickupCue() {},
+      destroy() {}
+    };
+  },
+
+
+  createLegacyHudView(baselineObjects) {
+    const scene = this;
+    const objects = this.collectHudObjectsSince(baselineObjects);
+    const noopSystem = this.createNoopHudView().regions.system.container;
+    const regions = {
+      mission: { container: this.missionHudContainer },
+      facility: { container: this.facilityHudContainer },
+      vitals: { container: this.vitalsHudContainer },
+      weapon: { container: this.weaponHudContainer },
+      system: { container: noopSystem }
+    };
+    const refs = {
+      statsText: this.statsText,
+      levelText: this.levelText,
+      xpBarBackground: this.xpBarBackground,
+      xpBarFill: this.xpBarFill,
+      xpText: this.xpText,
+      weaponHudText: this.weaponHudText,
+      phaseText: this.phaseText,
+      muteText: this.muteText,
+      pauseButton: this.pauseButton,
+      pauseButtonLabel: this.pauseButtonLabel,
+      pickupRadiusIndicator: this.pickupRadiusIndicator,
+      eventBannerContainer: this.eventBannerContainer,
+      eventBannerBg: this.eventBannerBg,
+      eventBannerTitle: this.eventBannerTitle,
+      eventBannerDetail: this.eventBannerDetail,
+      outageDarknessRt: this.outageDarknessRt,
+      outageLightSprite: this.outageLightSprite
+    };
+    const timelineContainers = selectTimelineHudContainers(
+      Object.fromEntries(Object.entries(regions).map(([name, region]) => [name, region.container]))
+    );
+    let destroyed = false;
+    return {
+      mode: "legacy",
+      objects,
+      regions,
+      refs,
+      timelineContainers,
+      controls: {
+        pauseHitArea: refs.pauseButton,
+        muteHitArea: refs.muteText
+      },
+      update(presentation) {
+        if (!destroyed) scene.applyLegacyHudPresentation(presentation);
+      },
+      setGameplayVisible(visible) {
+        if (destroyed) return;
+        for (const target of [...timelineContainers, refs.muteText, refs.pauseButton, refs.pauseButtonLabel, refs.pickupRadiusIndicator]) {
+          target?.setVisible?.(visible);
+        }
+      },
+      setFacilityCollapsed(collapsed) {
+        if (destroyed || collapsed !== true) return;
+        scene.applyLegacyFacilityHudPresentation({
+          expanded: false,
+          title: "设施稳定",
+          detail: "SITE-CN // 收容系统在线",
+          tone: "contained"
+        });
+      },
+      notifyPickupCue() {
+        if (destroyed || !scene.player) return;
+        refs.pickupRadiusIndicator.clear?.();
+        refs.pickupRadiusIndicator.fillStyle?.(0x50d66c, 0.1);
+        refs.pickupRadiusIndicator.lineStyle?.(1, 0x50d66c, 0.35);
+        refs.pickupRadiusIndicator.fillCircle?.(scene.player.x, scene.player.y, scene.pickupRadius);
+        refs.pickupRadiusIndicator.strokeCircle?.(scene.player.x, scene.player.y, scene.pickupRadius);
+      },
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        for (const object of [...objects].reverse()) {
+          object?.removeAllListeners?.();
+          object?.disableInteractive?.();
+          object?.removeInteractive?.();
+          if (object?.active !== false) object?.destroy?.(true);
+        }
+      }
+    };
+  },
+
+
+  createLegacyHud() {
 
     this.missionHudContainer = this.add.container(HUD_REGIONS.mission.x, HUD_REGIONS.mission.y);
     this.vitalsHudContainer = this.add.container(HUD_REGIONS.vitals.x, HUD_REGIONS.vitals.y);
@@ -345,10 +555,6 @@ export const hudMixin = {
       system: this.systemHudContainer
     }).map((container) => [container, container.x, container.y]);
 
-    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
-    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
   },
 
 
@@ -359,35 +565,17 @@ export const hudMixin = {
     this._hudTornDown = true;
     this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
     this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);
-    this.pauseButton?.removeAllListeners();
-    for (const container of this.gameplayHudContainers ?? []) {
-      if (container?.active) {
-        container.destroy(true);
-      }
-    }
-    if (this.eventBannerContainer?.active) {
-      this.eventBannerContainer.destroy(true);
-    }
-    for (const object of [
-      this.muteText,
-      this.pauseButton,
-      this.pauseButtonLabel,
-      this.pickupRadiusIndicator,
-      this.outageDarknessRt,
-      this.outageLightSprite
-    ]) {
-      if (object?.active) {
-        object.destroy();
-      }
-    }
+    this.tacticalHudView?.destroy?.();
+    this.tacticalHudView = null;
     this.gameplayHudContainers = [];
-    this.timelineHudBasePositions = null;
+    this.timelineHudBasePositions = [];
+    this._hudPresentation = null;
     this.topBannerState = null;
   },
 
 
   updateMuteText() {
-    if (!this.muteText) {
+    if (!this.muteText?.setText) {
       return;
     }
     if (!BALANCE.audio.enabled) {
@@ -399,18 +587,7 @@ export const hudMixin = {
 
 
   setGameplayHudVisible(isVisible) {
-    const targets = [
-      ...(this.gameplayHudContainers ?? []),
-      this.muteText,
-      this.pauseButton,
-      this.pauseButtonLabel,
-      this.pickupRadiusIndicator
-    ];
-    for (const target of targets) {
-      if (target) {
-        target.setVisible(isVisible);
-      }
-    }
+    this.tacticalHudView?.setGameplayVisible?.(isVisible);
   },
 
 
@@ -536,9 +713,18 @@ export const hudMixin = {
       bossPhaseActive: this.bossPhaseActive && !this.isGameOver,
       bossHealthRatio,
       activeFacilityEvent: facilityEvent,
-      eventBannerActive: this.topBannerState !== null
+      eventBannerActive: this.topBannerState !== null,
+      soundMuted: this.soundMuted,
+      isPaused: this.isPaused,
+      pickupRadius: this.pickupRadius,
+      buildPanelVisible: this.buildPanel?.visible === true
     });
-    this.applyHudPresentation(presentation);
+    this._hudPresentation = presentation;
+    if (presentation.facility.expanded) {
+      this.tacticalHudView?.setFacilityCollapsed?.(false);
+    }
+    this.tacticalHudView?.update?.(presentation);
+    this.applyTopBannerOverlay();
   },
 
 
@@ -548,6 +734,11 @@ export const hudMixin = {
 
 
   applyHudPresentation(presentation) {
+    this.tacticalHudView?.update?.(presentation);
+  },
+
+
+  applyLegacyHudPresentation(presentation) {
     const { mission, vitals, weapon, facility } = presentation;
     for (const container of this.gameplayHudContainers ?? []) {
       container.setVisible(mission.active);
@@ -603,11 +794,23 @@ export const hudMixin = {
     );
     this.dashBarFill.width = DASH_BAR_WIDTH * weapon.dashRatio;
 
-    this.applyFacilityHudPresentation(facility);
+    this.applyLegacyFacilityHudPresentation(facility);
   },
 
 
   applyFacilityHudPresentation(facility) {
+    if (this.tacticalHudView?.mode === "legacy") {
+      this.applyLegacyFacilityHudPresentation(facility);
+      return;
+    }
+    const presentation = this._hudPresentation
+      ? { ...this._hudPresentation, facility }
+      : { facility };
+    this.tacticalHudView?.update?.(presentation);
+  },
+
+
+  applyLegacyFacilityHudPresentation(facility) {
     const warning = facility.expanded && facility.tone !== "danger";
     const danger = facility.expanded && facility.tone === "danger";
     this.facilityCollapsedPanel.frame.setVisible(!facility.expanded);
@@ -628,21 +831,18 @@ export const hudMixin = {
 
 
   collapseFacilityHud() {
-    this.applyFacilityHudPresentation({
-      expanded: false,
-      title: "设施稳定",
-      detail: "SITE-CN // 收容系统在线",
-      tone: "contained"
-    });
+    this.tacticalHudView?.setFacilityCollapsed?.(true);
   },
 
 
   updatePickupRadiusIndicator() {
-    this.pickupRadiusIndicator.clear();
-    this.pickupRadiusIndicator.fillStyle(0x50d66c, 0.1);
-    this.pickupRadiusIndicator.lineStyle(1, 0x50d66c, 0.35);
-    this.pickupRadiusIndicator.fillCircle(this.player.x, this.player.y, this.pickupRadius);
-    this.pickupRadiusIndicator.strokeCircle(this.player.x, this.player.y, this.pickupRadius);
+    const nowMs = this._hudPresentation?.pickup?.nowMs
+      ?? Math.max(0, Number.isFinite(this.elapsedSurvivalMs) ? this.elapsedSurvivalMs : 0);
+    this.tacticalHudView?.notifyPickupCue?.({
+      reason: "legacy-update",
+      nowMs,
+      durationMs: 0
+    });
   },
 
 
@@ -650,13 +850,25 @@ export const hudMixin = {
     if (!this.eventBannerContainer) {
       return;
     }
-    this.eventBannerTitle.setText(title);
-    this.eventBannerDetail.setText(detail);
-    this.eventBannerContainer.setVisible(true);
-    this.eventBannerContainer.setAlpha(1);
     this.topBannerState = {
+      title,
+      detail,
       expiresAtMs: this.elapsedSurvivalMs + durationMs
     };
+    this.eventBannerContainer.setAlpha(1);
+    this.applyTopBannerOverlay();
+  },
+
+
+  applyTopBannerOverlay() {
+    if (!this.topBannerState) {
+      return;
+    }
+    this.eventBannerTitle?.setText?.(this.topBannerState.title);
+    this.eventBannerDetail?.setText?.(this.topBannerState.detail);
+    this.eventBannerContainer?.setVisible?.(true);
+    this.eventBannerBg?.setVisible?.(true);
+    this.eventBannerDetail?.setVisible?.(true);
   },
 
 
