@@ -16,6 +16,487 @@ import { createTitleScreenView } from "../art/titleScreenView.js";
 import { createArmorySlot } from "../art/weaponSelectionView.js";
 import { THEME } from "../ui/theme.js";
 import { createTerminalButton } from "../ui/tacticalUi.js";
+import { createTerminalOverlay } from "../ui/terminalOverlay.js";
+
+const PAUSE_OVERLAY_DEPTH = 70;
+const RESULT_OVERLAY_DEPTH = 50;
+
+function releaseMissionDisplayObject(object) {
+  if (!object) return;
+  try {
+    object.disableInteractive?.();
+    object.removeInteractive?.();
+    object.destroy?.();
+  } finally {
+    object.removeAllListeners?.();
+  }
+}
+
+function createMissionOverlayOwner(overlay, tone) {
+  const objects = [...overlay.objects];
+  const objectSet = new Set(objects);
+  const ownedObjects = [];
+  const ownedControllers = [];
+  let destroyed = false;
+
+  const owner = {
+    container: overlay.container,
+    body: overlay.body,
+    header: overlay.header,
+    content: overlay.content,
+    objects,
+    actions: {},
+    tone,
+    fallback: false,
+    ownObject(object, parent = overlay.content) {
+      if (!objectSet.has(object)) {
+        objectSet.add(object);
+        objects.push(object);
+        ownedObjects.push(object);
+      }
+      parent?.add(object);
+      return object;
+    },
+    ownController(controller, parent = overlay.content) {
+      ownedControllers.push(controller);
+      for (const object of controller.objects ?? []) {
+        if (!objectSet.has(object)) {
+          objectSet.add(object);
+          objects.push(object);
+        }
+      }
+      parent?.add(controller.objects ?? []);
+      return controller;
+    },
+    setTone(nextTone) {
+      if (destroyed) return;
+      owner.tone = nextTone;
+      overlay.setTone(nextTone);
+    },
+    setVisible(visible) {
+      if (destroyed) return;
+      overlay.setVisible(visible);
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      for (const action of Object.values(owner.actions)) {
+        try {
+          action?.setState?.("disabled");
+          action?.hitArea?.disableInteractive?.();
+        } catch {
+          // Continue tearing down every object owned by this overlay.
+        }
+      }
+      for (const controller of [...ownedControllers].reverse()) {
+        try {
+          controller?.destroy?.();
+        } catch {
+          // Continue releasing the rest of the transaction.
+        }
+      }
+      for (const object of [...ownedObjects].reverse()) {
+        try {
+          releaseMissionDisplayObject(object);
+        } catch {
+          // Continue releasing the rest of the transaction.
+        }
+      }
+      try {
+        overlay.destroy();
+      } catch {
+        // All directly owned objects have already been released.
+      }
+    }
+  };
+
+  return owner;
+}
+
+function configureMissionObject(object, depth, scrollFactor, origin = null) {
+  object.setDepth(depth);
+  object.setScrollFactor(scrollFactor);
+  if (origin) object.setOrigin(...origin);
+  return object;
+}
+
+function createOwnedMissionText(scene, owner, {
+  x,
+  y,
+  text,
+  style,
+  depth,
+  scrollFactor,
+  origin = [0, 0]
+}) {
+  const object = owner.ownObject(scene.add.text(x, y, text, style));
+  return configureMissionObject(object, depth, scrollFactor, origin);
+}
+
+function getPauseObjective(scene) {
+  if (scene.bossPhaseActive || scene.bossEnemy?.active) {
+    return "重新收容 SCP-049";
+  }
+  if (scene.survivalPhaseEnded) {
+    return "等待 SCP-049 收容接触";
+  }
+  return "维持生存 // 等待收容窗口";
+}
+
+function getPauseFacilityStatus(scene) {
+  const event = scene.activeFacilityEvent;
+  if (event) {
+    const configured = BALANCE.facility.events[event.type];
+    const name = event.name ?? configured?.name ?? event.type;
+    const warning = event.warning ?? configured?.warning ?? "处置协议执行中";
+    return `${name} // ${warning}`;
+  }
+  if (scene.bossPhaseActive) {
+    return "终局收容区 // 高危封锁";
+  }
+  return "设施在线 // 常规警戒";
+}
+
+function createPauseTerminalController(scene) {
+  let owner = null;
+  try {
+    const cx = GAME_WIDTH / 2;
+    const overlay = createTerminalOverlay(scene, {
+      x: 0,
+      y: 0,
+      width: 580,
+      height: 420,
+      depth: PAUSE_OVERLAY_DEPTH,
+      scrollFactor: 1,
+      eyebrow: "SITE-19 // MISSION CONTROL",
+      title: "行动暂停",
+      subtitle: "任务时序冻结 // 等待操作员指令",
+      tone: "standard",
+      surfaceTextureKey: TEXTURES.terminalSurfaceGrid
+    });
+    owner = createMissionOverlayOwner(overlay, "standard");
+
+    const statusStyle = {
+      fontFamily: THEME.font.mono,
+      fontSize: "15px",
+      color: THEME.text.secondary
+    };
+    const lines = [
+      `站点编号 // SITE-19`,
+      `当前任务 // ${getPauseObjective(scene)}`,
+      `运行时间 // ${scene.getFinalSurvivalTimeSeconds()} 秒`,
+      `设施状态 // ${getPauseFacilityStatus(scene)}`
+    ];
+    lines.forEach((text, index) => {
+      createOwnedMissionText(scene, owner, {
+        x: cx - 248,
+        y: 180 + index * 30,
+        text,
+        style: statusStyle,
+        depth: PAUSE_OVERLAY_DEPTH + 1,
+        scrollFactor: 1
+      });
+    });
+
+    const resume = owner.ownController(createTerminalButton(scene, {
+      x: cx - 120,
+      y: 314,
+      width: 240,
+      height: 54,
+      text: "继续行动",
+      variant: "primary",
+      activateOn: "pointerdown",
+      depth: PAUSE_OVERLAY_DEPTH + 1,
+      scrollFactor: 1,
+      onActivate: () => scene.resumeFromPause()
+    }));
+    const quit = owner.ownController(createTerminalButton(scene, {
+      x: cx - 120,
+      y: 378,
+      width: 240,
+      height: 54,
+      text: "返回标题",
+      variant: "danger",
+      activateOn: "pointerdown",
+      depth: PAUSE_OVERLAY_DEPTH + 1,
+      scrollFactor: 1,
+      onActivate: () => scene.quitToTitle()
+    }));
+    owner.actions.resume = resume;
+    owner.actions.quit = quit;
+    owner.resumeButton = resume;
+    owner.quitButton = quit;
+
+    scene.syncScreenOverlayPosition(owner.container);
+    return owner;
+  } catch (error) {
+    owner?.destroy();
+    throw error;
+  }
+}
+
+function addResultStats(scene, owner, {
+  finalTime,
+  killCount,
+  runCredits,
+  totalCredits,
+  depth,
+  scrollFactor
+}) {
+  const rows = [
+    ["生存时间", `${finalTime} 秒`],
+    ["击杀数", `${killCount}`],
+    ["当局学分", `+${runCredits}`],
+    ["累计学分", `${totalCredits}`]
+  ];
+  rows.forEach(([label, value], index) => {
+    const y = 226 + index * 31;
+    createOwnedMissionText(scene, owner, {
+      x: GAME_WIDTH / 2 - 190,
+      y,
+      text: label,
+      style: {
+        fontFamily: THEME.font.label,
+        fontSize: "14px",
+        color: THEME.text.secondary
+      },
+      depth,
+      scrollFactor,
+      origin: [0, 0.5]
+    });
+    createOwnedMissionText(scene, owner, {
+      x: GAME_WIDTH / 2 + 190,
+      y,
+      text: value,
+      style: {
+        fontFamily: THEME.font.mono,
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: THEME.text.primary
+      },
+      depth,
+      scrollFactor,
+      origin: [1, 0.5]
+    });
+  });
+}
+
+function createResultTerminalController(scene, {
+  tone,
+  eyebrow,
+  statusText,
+  subtitle,
+  stampTextureKey,
+  finalTime,
+  killCount,
+  runCredits,
+  totalCredits,
+  onRestart
+}) {
+  let owner = null;
+  try {
+    const overlay = createTerminalOverlay(scene, {
+      x: 0,
+      y: 0,
+      width: 540,
+      height: 400,
+      depth: RESULT_OVERLAY_DEPTH,
+      scrollFactor: 0,
+      eyebrow,
+      title: statusText,
+      subtitle,
+      tone,
+      surfaceTextureKey: TEXTURES.terminalSurfaceGrid
+    });
+    owner = createMissionOverlayOwner(overlay, tone);
+
+    const stamp = owner.ownObject(
+      scene.add.image(GAME_WIDTH / 2, 194, stampTextureKey)
+    );
+    configureMissionObject(stamp, RESULT_OVERLAY_DEPTH + 1, 0);
+    stamp.setDisplaySize(144, 48);
+
+    createOwnedMissionText(scene, owner, {
+      x: GAME_WIDTH / 2,
+      y: 194,
+      text: statusText,
+      style: {
+        fontFamily: THEME.font.label,
+        fontSize: "15px",
+        fontStyle: "bold",
+        color: tone === "danger" ? THEME.text.critical : THEME.text.contained
+      },
+      depth: RESULT_OVERLAY_DEPTH + 2,
+      scrollFactor: 0,
+      origin: [0.5, 0.5]
+    });
+
+    addResultStats(scene, owner, {
+      finalTime,
+      killCount,
+      runCredits,
+      totalCredits,
+      depth: RESULT_OVERLAY_DEPTH + 1,
+      scrollFactor: 0
+    });
+
+    const restart = owner.ownController(createTerminalButton(scene, {
+      x: GAME_WIDTH / 2 - 85,
+      y: 382,
+      width: 170,
+      height: 52,
+      text: "返回行动准备",
+      variant: tone === "danger" ? "danger" : "success",
+      activateOn: "pointerdown",
+      depth: RESULT_OVERLAY_DEPTH + 2,
+      scrollFactor: 0,
+      onActivate: onRestart
+    }));
+    owner.actions.restart = restart;
+    owner.restartButton = restart;
+    return owner;
+  } catch (error) {
+    owner?.destroy();
+    throw error;
+  }
+}
+
+function createMinimalResultFallback(scene, { tone, onRestart }) {
+  const objects = [];
+  const objectSet = new Set();
+  let destroyed = false;
+  let activated = false;
+
+  const own = (object) => {
+    if (object && !objectSet.has(object)) {
+      objectSet.add(object);
+      objects.push(object);
+    }
+    return object;
+  };
+  const attempt = (factory, configure) => {
+    let object = null;
+    try {
+      object = own(factory());
+      configure(object);
+      return object;
+    } catch {
+      return null;
+    }
+  };
+
+  let container = attempt(
+    () => scene.add.container(0, 0),
+    (object) => configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0)
+  );
+  const addToContainer = (object) => {
+    if (!object || !container) return;
+    try {
+      container.add(object);
+    } catch {
+      // Screen-fixed fallback objects remain usable without a parent container.
+    }
+  };
+
+  const backdrop = attempt(
+    () => scene.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x000000,
+      0.82
+    ),
+    (object) => {
+      configureMissionObject(object, RESULT_OVERLAY_DEPTH, 0);
+      addToContainer(object);
+    }
+  );
+  const hitArea = attempt(
+    () => scene.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      170,
+      52,
+      tone === "danger" ? THEME.terminal.danger : THEME.terminal.contained,
+      1
+    ),
+    (object) => {
+      configureMissionObject(object, RESULT_OVERLAY_DEPTH + 1, 0);
+      addToContainer(object);
+      object.setInteractive({ useHandCursor: true });
+    }
+  );
+  const label = attempt(
+    () => scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "返回行动准备", {
+      fontFamily: THEME.font.label,
+      fontSize: "18px",
+      fontStyle: "bold",
+      color: THEME.text.onButton
+    }),
+    (object) => {
+      configureMissionObject(object, RESULT_OVERLAY_DEPTH + 2, 0, [0.5, 0.5]);
+      addToContainer(object);
+    }
+  );
+
+  const interactiveObject = hitArea ?? label ?? backdrop;
+  if (!interactiveObject) {
+    for (const object of [...objects].reverse()) {
+      try {
+        releaseMissionDisplayObject(object);
+      } catch {
+        // Release everything possible before reporting an unusable fallback.
+      }
+    }
+    throw new Error("Unable to create an interactive result fallback.");
+  }
+  if (interactiveObject !== hitArea) {
+    interactiveObject.setInteractive({ useHandCursor: true });
+  }
+
+  const restart = {
+    objects: [interactiveObject, label].filter(Boolean),
+    hitArea: interactiveObject,
+    label,
+    setState(state) {
+      if (state === "disabled") interactiveObject.disableInteractive?.();
+    },
+    destroy() {
+      interactiveObject.disableInteractive?.();
+    }
+  };
+  interactiveObject.on("pointerdown", () => {
+    if (activated || destroyed || !interactiveObject.interactive) return;
+    activated = true;
+    restart.setState("disabled");
+    onRestart();
+  });
+
+  if (!container) container = interactiveObject;
+  const controller = {
+    container,
+    content: container,
+    objects,
+    actions: { restart },
+    restartButton: restart,
+    tone,
+    fallback: true,
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      restart.setState("disabled");
+      for (const object of [...objects].reverse()) {
+        try {
+          releaseMissionDisplayObject(object);
+        } catch {
+          // Continue releasing the rest of the fallback.
+        }
+      }
+    }
+  };
+  return controller;
+}
 
 // Domain mixin: menus. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const menusMixin = {
@@ -536,73 +1017,14 @@ export const menusMixin = {
 
 
   showGameOverOverlay() {
-    const finalTime = this.getFinalSurvivalTimeSeconds();
-
-    const overlay = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      420,
-      280,
-      0x000000,
-      0.7
-    );
-    overlay.setDepth(50);
-    overlay.setScrollFactor(0);
-
-    const gameOverText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 90,
-      "游戏结束",
-      {
-        fontSize: "46px",
-        color: "#ffffff"
-      }
-    );
-    gameOverText.setDepth(51);
-    gameOverText.setOrigin(0.5);
-    gameOverText.setScrollFactor(0);
-
-    const finalStatsText = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 20,
-      `最终生存时间：${finalTime}秒\n最终击杀数：${this.killCount}\n获得学分：+${this.lastRunCreditsEarned ?? 0}（累计 ${this.meta.credits}）`,
-      {
-        fontSize: "22px",
-        color: "#d7defa",
-        align: "center"
-      }
-    );
-    finalStatsText.setDepth(51);
-    finalStatsText.setOrigin(0.5);
-    finalStatsText.setScrollFactor(0);
-
-    const restartButton = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 78,
-      170,
-      52,
-      0x3f82ff,
-      1
-    );
-    restartButton.setDepth(51);
-    restartButton.setScrollFactor(0);
-    restartButton.setInteractive({ useHandCursor: true });
-    restartButton.on("pointerdown", () => {
-      this.scene.restart();
+    return this.showMissionResultOverlay({
+      type: "failure",
+      tone: "danger",
+      eyebrow: "SITE-19 // INCIDENT REPORT",
+      statusText: "行动终止",
+      subtitle: "任务记录已封存 // 等待重新部署",
+      stampTextureKey: TEXTURES.incidentStampFrame
     });
-
-    const restartLabel = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 78,
-      "重新开始",
-      {
-        fontSize: "25px",
-        color: "#ffffff"
-      }
-    );
-    restartLabel.setDepth(52);
-    restartLabel.setOrigin(0.5);
-    restartLabel.setScrollFactor(0);
   },
 
 
@@ -617,63 +1039,87 @@ export const menusMixin = {
 
 
   showVictoryOverlay() {
+    return this.showMissionResultOverlay({
+      type: "victory",
+      tone: "success",
+      eyebrow: "SITE-19 // RECONTAINMENT REPORT",
+      statusText: "重新收容确认",
+      subtitle: "SCP-049 已重新收容 // 行动记录完成",
+      stampTextureKey: TEXTURES.recontainmentStampFrame
+    });
+  },
+
+
+  showMissionResultOverlay({
+    type,
+    tone,
+    eyebrow,
+    statusText,
+    subtitle,
+    stampTextureKey
+  }) {
+    if (this.resultOverlayController || this.resultOverlay) {
+      return this.resultOverlayController ?? null;
+    }
+
     const finalTime = this.getFinalSurvivalTimeSeconds();
-    const overlay = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      480,
-      320,
-      0x000000,
-      0.72
-    );
-    overlay.setDepth(50);
-    overlay.setStrokeStyle(2, 0x7bd7a8);
-    overlay.setScrollFactor(0);
-
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 98, "任务完成", {
-      fontSize: "44px",
-      color: "#cbffe1"
-    });
-    title.setOrigin(0.5);
-    title.setDepth(51);
-    title.setScrollFactor(0);
-
-    const detail = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 12,
-      `SCP-049 已被成功收容。\n生存时间：${finalTime}秒\n击杀数：${this.killCount}\n获得学分：+${this.lastRunCreditsEarned ?? 0}（累计 ${this.meta.credits}）`,
-      {
-        fontSize: "22px",
-        color: "#d7defa",
-        align: "center"
-      }
-    );
-    detail.setOrigin(0.5);
-    detail.setDepth(51);
-    detail.setScrollFactor(0);
-
-    const restartButton = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 + 92,
-      170,
-      52,
-      0x4da07b,
-      1
-    );
-    restartButton.setDepth(51);
-    restartButton.setScrollFactor(0);
-    restartButton.setInteractive({ useHandCursor: true });
-    restartButton.on("pointerdown", () => {
+    const stats = {
+      finalTime,
+      killCount: this.killCount,
+      runCredits: this.lastRunCreditsEarned ?? 0,
+      totalCredits: this.meta.credits
+    };
+    let controller = null;
+    let restarted = false;
+    const restart = () => {
+      if (restarted) return;
+      restarted = true;
+      controller?.actions?.restart?.setState?.("disabled");
+      controller?.actions?.restart?.hitArea?.disableInteractive?.();
+      this.destroyResultOverlay();
       this.scene.restart();
-    });
+    };
 
-    const restartLabel = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 92, "重新开始", {
-      fontSize: "25px",
-      color: "#ffffff"
-    });
-    restartLabel.setOrigin(0.5);
-    restartLabel.setDepth(52);
-    restartLabel.setScrollFactor(0);
+    try {
+      controller = createResultTerminalController(this, {
+        tone,
+        eyebrow,
+        statusText,
+        subtitle,
+        stampTextureKey,
+        ...stats,
+        onRestart: restart
+      });
+    } catch {
+      controller = createMinimalResultFallback(this, { tone, onRestart: restart });
+    }
+
+    controller.resultType = type;
+    this.resultOverlayController = controller;
+    this.resultOverlay = controller.container;
+    return controller;
+  },
+
+
+  destroyResultOverlay() {
+    const controller = this.resultOverlayController;
+    const overlay = this.resultOverlay;
+    this.resultOverlayController = null;
+    this.resultOverlay = null;
+
+    if (controller) {
+      try {
+        controller.destroy();
+      } catch {
+        // References are already cleared; Scene teardown can continue safely.
+      }
+      return;
+    }
+    try {
+      overlay?.destroy?.(true);
+    } catch {
+      // Legacy compatibility teardown is best-effort and idempotent.
+    }
   },
 
 
@@ -691,78 +1137,48 @@ export const menusMixin = {
 
 
   showPauseOverlay() {
-    if (this.pauseOverlay) {
-      return;
+    if (this.pauseOverlayController || this.pauseOverlay) {
+      return this.pauseOverlayController ?? null;
     }
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
-    const fontFamily =
-      '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif';
 
-    this.pauseOverlay = this.add.container(0, 0);
-    this.pauseOverlay.setDepth(70);
-    // Camera follows the player, so keep the overlay in world space at the
-    // current viewport (not scrollFactor 0) or the interactive hit areas end up
-    // offset from where the buttons are drawn — same fix as the level-up menu.
-    this.syncScreenOverlayPosition(this.pauseOverlay);
-
-    const backdrop = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65);
-    backdrop.setInteractive();
-    const panel = this.add.rectangle(cx, cy, 420, 300, 0x141c2f, 1);
-    panel.setStrokeStyle(2, 0x6f91d8);
-
-    const title = this.add.text(cx, cy - 100, "已暂停", {
-      fontFamily,
-      fontSize: "44px",
-      fontStyle: "bold",
-      color: "#f4f7ff"
-    });
-    title.setOrigin(0.5);
-
-    const resumeButton = this.add.rectangle(cx, cy - 12, 240, 54, 0x2a3242, 1);
-    resumeButton.setStrokeStyle(2, 0x6f91d8);
-    resumeButton.setInteractive({ useHandCursor: true });
-    resumeButton.on("pointerover", () => resumeButton.setFillStyle(0x39527f, 1));
-    resumeButton.on("pointerout", () => resumeButton.setFillStyle(0x2a3242, 1));
-    resumeButton.on("pointerdown", () => this.resumeFromPause());
-    const resumeLabel = this.add.text(cx, cy - 12, "继续游戏", {
-      fontFamily,
-      fontSize: "24px",
-      fontStyle: "bold",
-      color: "#ffffff"
-    });
-    resumeLabel.setOrigin(0.5);
-
-    const quitButton = this.add.rectangle(cx, cy + 62, 240, 54, 0x3a2530, 1);
-    quitButton.setStrokeStyle(2, 0xb06a78);
-    quitButton.setInteractive({ useHandCursor: true });
-    quitButton.on("pointerover", () => quitButton.setFillStyle(0x53303e, 1));
-    quitButton.on("pointerout", () => quitButton.setFillStyle(0x3a2530, 1));
-    quitButton.on("pointerdown", () => this.quitToTitle());
-    const quitLabel = this.add.text(cx, cy + 62, "返回标题", {
-      fontFamily,
-      fontSize: "22px",
-      fontStyle: "bold",
-      color: "#ffd9df"
-    });
-    quitLabel.setOrigin(0.5);
-
-    this.pauseOverlay.add([
-      backdrop,
-      panel,
-      title,
-      resumeButton,
-      resumeLabel,
-      quitButton,
-      quitLabel
-    ]);
+    let controller = null;
+    try {
+      controller = createPauseTerminalController(this);
+      this.pauseOverlayController = controller;
+      this.pauseOverlay = controller.container;
+      return controller;
+    } catch {
+      controller?.destroy();
+      this.pauseOverlayController = null;
+      this.pauseOverlay = null;
+      const gameplayWasPaused = this.isPaused === true;
+      this.isPaused = false;
+      if (gameplayWasPaused) {
+        this.resumeGameplaySystems();
+      }
+      return null;
+    }
   },
 
 
   hidePauseOverlay() {
-    if (this.pauseOverlay) {
-      this.pauseOverlay.destroy(true);
-      this.pauseOverlay = null;
+    const controller = this.pauseOverlayController;
+    const overlay = this.pauseOverlay;
+    this.pauseOverlayController = null;
+    this.pauseOverlay = null;
+
+    if (controller) {
+      try {
+        controller.destroy();
+      } catch {
+        // References are already cleared; repeated teardown remains safe.
+      }
+      return;
+    }
+    try {
+      overlay?.destroy?.(true);
+    } catch {
+      // Legacy compatibility teardown is best-effort and idempotent.
     }
   },
 
