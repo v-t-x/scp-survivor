@@ -244,6 +244,8 @@ test("partial facility presentation preserves every cached tactical HUD section 
   assert.strictEqual(merged.facility, facility);
   assert.strictEqual(merged.system, cached.system);
   assert.strictEqual(merged.pickup, cached.pickup);
+  assert.notStrictEqual(merged, cached);
+  assert.strictEqual(scene._hudPresentation, merged);
 });
 
 test("source guard keeps main and timeline untouched by the HUD facade migration", async () => {

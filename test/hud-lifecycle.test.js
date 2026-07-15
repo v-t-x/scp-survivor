@@ -43,13 +43,21 @@ function createEventEmitter() {
   };
 }
 
+function removeFromList(list, object) {
+  const index = list?.indexOf(object) ?? -1;
+  if (index >= 0) list.splice(index, 1);
+}
+
 function createDisplayObject(scene, type, initial = {}) {
   const listeners = new Map();
+  const isContainer = type === "container";
   const object = {
     type,
     active: true,
+    destroyed: false,
     alpha: 1,
     visible: true,
+    ...(isContainer ? { list: [] } : {}),
     ...initial,
     setDepth(value) { this.depth = value; return this; },
     setScrollFactor(value) { this.scrollFactor = value; return this; },
@@ -83,20 +91,37 @@ function createDisplayObject(scene, type, initial = {}) {
     erase() { return this; },
     setPosition(x, y) { this.x = x; this.y = y; return this; },
     add(children) {
-      this.children = [...(this.children ?? []), ...children];
-      for (const child of children) child.parentContainer = this;
+      const candidates = Array.isArray(children) ? children : [children];
+      this.list ??= [];
+      for (const child of candidates) {
+        if (!child) continue;
+        removeFromList(child.parentContainer?.list, child);
+        removeFromList(scene.children.list, child);
+        if (!this.list.includes(child)) this.list.push(child);
+        child.parentContainer = this;
+        child.on("destroy", () => {
+          removeFromList(this.list, child);
+          if (child.parentContainer === this) child.parentContainer = null;
+        });
+      }
       return this;
     },
     destroy(destroyChildren = false) {
-      if (!this.active) return;
-      this.removeAllListeners();
+      if (this.destroyed) return;
       if (destroyChildren) {
-        for (const child of [...(this.children ?? [])]) child.destroy?.(true);
+        for (const child of [...(this.list ?? [])]) child.destroy?.(true);
+      } else {
+        for (const child of [...(this.list ?? [])]) {
+          child.parentContainer = null;
+          if (!scene.children.list.includes(child)) scene.children.list.push(child);
+        }
       }
+      if (this.list) this.list.length = 0;
+      this.emit("destroy", this);
+      this.removeAllListeners();
+      removeFromList(scene.children.list, this);
       this.active = false;
       this.destroyed = true;
-      const index = scene.children.list.indexOf(this);
-      if (index >= 0) scene.children.list.splice(index, 1);
     }
   };
   Object.defineProperty(object, "listenerCount", { get: () => listeners.size });
@@ -186,8 +211,8 @@ async function loadHudMixin(tacticalFactory = createTacticalHudView) {
   );
 }
 
-function activeObjectCount(scene) {
-  return scene.allObjects.filter((object) => object.active).length;
+function liveObjectCount(scene) {
+  return scene.allObjects.filter((object) => !object.destroyed).length;
 }
 
 test("three tactical HUD create-teardown cycles do not grow Phaser objects or scene listeners", async () => {
@@ -197,12 +222,12 @@ test("three tactical HUD create-teardown cycles do not grow Phaser objects or sc
 
   for (let restart = 0; restart < 3; restart += 1) {
     scene.createUI();
-    liveCounts.push(activeObjectCount(scene));
+    liveCounts.push(liveObjectCount(scene));
     assert.equal(scene.events.listenerCount(SCENE_EVENTS.SHUTDOWN), 1);
     assert.equal(scene.events.listenerCount(SCENE_EVENTS.DESTROY), 1);
     scene.teardownHud();
     scene.teardownHud();
-    assert.equal(activeObjectCount(scene), 0);
+    assert.equal(liveObjectCount(scene), 0);
     assert.equal(scene.events.listenerCount(SCENE_EVENTS.SHUTDOWN), 0);
     assert.equal(scene.events.listenerCount(SCENE_EVENTS.DESTROY), 0);
   }
@@ -221,7 +246,7 @@ test("tactical construction failure executes the extracted legacy HUD and keeps 
   assert.doesNotThrow(() => scene.createUI());
   assert.equal(tacticalAttempts, 1);
   assert.equal(scene.tacticalHudView.mode, "legacy");
-  assert.equal(activeObjectCount(scene) > 0, true);
+  assert.equal(liveObjectCount(scene) > 0, true);
   assert.doesNotThrow(() => scene.updateUI());
   scene.pauseButton.emit("pointerdown");
   assert.equal(scene.togglePauseCalls, 1);
@@ -230,7 +255,7 @@ test("tactical construction failure executes the extracted legacy HUD and keeps 
   assert.equal(scene.muteText.text, "音频：静音 (M)");
   assert.doesNotThrow(() => scene.events.emit(SCENE_EVENTS.SHUTDOWN));
   assert.doesNotThrow(() => scene.events.emit(SCENE_EVENTS.DESTROY));
-  assert.equal(activeObjectCount(scene), 0);
+  assert.equal(liveObjectCount(scene), 0);
 });
 
 test("legacy failure rolls back its partial object and installs a complete no-op HUD", async () => {
@@ -247,7 +272,7 @@ test("legacy failure rolls back its partial object and installs a complete no-op
   assert.equal(scene.tacticalHudView.mode, "noop");
   assert.deepEqual(scene.gameplayHudContainers, []);
   assert.deepEqual(scene.timelineHudBasePositions, []);
-  assert.equal(activeObjectCount(scene), 0);
+  assert.equal(liveObjectCount(scene), 0);
   for (const name of [
     "statsText", "levelText", "xpBarBackground", "xpBarFill", "xpText",
     "weaponHudText", "phaseText", "muteText", "pauseButton", "pauseButtonLabel",
@@ -266,6 +291,64 @@ test("legacy failure rolls back its partial object and installs a complete no-op
     scene.events.emit(SCENE_EVENTS.SHUTDOWN);
     scene.events.emit(SCENE_EVENTS.DESTROY);
   });
+});
+
+test("fallback cleanup preserves recursive baseline objects and destroys inactive reparented partials", async () => {
+  const scene = createScene();
+  const baselineContainer = scene.add.container(12, 18);
+  const baselineChild = scene.add.text(4, 6, "existing", {});
+  baselineChild.on("pointerdown", () => {});
+  baselineContainer.add([baselineChild]);
+  const baselineChildListenerCount = baselineChild.listenerCount;
+  const baselineCount = scene.allObjects.length;
+  let partialContainer;
+  let reparentedPartial;
+  let injectedPartial;
+
+  Object.assign(scene, await loadHudMixin((factoryScene) => {
+    partialContainer = factoryScene.add.container(30, 40);
+    partialContainer.on("pointerdown", () => {});
+    reparentedPartial = factoryScene.add.rectangle(2, 3, 8, 9, 0xffffff, 1);
+    reparentedPartial.setInteractive().on("pointerdown", () => {});
+    partialContainer.add([reparentedPartial]);
+    partialContainer.active = false;
+    reparentedPartial.active = false;
+
+    injectedPartial = factoryScene.add.text(8, 10, "partial", {});
+    injectedPartial.on("pointerdown", () => {});
+    injectedPartial.active = false;
+    baselineContainer.add([injectedPartial]);
+    throw new Error("tactical construction failed after reparenting");
+  }));
+
+  scene.createUI();
+
+  assert.equal(scene.tacticalHudView.mode, "legacy");
+  assert.equal(baselineContainer.destroyed, false);
+  assert.equal(baselineChild.destroyed, false);
+  assert.equal(baselineChild.listenerCount, baselineChildListenerCount);
+  assert.equal(baselineContainer.list.includes(baselineChild), true);
+  for (const object of [partialContainer, reparentedPartial, injectedPartial]) {
+    assert.equal(object.destroyed, true, `${object.type} partial is destroyed`);
+    assert.equal(object.listenerCount, 0, `${object.type} partial listeners are cleared`);
+  }
+  assert.equal(baselineContainer.list.includes(injectedPartial), false);
+
+  const inactiveLegacyObject = scene.pauseButton;
+  assert.equal(inactiveLegacyObject.listenerCount > 0, true);
+  inactiveLegacyObject.active = false;
+  const legacyObjects = [...scene.tacticalHudView.objects];
+
+  scene.teardownHud();
+
+  assert.equal(inactiveLegacyObject.destroyed, true);
+  assert.equal(inactiveLegacyObject.listenerCount, 0);
+  assert.equal(legacyObjects.every((object) => object.destroyed), true);
+  assert.equal(legacyObjects.every((object) => object.listenerCount === 0), true);
+  assert.equal(baselineContainer.destroyed, false);
+  assert.equal(baselineChild.destroyed, false);
+  assert.equal(baselineChild.listenerCount, baselineChildListenerCount);
+  assert.equal(liveObjectCount(scene), baselineCount);
 });
 
 test("top banner survives the real frame update order and restores facility presentation after expiry", async () => {
@@ -305,4 +388,98 @@ test("top banner survives the real frame update order and restores facility pres
   assert.equal(scene.eventBannerContainer.alpha, 1);
   assert.equal(scene.eventBannerTitle.text, "设施稳定 // SITE-CN // 收容系统在线");
   assert.equal(scene.eventBannerDetail.text, "SITE-CN // 收容系统在线");
+});
+
+test("direct facility updates preserve active banners and restore facility presentation after expiry", async (t) => {
+  const facility = {
+    expanded: false,
+    title: "设施稳定",
+    detail: "SITE-CN // 收容系统在线",
+    tone: "contained"
+  };
+  const cases = [
+    ["tactical", createTacticalHudView],
+    ["legacy", () => { throw new Error("tactical unavailable"); }]
+  ];
+
+  for (const [mode, factory] of cases) {
+    await t.test(mode, async () => {
+      const scene = createScene();
+      Object.assign(scene, await loadHudMixin(factory));
+      scene.createUI();
+      scene.updateUI();
+      assert.equal(scene.tacticalHudView.mode ?? "tactical", mode);
+
+      scene.showTopBanner("外科狂乱", "SCP-049 暴露了弱点", 1_000);
+      scene.elapsedSurvivalMs = 1_900;
+      scene.updateTopBanner();
+      scene.applyFacilityHudPresentation(facility);
+
+      assert.equal(scene.eventBannerTitle.text, "外科狂乱");
+      assert.equal(scene.eventBannerDetail.text, "SCP-049 暴露了弱点");
+      assert.equal(scene.eventBannerContainer.visible, true);
+      assert.equal(scene.eventBannerBg.visible, true);
+      assert.equal(scene.eventBannerDetail.visible, true);
+      assert.equal(scene.eventBannerContainer.alpha, 100 / 280);
+
+      scene.elapsedSurvivalMs = 2_000;
+      scene.updateTopBanner();
+      scene.applyFacilityHudPresentation(facility);
+
+      assert.equal(scene.topBannerState, null);
+      assert.equal(scene.eventBannerContainer.visible, false);
+      assert.equal(scene.eventBannerContainer.alpha, 1);
+      if (mode === "tactical") {
+        assert.equal(scene.eventBannerTitle.text, "设施稳定 // SITE-CN // 收容系统在线");
+        assert.equal(scene.eventBannerDetail.text, "SITE-CN // 收容系统在线");
+      } else {
+        assert.equal(scene.facilityTitleText.text, "设施稳定");
+        assert.equal(scene.facilityDetailText.text, "SITE-CN // 收容系统在线");
+      }
+    });
+  }
+});
+
+test("partial facility update waits without a cached tactical presentation and preserves existing refs", async () => {
+  const scene = createScene();
+  Object.assign(scene, await loadHudMixin());
+  scene.createUI();
+  scene.updateUI();
+
+  const watchedRefs = [
+    "phaseText", "statsText", "levelText", "xpText", "weaponHudText",
+    "pauseButtonLabel", "muteText"
+  ];
+  const before = Object.fromEntries(watchedRefs.map((name) => [
+    name,
+    {
+      text: scene[name].text,
+      visible: scene[name].visible,
+      alpha: scene[name].alpha
+    }
+  ]));
+  const originalUpdate = scene.tacticalHudView.update;
+  let updateCalls = 0;
+  scene.tacticalHudView.update = (...args) => {
+    updateCalls += 1;
+    return originalUpdate(...args);
+  };
+  scene._hudPresentation = null;
+
+  scene.applyFacilityHudPresentation({
+    expanded: true,
+    title: "收容警报",
+    detail: "观察区出现异常读数。",
+    tone: "warning"
+  });
+
+  assert.equal(updateCalls, 0);
+  assert.equal(scene._hudPresentation, null);
+  for (const name of watchedRefs) {
+    assert.deepEqual({
+      text: scene[name].text,
+      visible: scene[name].visible,
+      alpha: scene[name].alpha
+    }, before[name], `${name} remains unchanged`);
+  }
 });

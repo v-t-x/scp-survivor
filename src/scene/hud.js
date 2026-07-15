@@ -30,7 +30,7 @@ export const hudMixin = {
       this.teardownHud();
     }
     this._hudTornDown = false;
-    const baselineObjects = new Set(this.children?.list ?? []);
+    const baselineObjects = this.snapshotHudObjectIdentities();
     let view;
 
     try {
@@ -76,18 +76,28 @@ export const hudMixin = {
   },
 
 
+  snapshotHudObjectIdentities() {
+    const objects = new Set();
+    const visit = (object) => {
+      if (!object || objects.has(object)) return;
+      objects.add(object);
+      for (const child of object.list ?? []) visit(child);
+    };
+    for (const object of this.children?.list ?? []) visit(object);
+    return objects;
+  },
+
+
   collectHudObjectsSince(baselineObjects) {
     const collected = [];
     const seen = new Set();
     const visit = (object) => {
       if (!object || seen.has(object)) return;
       seen.add(object);
-      collected.push(object);
-      for (const child of object.list ?? object.children ?? []) visit(child);
+      if (!baselineObjects.has(object)) collected.push(object);
+      for (const child of object.list ?? []) visit(child);
     };
-    for (const object of this.children?.list ?? []) {
-      if (!baselineObjects.has(object)) visit(object);
-    }
+    for (const object of this.children?.list ?? []) visit(object);
     return collected;
   },
 
@@ -95,10 +105,10 @@ export const hudMixin = {
   destroyHudObjectsSince(baselineObjects) {
     const objects = this.collectHudObjectsSince(baselineObjects);
     for (const object of [...objects].reverse()) {
-      object?.removeAllListeners?.();
       object?.disableInteractive?.();
       object?.removeInteractive?.();
-      if (object?.active !== false) object?.destroy?.(true);
+      object?.destroy?.(true);
+      object?.removeAllListeners?.();
     }
   },
 
@@ -225,10 +235,10 @@ export const hudMixin = {
         if (destroyed) return;
         destroyed = true;
         for (const object of [...objects].reverse()) {
-          object?.removeAllListeners?.();
           object?.disableInteractive?.();
           object?.removeInteractive?.();
-          if (object?.active !== false) object?.destroy?.(true);
+          object?.destroy?.(true);
+          object?.removeAllListeners?.();
         }
       }
     };
@@ -799,14 +809,23 @@ export const hudMixin = {
 
 
   applyFacilityHudPresentation(facility) {
-    if (this.tacticalHudView?.mode === "legacy") {
-      this.applyLegacyFacilityHudPresentation(facility);
-      return;
-    }
     const presentation = this._hudPresentation
       ? { ...this._hudPresentation, facility }
-      : { facility };
+      : null;
+    if (presentation) {
+      this._hudPresentation = presentation;
+    }
+    if (this.tacticalHudView?.mode === "legacy") {
+      this.applyLegacyFacilityHudPresentation(facility);
+      this.applyTopBannerOverlay();
+      return;
+    }
+    if (!presentation) {
+      this.applyTopBannerOverlay();
+      return;
+    }
     this.tacticalHudView?.update?.(presentation);
+    this.applyTopBannerOverlay();
   },
 
 
