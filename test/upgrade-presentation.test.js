@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import { UPGRADE_DEFINITIONS } from "../src/config/upgrades.js";
 import { IMAGE_ASSETS, TEXTURES } from "../src/assets/manifest.js";
 
@@ -68,7 +67,7 @@ test("upgrade presentation maps the exact real upgrade key set without gameplay 
   }
 });
 
-test("all 19 terminal upgrade assets have unique manifest keys and guarded fallbacks", async () => {
+test("all 19 terminal upgrade assets have unique manifest keys and exact executable fallback pairs", async () => {
   for (const [property, key] of Object.entries(EXPECTED_TEXTURE_PROPERTIES)) {
     assert.equal(TEXTURES[property], key);
   }
@@ -79,15 +78,39 @@ test("all 19 terminal upgrade assets have unique manifest keys and guarded fallb
   assert.equal(manifestAssets.length, 19);
   assert.equal(new Set(manifestAssets.map(({ key }) => key)).size, 19);
 
-  const fallbackSource = await readFile(
-    new URL("../src/assets/fallbackTextureFactory.js", import.meta.url),
-    "utf8"
+  const fallbackPairs = [];
+  let requestedKey = null;
+  let graphics;
+  graphics = new Proxy({}, {
+    get(_target, property) {
+      if (property === "generateTexture") {
+        return (generatedKey) => {
+          fallbackPairs.push([requestedKey, generatedKey]);
+          return graphics;
+        };
+      }
+      return () => graphics;
+    }
+  });
+  const scene = {
+    textures: {
+      exists(key) {
+        requestedKey = key;
+        return false;
+      }
+    },
+    add: {
+      graphics() {
+        return graphics;
+      }
+    }
+  };
+
+  const { generateFallbackTextures } = await import("../src/assets/fallbackTextureFactory.js");
+  generateFallbackTextures(scene);
+
+  assert.deepEqual(
+    fallbackPairs.filter(([key]) => expectedKeys.has(key)),
+    [...expectedKeys].map((key) => [key, key])
   );
-  for (const property of Object.keys(EXPECTED_TEXTURE_PROPERTIES)) {
-    assert.match(
-      fallbackSource,
-      new RegExp(`ensureTexture\\(scene, TEXTURES\\.${property},`),
-      `${property} must have an existence-guarded fallback`
-    );
-  }
 });

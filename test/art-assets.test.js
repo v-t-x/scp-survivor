@@ -5,6 +5,7 @@ import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 import { IMAGE_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
 
 const approvedImageAssets = [
   { key: "facility-floor", path: "assets/art/facility/floor.png", size: [32, 32] },
@@ -52,6 +53,9 @@ const approvedImageAssets = [
 ];
 
 const upgradeIconAssets = approvedImageAssets.filter(({ key }) => key.startsWith("upgrade-"));
+const weaponToneUpgradeAssets = Object.entries(UPGRADE_PRESENTATION)
+  .filter(([, { tone }]) => tone === "weapon")
+  .map(([upgradeKey, { textureKey, path }]) => ({ upgradeKey, key: textureKey, path }));
 const terminalSurfaceAssets = approvedImageAssets.filter(({ key }) => [
   "terminal-surface-grid",
   "incident-stamp-frame",
@@ -584,6 +588,30 @@ test("upgrade icons and terminal surfaces preserve their frozen transparent pixe
     }
     assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must use binary transparency`);
     assert.ok(colors.size <= 16, `${key} exceeds the 16-color terminal palette`);
+  }
+});
+
+test("weapon-tone upgrade icons use amber accents without cyan or mutation accents", async () => {
+  for (const { upgradeKey, key, path } of weaponToneUpgradeAssets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    const { pixels } = decodeRgbaPng(await readFile(absolute));
+    let amberPixels = 0;
+    let cyanPixels = 0;
+    let purplePixels = 0;
+
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      if (pixels[offset + 3] === 0) continue;
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      if (red >= 120 && red >= green + 15 && green >= blue + 15) amberPixels += 1;
+      if (green >= 150 && blue >= 150 && green >= red + 40 && blue >= red + 40) cyanPixels += 1;
+      if (red >= 120 && blue >= 120 && red >= green + 40 && blue >= green + 40) purplePixels += 1;
+    }
+
+    assert.ok(amberPixels >= 8, `${key} (${upgradeKey}) must contain a clear R>G>B amber accent`);
+    assert.equal(cyanPixels, 0, `${key} (${upgradeKey}) must not contain standard-tone cyan accents`);
+    assert.equal(purplePixels, 0, `${key} (${upgradeKey}) must not contain mutation-tone purple accents`);
   }
 });
 

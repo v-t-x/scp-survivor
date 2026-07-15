@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查。登记共计 52 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
+本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本。登记仍共计 52 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -713,23 +713,23 @@ Avoid: a giant puddle, bright neon liquid, blood splatter gore, a full opaque re
 
 ## 终端覆盖层 Task 2 升级图标与终端表面素材
 
-以下 19 项均于 2026-07-15 使用 OpenAI built-in `image_gen` 生成；工具未公开具体模型名，因此不推断。输入仅为文字，没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像，也没有切换 CLI/API fallback。原始、去底中间物、切分 crop、被拒候选和 1×/8× contact sheet 均保留在 `.superpowers/sdd/terminal-task-2-assets/`，不暂存。
+以下 19 项均于 2026-07-15 使用 OpenAI built-in `image_gen` 生成；工具未公开具体模型名，因此不推断。初版源板仅使用文字输入；6 张武器 tone 修订以初版正式图和同一项目源板作为本地图像参考。全程没有使用用户截图、SCP Wiki 图片、现成素材包或其他第三方图像，也没有切换 CLI/API fallback。原始、去底中间物、crop、被拒候选和 1×/8× contact sheet 均保留在 `.superpowers/sdd/terminal-task-2-assets/`，不暂存。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| upgrade-damage | PNG | `assets/art/upgrades/damage.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + `normalize_pixel_asset.py` | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 1；raw/cutout 来源与 SHA 见下方共同流程 | 固定 4×4 cell 1；alpha bbox + 10% padding；`--fit contain --alpha binary --colors 32`；final SHA-256 `A73ED30CBA698AA36ABADD4CBDD5408FF445828771568BA35C1C5DA393EE2B7E` | 项目定制生成；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | Task 2 正式生产素材准入：合同、二值 alpha、色数与视觉审查通过；不等同于商业发布准入 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
-| upgrade-attack-speed | PNG | `assets/art/upgrades/attack-speed.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 2；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 2；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `1F96EBC7BC3BF869166E7EF454DB2376526BFCF090128507AB629413C08D5312` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-damage | PNG | `assets/art/upgrades/damage.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + `normalize_pixel_asset.py` | 2026-07-15 | [P49](#p49-weapon-tone-damage-revision)；本地参考为初版正式图与 [P46](#p46-upgrade-icons-source-board) | bundled helper 去底；alpha bbox + 横纵各 10% padding；`--fit contain --alpha binary --colors 32`；final SHA-256 `EC11D9EAA374C14D039EA8CE77E4E8B8D3CC3097B4800266058278443612580E` | 项目定制生成；仅使用项目自有生成图作参考；无第三方图像输入；商业发布前复核 OpenAI 输出权利与项目许可 | 候选；商业发布前复核 | 独立审查修订后正式准入：impact chevron 可辨，98 个明确 R>G>B 琥珀像素，强青/紫 accent 均为 0，二值 alpha 与色数通过；不等同于商业发布准入 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-attack-speed | PNG | `assets/art/upgrades/attack-speed.png` | 同上 | 2026-07-15 | [P50](#p50-weapon-tone-attack-speed-revision)；同一项目参考 | 同一 helper、bbox padding 与 normalizer；final SHA-256 `36EF5D24358A6F09AD645EACDC0A3F14D804B00CD1886A97132C8DA15BBD1127` | 同上；无第三方图像输入 | 候选；商业发布前复核 | 修订后正式准入：四叶 rotor/motion 可辨，99 个明确琥珀像素，强青/紫 accent 均为 0，像素合同通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-move-speed | PNG | `assets/art/upgrades/move-speed.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 3；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 3；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `78196E2346FB3A1E9BA190042CA17964A4C89FFB3B7358F88943ED573EB8296A` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-max-health | PNG | `assets/art/upgrades/max-health.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 4；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 4；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `2497B990D284E5830A447AACF903E233CC977F80262B0D558FC07FA75D2CA5CE` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
-| upgrade-projectile-count | PNG | `assets/art/upgrades/projectile-count.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 5；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 5；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `6AC41EC22CB5C38F68E56601EA270426CB09C096A297CB83BA749814C282777C` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
-| upgrade-penetration | PNG | `assets/art/upgrades/penetration.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 6；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 6；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `0BE98C490A642BD49DEAAE4008033A798E4275713978049E6A12E471D0B2E371` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-projectile-count | PNG | `assets/art/upgrades/projectile-count.png` | 同上 | 2026-07-15 | [P51](#p51-weapon-tone-projectile-count-revision)；同一项目参考 | 同一 helper、bbox padding 与 normalizer；final SHA-256 `D56B79E388A1790951465406C08FD0515124810B6A8D226C12621645AEF0AD82` | 同上；无第三方图像输入 | 候选；商业发布前复核 | 修订后正式准入：三发散射轮廓可辨，91 个明确琥珀像素，强青/紫 accent 均为 0，像素合同通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-penetration | PNG | `assets/art/upgrades/penetration.png` | 同上 | 2026-07-15 | [P52](#p52-weapon-tone-penetration-revision)；同一项目参考 | 同一 helper、bbox padding 与 normalizer；final SHA-256 `41CF5CC82E9E5E845E23C572626E994F33206EE8E49316B7196B096AE8CF7A52` | 同上；无第三方图像输入 | 候选；商业发布前复核 | 修订后正式准入：弹体穿过双装甲板可辨，25 个明确琥珀像素，强青/紫 accent 均为 0，像素合同通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-pickup-radius | PNG | `assets/art/upgrades/pickup-radius.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 7；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 7；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `E1C855B11C71F6D683FDF8C5687D486825430DA1A4DB7819915F3A71D63FE9E0` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-emergency-heal | PNG | `assets/art/upgrades/emergency-heal.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 8；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 8；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `619DD054C736C5B64C3270385CF6126F481939891C775EA2C7CE6F96D4FF56A5` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-breacher-knockback | PNG | `assets/art/upgrades/breacher-knockback.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 9；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 9；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `D487F3981C0E636DC2391D0D1DD5D62C29829EA729ED78517FE19B081E9AACE9` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-breacher-suppression | PNG | `assets/art/upgrades/breacher-suppression.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 10；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 10；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `03992A0C62FE49260F889B78537BF233BC5CBC05CAFE52A22F6DDA95DF57BE08` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-breacher-magazine | PNG | `assets/art/upgrades/breacher-magazine.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 11；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 11；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `91C988124072DD49835C35881A7037D4B53FAD8C76152A3D065FAD9C097A5D33` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
-| upgrade-tesla-chains | PNG | `assets/art/upgrades/tesla-chains.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 12；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 12；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `9673E37AE58A34301E9BF3464F4601F157325432CC7B34B2B99A50E971A96259` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
-| upgrade-tesla-cooldown | PNG | `assets/art/upgrades/tesla-cooldown.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 13；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 13；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `4971369F17503B9C9D3988B9748A0B8A69F4BA0328C6C66919FA1C6BF79F3FB9` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-tesla-chains | PNG | `assets/art/upgrades/tesla-chains.png` | 同上 | 2026-07-15 | [P53](#p53-weapon-tone-tesla-chains-revision)；同一项目参考 | 同一 helper、bbox padding 与 normalizer；final SHA-256 `705369193B86E44DDDEAEB0BE38A83D6B34C41B8B9A78B80BC420A3998880900` | 同上；无第三方图像输入 | 候选；商业发布前复核 | 修订后正式准入：三节点链路可辨，62 个明确琥珀像素，强青/紫 accent 均为 0，像素合同通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
+| upgrade-tesla-cooldown | PNG | `assets/art/upgrades/tesla-cooldown.png` | 同上 | 2026-07-15 | [P54](#p54-weapon-tone-tesla-cooldown-revision)；同一项目参考 | 同一 helper、bbox padding 与 normalizer；final SHA-256 `634F7A089C4F86CE0190E16CDE0DEA1963E58113CA31467C7D8234AE3386DBE1` | 同上；无第三方图像输入 | 候选；商业发布前复核 | 修订后正式准入：Tesla 线圈/电容模块与回转箭头可辨，94 个明确琥珀像素，强青/紫 accent 均为 0，像素合同通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-pistol-boomerang | PNG | `assets/art/upgrades/pistol-boomerang.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 14；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 14；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `3B4C8EA0010BA8D1FA9A07B4838C53876B13911127D9755FEED2D417ACD147EA` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；质变轮廓、合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-breacher-explosive | PNG | `assets/art/upgrades/breacher-explosive.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 15；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 15；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `5AE8E201512382DAFAFDDF2E081F1FE11053D1070219ECBD874FF8FE2C80A4EB` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；质变轮廓、合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
 | upgrade-tesla-field | PNG | `assets/art/upgrades/tesla-field.png` | 同上 | 2026-07-15 | [P46](#p46-upgrade-icons-source-board) cell 16；共同 raw/cutout 来源与 SHA 见下方 | 固定 4×4 cell 16；alpha bbox + 10% padding；同一 normalizer；final SHA-256 `953E9383829C1AE34023CE8D1E2F50302CB9E3E37F126683D01E25BE72792D58` | 同上；无第三方图像输入 | 候选；商业发布前复核 | Task 2 正式生产素材准入；质变轮廓、合同、像素与视觉审查通过 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款。 |
@@ -739,17 +739,31 @@ Avoid: a giant puddle, bright neon liquid, blood splatter gore, a full opaque re
 
 ### 共同处理、来源 SHA 与审查产物
 
-- 升级图标 raw：Codex 默认源 `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-3d045c2e-6f10-4277-9bcf-f88e82a8067b.png`；审计副本 `.superpowers/sdd/terminal-task-2-assets/sources/upgrade-icons-source-board.png`；1254×1254 RGB；SHA-256 `C2EE6E37A9C7395E41A6FD58F8D3602B9A4C70FE9737A98EEC666EADB21A8909`。
-- 升级图标去底：bundled `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；输出 `upgrade-icons-source-board-cutout.png`；SHA-256 `E262B8A8AD3D854AA36E56499B5860B690269A7FF81B3D676DF87AE611999864`。随后按 round 边界固定等分 4×4，以 alpha≥128 的 bbox 加最大边 10% padding 切出 16 个 cell；没有手绘、重绘、逐项修补或候选拼接；每项再由 `normalize_pixel_asset.py --width 32 --height 32 --fit contain --alpha binary --colors 32` 以 Pillow nearest、无抖动量化输出 8-bit RGBA。
+- 初版升级图标 raw：Codex 默认源 `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-3d045c2e-6f10-4277-9bcf-f88e82a8067b.png`；审计副本 `.superpowers/sdd/terminal-task-2-assets/sources/upgrade-icons-source-board.png`；1254×1254 RGB；SHA-256 `C2EE6E37A9C7395E41A6FD58F8D3602B9A4C70FE9737A98EEC666EADB21A8909`。该源板继续作为其余 10 张图标的正式来源及 6 张 tone 修订的项目内参考。
+- 初版升级图标去底：bundled `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`；输出 `upgrade-icons-source-board-cutout.png`；SHA-256 `E262B8A8AD3D854AA36E56499B5860B690269A7FF81B3D676DF87AE611999864`。按 round 边界固定等分 4×4，以 alpha≥128 的 bbox 加最大边 10% padding 切出 16 个 cell，再由 `normalize_pixel_asset.py --width 32 --height 32 --fit contain --alpha binary --colors 32` 以 Pillow nearest、无抖动量化输出 8-bit RGBA；其中 6 张 weapon 初版已被下述修订替代。
+- 6 张 weapon tone 修订均为 1254×1254 RGB built-in imagegen 输出；默认源、审计副本和 SHA-256 如下。模型名未暴露；本地输入仅为对应初版正式图和 P46 项目源板，无第三方图像输入。
+
+| Asset | Codex default raw | Untracked audit raw | Raw SHA-256 |
+|---|---|---|---|
+| damage | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-1013bb59-7b7f-44e8-a11e-672ab15b9dc8.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-damage-imagegen-source.png` | `EBC0A57F9319A2E808531AA9A7AB9B82A2C0C9ECB0A120E3E7FB10DD2D25468E` |
+| attack-speed | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-0c6cd93f-d1b8-49d7-bad6-c163404bd7f1.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-attack-speed-imagegen-source.png` | `0F826A8A1F3756DAE4B1176AE45D2D60A468CA8B132255D4BBC4833E3BFC6745` |
+| projectile-count | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-a677b7d5-7270-495f-a450-2cf63ec8593f.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-projectile-count-imagegen-source.png` | `2BC031A4B6AC972AF81334D7333945D26EB8245C4E8E919D87E87561DA5C81EA` |
+| penetration | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-fad567f8-881a-4aba-a980-8804fcf8fbdb.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-penetration-imagegen-source.png` | `BA4D60A79ABC485E8E9A674043A7E6EF2D1312876A98E02EA83B00437F8D6E02` |
+| tesla-chains | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-0a9b1059-37cc-4b14-9e69-f67189274881.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-tesla-chains-imagegen-source.png` | `EBFC911E11CC792E6CA72CB923772A2AEB6C2F26970B646DF121649958F1EBA3` |
+| tesla-cooldown | `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-a9981b60-a537-4a54-8f21-efc1d98b72af.png` | `.superpowers/sdd/terminal-task-2-assets/sources/weapon-tone-tesla-cooldown-imagegen-source.png` | `47E17FDD7CB699B30B1AA3A228259669783CA0CF9A71FA3786AD8B45D19FA3EF` |
+
+- 6 张修订均使用上述 bundled helper 精确参数去底，再按非零 alpha bbox 加横纵各 10% padding 裁切；crop 尺寸依次为 794×815、817×843、742×740、911×792、892×859、877×793。随后仅用 `normalize_pixel_asset.py --width 32 --height 32 --fit contain --alpha binary --colors 32` 输出；没有脚本改色、手绘修补或候选拼接。cutout SHA-256 依次为 `779AC0D63CCDD6EA7A7CBEA421778E08CBF0FC517022D6616E99D92197AF37CB`、`D76C5FD2D503E591F5848A35C14F1717EB1F0B3F25BEF3D2BFE5A6120E1DD4D4`、`6559E85952BC1715F58DB5AED7C021CC560AAD07887004B901DE6F9D630C7CB6`、`ECE41899222F7B602357940E8F4C61C40E12F1A8581ADFDCBCC8F1499232EBF3`、`513C4D121DC97217C0CB92FADCAF2CA3BAE453A0CDAE12A258F57D2A194AD410`、`96E6A8F63F84EF4397D6FDE4AE651E242C58716BF2472C7C0B63275B87AB9C5C`；crop SHA-256 依次为 `72376BA81A5C0AB89AB7B9F7D9415FFB45AD959F26D153ED50FD60DEF62F2CA0`、`23C06928B1287E4665D1FAA45F589773DBE3EED0AD23EF152BCB18EA06FCE4FA`、`AE41454F4D7A4BD9A58A666A118B4935044930825AB444973E71789C4E2885FD`、`4393FC73CE79F4D503312759D1ED4B21017C10CDB1F13B49C8004E7C0DDA01AE`、`3E1DF775C5032196AF083B63C8DC3564EF0DA06516D149CEED2A5BB54AC9E1BE`、`714D9B0254FFC213F9AEF3CF5D1FF4635385D71A657C798847D5963736DBE69F`。
 - 终端素材 accepted raw：Codex 默认源 `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-8c92bd9e-5659-42eb-8916-938f50850e3d.png`；审计副本 `.superpowers/sdd/terminal-task-2-assets/sources/terminal-surfaces-source-board-accepted.png`；2172×724 RGB；SHA-256 `4BA7C5C07F3EC13BD3D2A6127D4EC9FDB1CCB0F251F125330CD6F75495D12E77`。
 - 终端素材去底：同一 bundled helper 参数；输出 `terminal-surfaces-source-board-accepted-cutout.png`；SHA-256 `57B31367938C42E4D385954831CC551D5B70689016D0E39D3AB722C51E1E6D45`。随后固定等分 1×3，以 alpha≥128 的 bbox 加最大边 5% padding 切出三个 cell；没有手绘、重绘或颜色替换；再分别用 `normalize_pixel_asset.py --fit contain --alpha binary --colors 16` 输出 128×128、96×32、96×32 的 8-bit RGBA。
-- contact sheet 均由 `scripts/art/build_contact_sheet.py` 以整数 nearest scale 生成：`upgrades-contact-sheet-1x.png` SHA-256 `527F8362184DDE346A82BE0BD1C804D0D0862C62FEB286B8F4334FF7C3A7DC57`；`upgrades-contact-sheet-8x.png` SHA-256 `2059FAE2B2038CC8B69E27E91E9DE22DBFA6E9C2F66F493186D5E68344F64724`；`terminal-surfaces-contact-sheet-1x.png` SHA-256 `11B605E20DA7FE548C1F963966386B99DB30ECE26211D931F022D817D94FE6A0`；`terminal-surfaces-contact-sheet-8x.png` SHA-256 `13909B3BA4BF7A471598AFB1B74F5EC00C83C5849C55E50932082C8CD6FA98A6`。
-- 逐张原始尺寸及 8× nearest 审查通过：16 个升级轮廓在 32×32 可辨，二值 alpha、透明边缘与 tone 语言明确；grid 为开放线路；两个 stamp frame 无文字、同构且颜色语义分离。没有录用抗锯齿或只在缩小后才像像素画的候选。
+- contact sheet 均由 `scripts/art/build_contact_sheet.py` 以整数 nearest scale 生成：修订后 `upgrades-contact-sheet-1x.png` SHA-256 `7C7B52D4CEA827FB759EF7C768CFD04204B396EFB708579B01CD4A4CB96CA267`；`upgrades-contact-sheet-8x.png` SHA-256 `0EECDA7622130F14901034F4609107956DAF5EA9A08A3D979CCDBA0DC3437450`；`terminal-surfaces-contact-sheet-1x.png` SHA-256 `11B605E20DA7FE548C1F963966386B99DB30ECE26211D931F022D817D94FE6A0`；`terminal-surfaces-contact-sheet-8x.png` SHA-256 `13909B3BA4BF7A471598AFB1B74F5EC00C83C5849C55E50932082C8CD6FA98A6`。
+- 逐张原始尺寸及 8× nearest 审查通过：16 个升级轮廓在 32×32 可辨，二值 alpha、透明边缘与 tone 语言明确；6 张修订的琥珀像素计数为 98、99、91、25、62、94，强青与紫色 accent 均为 0；tesla-cooldown 的线圈模块与右侧回转箭头清晰。grid 为开放线路；两个 stamp frame 无文字、同构且颜色语义分离。没有录用抗锯齿或只在缩小后才像像素画的候选。
 
 ### 被拒与中断尝试
 
 - [P47](#p47-terminal-surfaces-first-attempt-rejected) 产生了可用输出，但因 grid 带实心深色底板，且绿色 recontainment frame 混入红/粉磨损像素而拒绝，未进入生产后处理。Codex 默认源 `C:\Users\24037\.codex\generated_images\019f65c4-670d-7053-a240-6b34370b3805\exec-5f6ff56c-05df-4622-bc57-c931b9e80987.png`；审计副本 `.superpowers/sdd/terminal-task-2-assets/sources/terminal-surfaces-source-board-rejected-filled-grid.png`；2172×724 RGB；SHA-256 `392326A64727E6F4B57B40AA8E66896A666A31682A65A74A4A754546993C3216`。
-- 本任务没有 imagegen 中断、无输出或 CLI/API fallback 尝试。
+- 独立审查拒绝 P46 的 6 张初版 weapon final：它们分别为 damage、attack-speed、projectile-count、penetration、tesla-chains、tesla-cooldown，均无明确 R>G>B 琥珀像素且仍使用青色 accent；被替代 final SHA-256 依次为 `A73ED30CBA698AA36ABADD4CBDD5408FF445828771568BA35C1C5DA393EE2B7E`、`1F96EBC7BC3BF869166E7EF454DB2376526BFCF090128507AB629413C08D5312`、`6AC41EC22CB5C38F68E56601EA270426CB09C096A297CB83BA749814C282777C`、`0BE98C490A642BD49DEAAE4008033A798E4275713978049E6A12E471D0B2E371`、`9673E37AE58A34301E9BF3464F4601F157325432CC7B34B2B99A50E971A96259`、`4971369F17503B9C9D3988B9748A0B8A69F4BA0328C6C66919FA1C6BF79F3FB9`。
+- 首次 6 项并行修订编排被用户中断，聚合调用未返回；落盘结果中 `exec-035b7087-79ad-4fc3-b62f-3b822efba770.png`（damage，SHA `884EFA9771C48B3507771BE511FC52AEC0AE656EB5AF955B3C9D9EA70882795B`，prompt P49）、`exec-ccbeeada-0bb9-458e-b4c3-060ec3b73fc3.png`（attack-speed，SHA `E22BEDF295D557F7D31BFEFAC70358C04CF16DC579F99C8B3D7CFE000E7FE1E8`，prompt P50）和 `exec-267e30c2-f4ef-4d59-8188-420e03b20287.png`（projectile-count，SHA `EC809D4381B2A18037328F88D35A84147B65CDA276D858B73841FD65E1D3B747`，prompt P55）均因后续同主题候选更清晰而拒绝；未跟踪审计副本分别为 `weapon-tone-damage-imagegen-rejected-duplicate.png`、`weapon-tone-attack-speed-imagegen-rejected-duplicate.png`、`weapon-tone-projectile-count-imagegen-rejected-duplicate.png`。`exec-fad567f8-881a-4aba-a980-8804fcf8fbdb.png` 为该中断批次中保留的 penetration 输出，prompt P52。
+- 顺序重试产生 `exec-c997e5b9-ba3c-45b8-b4ec-ab24b3218cc1.png`（penetration，SHA `E076DD8C96E19D28F744B0B6B719BB97CE90FFEA1D1A17469DF5ABCB95459D3D`，prompt P56），因已录用 fad 版本而作为重复候选拒绝；未跟踪审计副本为 `weapon-tone-penetration-imagegen-rejected-duplicate.png`。随后用户停止继续生成，原 tesla-cooldown 请求未产生输出。用户之后单独授权一次 [P54](#p54-weapon-tone-tesla-cooldown-revision)，该次成功并直接录用，不再迭代。没有 imagegen 工具错误，也没有 CLI/API fallback。
 
 ### P46 upgrade icons source board
 
@@ -791,4 +805,124 @@ Style/medium: authentic detailed Foundation terminal pixel art on an explicit co
 Color palette: left traces use only cold charcoal-blue, steel blue and restrained cyan; middle frame uses only near-black red, dark red and muted warning red; right frame uses only near-black green, dark green and restrained containment green. The right frame must contain zero red, orange, pink, or magenta distress pixels. Maximum sixteen subject colors overall apart from the magenta key.
 Constraints: exactly three subjects only; transparent intent through removable magenta; no letters, numbers, labels, words, logos, SCP insignia, watermark, icons, pictograms, UI buttons, filled background panels, 3D lighting, bevels, glow haze, shadows, scenery, or embedded text; do not use #ff00ff inside any subject; hard opaque edges suitable for exact local chroma removal and deterministic nearest-neighbor normalization
 Avoid: any solid fill behind the left grid, red contamination in the green frame, 3D, isometric, photorealism, hand-painted style, smooth vector curves, antialiasing, soft glow, realistic rubber stamp mockup, text-like marks, tiny illegible glyphs, decorative emblems
+```
+
+### P49 weapon tone damage revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 1 column 1
+Primary request: create one isolated revised heavy impact chevron with a cracked central strike and a few compact impact fragments. Change the weapon accent language from cyan to unmistakable amber while preserving the target's semantic silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: one centered icon, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue metal base; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: change only the accent family and cleanly redraw as needed; preserve the exact subject semantics from Image 1 and the cited Image 2 cell; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P50 weapon tone attack speed revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 1 column 2
+Primary request: create one isolated revised four-blade tactical rotor with a dark circular hub and compact motion ticks. Change the weapon accent language from cyan to unmistakable amber while preserving the target's semantic silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: one centered icon, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue metal base; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: change only the accent family and cleanly redraw as needed; preserve the exact subject semantics from Image 1 and the cited Image 2 cell; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P51 weapon tone projectile count revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 2 column 1
+Primary request: create one isolated revised icon of three compact ammunition rounds diverging in a clearly readable spread. Change the weapon accent language from cyan to unmistakable amber while preserving the target's three-projectile silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp grouped silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: one centered three-round icon, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue cartridge bodies; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: preserve exactly three rounds and their diverging spread; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: arrows without ammunition bodies, smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P52 weapon tone penetration revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 2 column 2
+Primary request: create one isolated revised version of one compact ammunition round passing cleanly through two parallel armor plates. Change the weapon accent language from cyan to unmistakable amber while preserving the target's semantic silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: one centered icon, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue metal base; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: change only the accent family and cleanly redraw as needed; preserve the exact subject semantics from Image 1 and the cited Image 2 cell; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P53 weapon tone tesla chains revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 3 column 4
+Primary request: create one isolated revised icon of exactly three circular Tesla nodes connected by one angular chained-energy path. Change the weapon accent language from cyan electricity to unmistakable amber electricity while preserving the three-node chain silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp grouped silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: three separated round nodes in a triangular chain, centered with generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue metal nodes; chained-energy accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: exactly three nodes and a clearly connected angular path; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, bloom, soft glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra node, extra icon, or scene elements
+Avoid: smooth lightning glow, disconnected nodes, four or more nodes, smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P54 weapon tone tesla cooldown revision
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact tesla-cooldown edit target and semantic reference; Image 2 is the original unified pixel source-board style reference, specifically row 4 column 1
+Primary request: create one isolated, clearly readable tesla-cooldown icon: a compact top-down Tesla coil or capacitor module with a distinct outer cooldown timing ring or curved return arrow wrapping around it
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down Foundation tactical terminal icon; single clear silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: centered compact module, the cooldown ring or return arrow clearly visible around the outer edge, generous even padding, no frame, no border
+Color palette: deep charcoal and restrained cool gray metal; energy and timing accents only in unmistakable warm amber/orange-gold with clear R>G>B channel ordering
+Constraints: preserve tesla cooldown semantics; one module plus one readable cooldown ring or curved return arrow; all subject edges crisp and opaque; no cyan or turquoise; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, bloom, soft glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: projectile spread, bullets, multiple disconnected nodes, smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P55 interrupted projectile count candidate
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 2 column 1
+Primary request: create one isolated revised version of three compact ammunition rounds diverging in a clearly readable spread. Change the weapon accent language from cyan to unmistakable amber while preserving the target's semantic silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: one centered icon, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue metal base; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: change only the accent family and cleanly redraw as needed; preserve the exact subject semantics from Image 1 and the cited Image 2 cell; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, or scene elements
+Avoid: smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
+```
+
+### P56 rejected penetration retry
+
+```text
+Use case: precise-object-edit
+Asset type: source artwork for a 32x32 top-down Foundation terminal upgrade icon
+Input images: Image 1 is the exact edit target and semantic silhouette; Image 2 is the original unified source-board style reference, specifically row 2 column 2
+Primary request: create one isolated revised icon of one compact ammunition round passing cleanly through two parallel armor plates. Change the weapon accent language from cyan to unmistakable amber while preserving the target's penetration silhouette and readability.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal; one uniform color only
+Style/medium: explicit hard-edged refined pixel art with visible square pixel clusters at original generated resolution; top-down tactical Foundation terminal icon; single crisp silhouette; non-3D, non-hand-painted, non-photorealistic
+Composition/framing: centered horizontal round crossing two vertical plates, generous even padding, no frame, no border
+Color palette: cold charcoal and restrained cool gray-blue armor plates and cartridge body; weapon accents only in warm amber/orange-gold with clear channel ordering R>G>B; use multiple amber shades for readable pixel clusters
+Constraints: exactly one round and exactly two parallel armor plates; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, debris, or scene elements
+Avoid: a plus symbol, a gate without a projectile, smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
 ```

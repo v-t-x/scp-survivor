@@ -1,4 +1,3 @@
-import Phaser from "phaser";
 import { BALANCE } from "../config/balance.js";
 import { TEXTURES } from "./manifest.js";
 
@@ -647,7 +646,7 @@ export function generateFallbackTextures(scene) {
     const lightCenter = lightRadius;
     for (let radius = lightRadius; radius > 0; radius -= 6) {
       const progress = 1 - radius / lightRadius;
-      const alpha = Phaser.Math.Clamp(0.02 + progress * 0.12, 0.02, 0.2);
+      const alpha = Math.min(Math.max(0.02 + progress * 0.12, 0.02), 0.2);
       graphics.fillStyle(0xffffff, alpha);
       graphics.fillCircle(lightCenter, lightCenter, radius);
     }
