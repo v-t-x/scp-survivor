@@ -36,6 +36,21 @@ function throwConfiguredFailure(failure, object, method) {
   }
 }
 
+function throwContainerAddFailure(failure, children) {
+  const configured = failure.containerAdd;
+  if (!configured) return;
+  configured.seen = (configured.seen ?? 0) + 1;
+  const child = children[0];
+  const occurrenceMatches = configured.occurrence == null
+    || configured.seen === configured.occurrence;
+  const childMatches = configured.childType == null
+    || (child?.type === configured.childType
+      && (configured.textureKey == null || child.textureKey === configured.textureKey));
+  if (occurrenceMatches && childMatches) {
+    throw new Error(`container add failed: ${configured.label}`);
+  }
+}
+
 function createDisplayObject(type, initial = {}, failure = {}) {
   const handlers = new Map();
   const object = {
@@ -180,6 +195,7 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       return this;
     },
     add(children) {
+      throwContainerAddFailure(failure, children);
       for (const child of children) child.parentContainer = this;
       this.children = [...(this.children ?? []), ...children];
       return this;
@@ -203,6 +219,9 @@ function createScene(options = {}) {
     remainingListenerFailures: options.listenerFailures ?? 0,
     configuration: options.configurationFailure
       ? { ...options.configurationFailure }
+      : null,
+    containerAdd: options.containerAddFailure
+      ? { ...options.containerAddFailure }
       : null
   };
   const add = (type, factory) => (...args) => {
@@ -372,6 +391,28 @@ test("pickup cues use presentation time without timers and expire back to hidden
   assert.equal(view.pickupWorldGraphic.visible, false);
 });
 
+test("pickup cue clock is nested under pickup and absent from the presentation root", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  const cueStart = presentation({ elapsedSurvivalMs: 500 });
+
+  assert.equal(Object.hasOwn(cueStart, "nowMs"), false);
+  assert.equal(cueStart.pickup.nowMs, 500);
+  view.notifyPickupCue({ reason: "build", nowMs: cueStart.pickup.nowMs, durationMs: 100 });
+
+  const beforeExpiry = presentation({ elapsedSurvivalMs: 599, buildPanelVisible: false });
+  assert.equal(Object.hasOwn(beforeExpiry, "nowMs"), false);
+  assert.equal(beforeExpiry.pickup.nowMs, 599);
+  view.update(beforeExpiry);
+  assert.equal(view.pickupWorldGraphic.visible, true);
+
+  const afterExpiry = presentation({ elapsedSurvivalMs: 601, buildPanelVisible: false });
+  assert.equal(Object.hasOwn(afterExpiry, "nowMs"), false);
+  assert.equal(afterExpiry.pickup.nowMs, 601);
+  view.update(afterExpiry);
+  assert.equal(view.pickupWorldGraphic.visible, false);
+});
+
 test("system hot areas stay inside the system region and preserve pause and mute semantics", () => {
   const scene = createScene();
   let pauseCallbacks = 0;
@@ -422,7 +463,8 @@ test("update keeps HUD objects stable while swapping the one 48px weapon image t
   const scene = createScene();
   const view = createView(scene);
   const weaponImage = scene.objects.find((object) => object.type === "image" && object.textureKey === TEXTURES.weaponPistolIcon);
-  const initialObjects = [...view.objects];
+  const initialViewObjects = [...view.objects];
+  const initialSceneObjects = [...scene.objects];
 
   view.update(presentation());
   view.update(presentation({
@@ -456,8 +498,10 @@ test("update keeps HUD objects stable while swapping the one 48px weapon image t
   assert.equal(weaponImage.textureKey, TEXTURES.weaponTeslaIcon);
   assert.deepEqual([weaponImage.displayWidth, weaponImage.displayHeight], [48, 48]);
   assert.equal(weaponImage.calls.filter(([name]) => name === "setDisplaySize").length, 1);
-  assert.equal(view.objects.length, initialObjects.length);
-  assert.equal(view.objects.every((object, index) => object === initialObjects[index]), true);
+  assert.equal(view.objects.length, initialViewObjects.length);
+  assert.equal(view.objects.every((object, index) => object === initialViewObjects[index]), true);
+  assert.equal(scene.objects.length, initialSceneObjects.length);
+  assert.equal(scene.objects.every((object, index) => object === initialSceneObjects[index]), true);
 });
 
 test("missing weapon textures retain the existing fallback image", () => {
@@ -564,6 +608,31 @@ for (const { type, method } of [
     assert.throws(
       () => createView(scene),
       new RegExp(`configuration failed: ${type}\\.${method}`)
+    );
+    assertSceneRolledBack(scene);
+  });
+}
+
+for (const { label, failure } of [
+  {
+    label: "early",
+    failure: { label: "early", occurrence: 1 }
+  },
+  {
+    label: "late",
+    failure: {
+      label: "late",
+      childType: "image",
+      textureKey: TEXTURES.powerOutageLight
+    }
+  }
+]) {
+  test(`constructor rolls back every object after ${label} container add failure`, () => {
+    const scene = createScene({ containerAddFailure: failure });
+
+    assert.throws(
+      () => createView(scene),
+      new RegExp(`container add failed: ${label}`)
     );
     assertSceneRolledBack(scene);
   });
