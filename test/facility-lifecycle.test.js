@@ -306,8 +306,32 @@ test("facility controller lifecycle tears down references and does not grow obje
   }
 });
 
+function createColliderIdentityFixture() {
+  const handles = Object.freeze([
+    Object.freeze({}),
+    Object.freeze({}),
+    Object.freeze({})
+  ]);
+  return {
+    originalSet: new Set(handles),
+    originalHandles: handles
+  };
+}
+
+function assertColliderIdentityPreserved(scene, originalSet, originalHandles) {
+  assert.strictEqual(scene.collisionObjects, originalSet, "collider Set reference must be preserved");
+  assert.equal(scene.collisionObjects.size, originalHandles.length, "collider Set size must not change");
+  for (const handle of originalHandles) {
+    assert.ok(scene.collisionObjects.has(handle), "every original collider handle must remain by identity");
+  }
+  for (const handle of scene.collisionObjects) {
+    assert.ok(originalHandles.includes(handle), "collider Set must not gain or replace members");
+  }
+}
+
 function createTimelineScene(timelineMixin, facilityRoomController) {
   const operations = [];
+  const { originalSet, originalHandles } = createColliderIdentityFixture();
   const scene = {
     elapsedSurvivalMs: 180000,
     activeFacilityEvent: null,
@@ -315,7 +339,7 @@ function createTimelineScene(timelineMixin, facilityRoomController) {
     outageVisualStrength: 0,
     bossPhaseActive: true,
     facilityRoomController,
-    collisionObjects: new Set(["enemy-enemy", "bullet-enemy", "player-enemy"]),
+    collisionObjects: originalSet,
     player: { x: 320, y: 240 },
     cameras: { main: { scrollX: 0, scrollY: 0 } },
     outageDarknessRt: {
@@ -333,7 +357,7 @@ function createTimelineScene(timelineMixin, facilityRoomController) {
     playSound(key) { operations.push(["sound", key]); }
   };
   Object.assign(scene, timelineMixin);
-  return { scene, operations };
+  return { scene, operations, originalSet, originalHandles };
 }
 
 function snapshotTimelineState(scene, operations) {
@@ -342,12 +366,11 @@ function snapshotTimelineState(scene, operations) {
     activeFacilityEventEndAtMs: scene.activeFacilityEventEndAtMs,
     outageStrength: scene.outageVisualStrength,
     bossPhaseActive: scene.bossPhaseActive,
-    collisionObjects: [...scene.collisionObjects].sort(),
     operations
   };
 }
 
-test("facility presentation wiring leaves committed timeline state and collision objects equivalent when absent, normal, or throwing", async () => {
+test("facility presentation wiring preserves timeline state and collider identities when absent, normal, or throwing", async () => {
   const timelineMixin = await loadTimelineMixin();
   const normalPresentations = [];
   const cases = [
@@ -358,13 +381,19 @@ test("facility presentation wiring leaves committed timeline state and collision
   const snapshots = [];
 
   for (const controller of cases) {
-    const { scene, operations } = createTimelineScene(timelineMixin, controller);
+    const {
+      scene,
+      operations,
+      originalSet,
+      originalHandles
+    } = createTimelineScene(timelineMixin, controller);
     assert.doesNotThrow(() => {
       scene.beginFacilityEvent("powerOutage");
       scene.updatePowerOutageVisual();
       scene.endFacilityEvent();
       scene.updatePowerOutageVisual();
     });
+    assertColliderIdentityPreserved(scene, originalSet, originalHandles);
     snapshots.push(snapshotTimelineState(scene, operations));
   }
 
@@ -372,16 +401,16 @@ test("facility presentation wiring leaves committed timeline state and collision
   assert.deepEqual(snapshots[2], snapshots[0]);
   assert.ok(normalPresentations.length >= 3);
   assert.equal(snapshots[0].bossPhaseActive, true);
-  assert.deepEqual(snapshots[0].collisionObjects, ["bullet-enemy", "enemy-enemy", "player-enemy"]);
 });
 
 function createSystemsScene(systemsMixin, facilityRoomController) {
   const resetSnapshots = [];
+  const { originalSet, originalHandles } = createColliderIdentityFixture();
   const scene = {
     activeFacilityEvent: { type: "powerOutage" },
     activeFacilityEventEndAtMs: 205000,
     outageVisualStrength: 0.8,
-    collisionObjects: new Set(["enemy-enemy", "bullet-enemy", "player-enemy"]),
+    collisionObjects: originalSet,
     facilityRoomController: facilityRoomController && {
       reset() {
         resetSnapshots.push({
@@ -410,7 +439,7 @@ function createSystemsScene(systemsMixin, facilityRoomController) {
     collapseFacilityHud() { this.collapseFacilityHudCalls += 1; }
   };
   Object.assign(scene, systemsMixin);
-  return { scene, resetSnapshots };
+  return { scene, resetSnapshots, originalSet, originalHandles };
 }
 
 function snapshotSystemsState(scene) {
@@ -424,8 +453,7 @@ function snapshotSystemsState(scene) {
     bannerTitle: scene.eventBannerTitle.text,
     bannerDetail: scene.eventBannerDetail.text,
     topBannerState: scene.topBannerState,
-    collapseFacilityHudCalls: scene.collapseFacilityHudCalls,
-    collisionObjects: [...scene.collisionObjects].sort()
+    collapseFacilityHudCalls: scene.collapseFacilityHudCalls
   };
 }
 
@@ -442,6 +470,11 @@ test("facility system cleanup commits gameplay cleanup before an isolated contro
   for (const controller of cases) {
     const fixture = createSystemsScene(systemsMixin, controller);
     assert.doesNotThrow(() => fixture.scene.clearFacilitySystems());
+    assertColliderIdentityPreserved(
+      fixture.scene,
+      fixture.originalSet,
+      fixture.originalHandles
+    );
     snapshots.push(snapshotSystemsState(fixture.scene));
     resetSnapshots.push(fixture.resetSnapshots);
   }
@@ -453,5 +486,4 @@ test("facility system cleanup commits gameplay cleanup before an isolated contro
     activeFacilityEventEndAtMs: 0,
     outageVisualStrength: 0
   }]);
-  assert.deepEqual(snapshots[0].collisionObjects, ["bullet-enemy", "enemy-enemy", "player-enemy"]);
 });
