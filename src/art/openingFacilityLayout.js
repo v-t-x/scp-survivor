@@ -69,6 +69,15 @@ function intersectsRect(bounds, rect) {
   );
 }
 
+function touchesOrOverlaps(first, second) {
+  return (
+    first.left <= second.right
+    && first.right >= second.left
+    && first.top <= second.bottom
+    && first.bottom >= second.top
+  );
+}
+
 function clipToViewport(bounds, viewport) {
   const left = Math.max(bounds.left, viewport.x);
   const right = Math.min(bounds.right, viewport.x + viewport.width);
@@ -122,17 +131,18 @@ export function createOpeningFacilityLayout(width, height) {
   const maintenanceX = safeRect.x + safeRect.width + 160;
 
   return [
+    { id: "base-floor", parentId: null, zone: "combat", role: "floor", key: TEXTURES.facilityFloor, x: centerX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 1 },
     { id: "entry-floor", parentId: null, zone: "entry", role: "floor", key: TEXTURES.facilityFloor, x: safeRect.x - 160, y: centerY, depth: -20, rotation: 0, scaleX: 8, scaleY: 8 },
     { id: "entry-threshold", parentId: "entry-floor", zone: "entry", role: "entry-threshold", key: TEXTURES.facilityEntryThreshold, x: safeRect.x - 160, y: centerY, depth: -11, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "combat-floor-left", parentId: null, zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
-    { id: "combat-floor-center", parentId: "combat-floor-left", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: centerX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
-    { id: "combat-floor-right", parentId: "combat-floor-center", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + safeRect.width - 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
-    { id: "maintenance-floor", parentId: null, zone: "maintenance", role: "floor", key: TEXTURES.facilityMaintenanceDeck, x: maintenanceX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
+    { id: "combat-floor-left", parentId: "base-floor", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "combat-floor-center", parentId: "combat-floor-left", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: centerX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "combat-floor-right", parentId: "combat-floor-center", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + safeRect.width - 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "maintenance-floor", parentId: null, zone: "maintenance", role: "floor", key: TEXTURES.facilityMaintenanceDeck, x: maintenanceX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 1 },
     { id: "maintenance-wall-bank", parentId: "maintenance-floor", zone: "maintenance", role: "wall-bank", key: TEXTURES.facilityWallBank, x: maintenanceX, y: centerY - 80, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
     { id: "maintenance-power-junction", parentId: "maintenance-wall-bank", zone: "maintenance", role: "power-junction", key: TEXTURES.facilityPowerJunction, x: maintenanceX, y: centerY + 16, depth: -9, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "contamination-trail-a", parentId: null, zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 128, y: centerY + 128, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "contamination-trail-b", parentId: "contamination-trail-a", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 160, y: centerY + 160, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "contamination-trail-c", parentId: "contamination-trail-b", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 192, y: centerY + 192, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 }
+    { id: "contamination-trail-a", parentId: null, zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 128, y: centerY + 64, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "contamination-trail-b", parentId: "contamination-trail-a", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 160, y: centerY + 96, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "contamination-trail-c", parentId: "contamination-trail-b", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 192, y: centerY + 128, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 }
   ];
 }
 
@@ -219,6 +229,25 @@ export function validateOpeningFacilityRelationships(layout) {
   }
   if (contaminationRoots.length !== 1 || connectedContamination.size !== contamination.length) {
     addViolation(violations, "contamination-disconnected");
+  }
+
+  const maintenanceFloorBounds = layout
+    .filter(({ zone, role }) => zone === "maintenance" && role === "floor")
+    .map(displayBounds)
+    .filter(Boolean);
+  for (const root of contaminationRoots) {
+    const rootBounds = displayBounds(root);
+    if (!rootBounds || !maintenanceFloorBounds.some((bounds) => touchesOrOverlaps(rootBounds, bounds))) {
+      addViolation(violations, "contamination-root-detached-from-maintenance");
+    }
+  }
+  for (const item of contamination.filter(({ parentId }) => parentId !== null)) {
+    const parent = byId.get(item.parentId);
+    const itemBounds = displayBounds(item);
+    const parentBounds = parent?.zone === "contamination" ? displayBounds(parent) : null;
+    if (itemBounds && parentBounds && !touchesOrOverlaps(itemBounds, parentBounds)) {
+      addViolation(violations, "contamination-trail-detached");
+    }
   }
 
   if (safeRect) {

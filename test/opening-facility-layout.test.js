@@ -115,6 +115,20 @@ function rectangleUnionArea(rectangles) {
   return area;
 }
 
+function areaOf({ left, right, top, bottom }) {
+  return (right - left) * (bottom - top);
+}
+
+function contaminationAreas(layout) {
+  const bounds = layout.filter(({ zone }) => zone === "contamination").map(boundsFor);
+  const visible = bounds.map(visibleBounds).filter(Boolean);
+  return {
+    fullUnion: rectangleUnionArea(bounds),
+    visibleSum: visible.reduce((sum, rectangle) => sum + areaOf(rectangle), 0),
+    visibleUnion: rectangleUnionArea(visible)
+  };
+}
+
 test("opening layout uses exactly the four approved semantic zones", () => {
   const layout = getLayout();
   const ids = new Set();
@@ -163,6 +177,19 @@ test("three production floor types establish entry, combat, and maintenance read
   assert.equal(powerJunction?.key, TEXTURES.facilityPowerJunction);
 });
 
+test("formal 128 by 128 floor modules preserve square nearest-neighbor pixels", () => {
+  const modules = getLayout().filter(({ role, key }) => (
+    role === "floor"
+    && (key === TEXTURES.facilityCombatFloor || key === TEXTURES.facilityMaintenanceDeck)
+  ));
+
+  assert.ok(modules.length > 0);
+  for (const module of modules) {
+    assert.equal(module.scaleX, module.scaleY, `${module.id} must not stretch a square floor texture`);
+    assert.ok(Number.isInteger(module.scaleX) && module.scaleX >= 1, `${module.id} must use integer pixel scale`);
+  }
+});
+
 test("the exact center safe rectangle contains floor only", () => {
   const layout = getLayout();
   assert.deepEqual(SAFE_RECT, { x: CENTER_X - 192, y: CENTER_Y - 144, width: 384, height: 288 });
@@ -188,6 +215,54 @@ test("contamination stays at the maintenance edge and covers at most ten percent
   assert.ok(visibleArea <= VIEWPORT.width * VIEWPORT.height * 0.1, `${visibleArea} exceeds the contamination budget`);
 });
 
+test("contamination must touch the maintenance floor and remain visually continuous through its parent chain", () => {
+  const layout = getLayout();
+  const detachedRoot = layout.map((item) => (
+    item.zone === "contamination" ? { ...item, x: item.x + 256 } : item
+  ));
+  const detachedTrail = layout.map((item) => (
+    item.id === "contamination-trail-b" || item.id === "contamination-trail-c"
+      ? { ...item, x: item.x + 128 }
+      : item
+  ));
+
+  assert.ok(
+    validateOpeningFacilityRelationships(detachedRoot).includes("contamination-root-detached-from-maintenance")
+  );
+  assert.ok(validateOpeningFacilityRelationships(detachedTrail).includes("contamination-trail-detached"));
+});
+
+test("contamination coverage uses clipped rectangle unions rather than summed or off-camera area", () => {
+  const layout = getLayout();
+  const threshold = VIEWPORT.width * VIEWPORT.height * 0.1;
+  const overlapping = layout.map((item) => (
+    item.zone === "contamination"
+      ? { ...item, x: SAFE_RECT.x + SAFE_RECT.width + 128, y: CENTER_Y + 128, scaleX: 2.2, scaleY: 2.2 }
+      : item
+  ));
+  const offCamera = layout.map((item) => (
+    item.zone === "contamination"
+      ? { ...item, x: CENTER_X + VIEWPORT.width / 2, y: CENTER_Y + 128, scaleX: 4, scaleY: 4 }
+      : item
+  ));
+  const overlappingAreas = contaminationAreas(overlapping);
+  const offCameraAreas = contaminationAreas(offCamera);
+
+  assert.ok(overlappingAreas.visibleSum > threshold, "simple addition must exceed the budget in this fixture");
+  assert.ok(overlappingAreas.visibleUnion <= threshold, "overlap union must remain within the budget");
+  assert.equal(
+    validateOpeningFacilityRelationships(overlapping).includes("contamination-coverage-exceeded"),
+    false
+  );
+
+  assert.ok(offCameraAreas.fullUnion > threshold, "unclipped area must exceed the budget in this fixture");
+  assert.ok(offCameraAreas.visibleUnion <= threshold, "visible clipped area must remain within the budget");
+  assert.equal(
+    validateOpeningFacilityRelationships(offCamera).includes("contamination-coverage-exceeded"),
+    false
+  );
+});
+
 test("relationship validator accepts the approved graph and rejects safety, parent, and coverage violations", () => {
   const layout = getLayout();
   assert.deepEqual(validateOpeningFacilityRelationships(layout), []);
@@ -201,6 +276,9 @@ test("relationship validator accepts the approved graph and rejects safety, pare
   const crossZoneParent = layout.map((item) => (
     item.role === "entry-threshold" ? { ...item, parentId: "combat-floor-center" } : item
   ));
+  const futureParent = layout.map((item) => (
+    item.id === "combat-floor-left" ? { ...item, parentId: "combat-floor-center" } : item
+  ));
   const orphanedDecoration = layout.map((item) => (
     item.role === "power-junction" ? { ...item, parentId: null } : item
   ));
@@ -213,6 +291,7 @@ test("relationship validator accepts the approved graph and rejects safety, pare
   assert.ok(validateOpeningFacilityRelationships(safeIntrusion).includes("safe-area-intrusion"));
   assert.ok(validateOpeningFacilityRelationships(missingParent).includes("parent-invalid"));
   assert.ok(validateOpeningFacilityRelationships(crossZoneParent).includes("parent-zone-mismatch"));
+  assert.ok(validateOpeningFacilityRelationships(futureParent).includes("parent-order-invalid"));
   assert.ok(validateOpeningFacilityRelationships(orphanedDecoration).includes("decorative-orphan"));
   assert.ok(validateOpeningFacilityRelationships(excessiveCoverage).includes("contamination-coverage-exceeded"));
 });

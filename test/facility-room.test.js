@@ -1,18 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { TEXTURES } from "../src/assets/manifest.js";
 import { createOpeningFacilityLayout } from "../src/art/openingFacilityLayout.js";
 
-function createSceneStub({ failOnImageCall = null, failure = new Error("image creation failed") } = {}) {
+function createSceneStub({
+  failOnImageCall = null,
+  failOnSetScaleCall = null,
+  failure = new Error("image creation failed")
+} = {}) {
   const created = [];
   let imageCalls = 0;
+  let setScaleCalls = 0;
 
-  function makeDisplayObject(x, y, key) {
+  function makeDisplayObject(kind, x, y, key, width = null, height = null) {
     const object = {
-      kind: "image",
+      kind,
       x,
       y,
       key,
+      width,
+      height,
       depth: 0,
       rotation: 0,
       scaleX: 1,
@@ -32,6 +40,8 @@ function createSceneStub({ failOnImageCall = null, failure = new Error("image cr
         return this;
       },
       setScale(xScale, yScale = xScale) {
+        setScaleCalls += 1;
+        if (setScaleCalls === failOnSetScaleCall) throw failure;
         this.scaleX = xScale;
         this.scaleY = yScale;
         return this;
@@ -75,7 +85,10 @@ function createSceneStub({ failOnImageCall = null, failure = new Error("image cr
       image(x, y, key) {
         imageCalls += 1;
         if (imageCalls === failOnImageCall) throw failure;
-        return makeDisplayObject(x, y, key);
+        return makeDisplayObject("image", x, y, key);
+      },
+      tileSprite(x, y, width, height, key) {
+        return makeDisplayObject("tileSprite", x, y, key, width, height);
       }
     }
   };
@@ -120,10 +133,61 @@ test("facility room controller owns every semantic visual and the façade return
   assert.equal(visuals.length, façadeScene.created.length);
 });
 
+test("the owned base floor is a world-sized tileSprite covering the complete opening viewport", async () => {
+  const { createFacilityRoomController } = await loadFacilityRoom();
+  const width = 1920;
+  const height = 1920;
+  const layout = createOpeningFacilityLayout(width, height);
+  const baseItem = layout.find(({ role, key }) => role === "floor" && key === TEXTURES.facilityFloor);
+  const scene = createSceneStub();
+  const controller = createFacilityRoomController(scene, width, height);
+  const baseFloor = controller.byId.get(baseItem?.id);
+
+  assert.ok(baseItem, "the semantic layout must own one facilityFloor item");
+  assert.ok(baseFloor, "the controller must own the base floor visual");
+  assert.equal(baseFloor.kind, "tileSprite");
+  assert.equal(baseFloor.width, width);
+  assert.equal(baseFloor.height, height);
+  const baseBounds = {
+    left: baseFloor.x - baseFloor.width / 2,
+    right: baseFloor.x + baseFloor.width / 2,
+    top: baseFloor.y - baseFloor.height / 2,
+    bottom: baseFloor.y + baseFloor.height / 2
+  };
+  assert.deepEqual(baseBounds, { left: 0, right: width, top: 0, bottom: height });
+
+  const viewport = {
+    left: width / 2 - 480,
+    right: width / 2 + 480,
+    top: height / 2 - 270,
+    bottom: height / 2 + 270
+  };
+  assert.ok(
+    baseBounds.left <= viewport.left
+    && baseBounds.right >= viewport.right
+    && baseBounds.top <= viewport.top
+    && baseBounds.bottom >= viewport.bottom,
+    "every point in the 960 by 540 opening viewport must have a facility floor"
+  );
+});
+
 test("facility room controller rolls back created visuals and rethrows image creation failures", async () => {
   const { createFacilityRoomController } = await loadFacilityRoom();
   const failure = new Error("fourth image failed");
   const scene = createSceneStub({ failOnImageCall: 4, failure });
+
+  assert.throws(
+    () => createFacilityRoomController(scene, 1920, 1920),
+    (error) => error === failure
+  );
+  assert.equal(scene.created.length, 4);
+  assert.ok(scene.created.every(({ destroyed, destroyCalls }) => destroyed && destroyCalls === 1));
+});
+
+test("facility room controller rolls back visuals when display configuration throws", async () => {
+  const { createFacilityRoomController } = await loadFacilityRoom();
+  const failure = new Error("third setScale failed");
+  const scene = createSceneStub({ failOnSetScaleCall: 3, failure });
 
   assert.throws(
     () => createFacilityRoomController(scene, 1920, 1920),
@@ -144,7 +208,9 @@ test("facility room presentation changes tint alpha and visibility without chang
     depth: visual.depth,
     rotation: visual.rotation,
     scaleX: visual.scaleX,
-    scaleY: visual.scaleY
+    scaleY: visual.scaleY,
+    width: visual.width,
+    height: visual.height
   }]));
 
   controller.setPresentation({
@@ -174,7 +240,9 @@ test("facility room presentation changes tint alpha and visibility without chang
       depth: visual.depth,
       rotation: visual.rotation,
       scaleX: visual.scaleX,
-      scaleY: visual.scaleY
+      scaleY: visual.scaleY,
+      width: visual.width,
+      height: visual.height
     }, `${item.id} geometry changed during presentation update`);
   }
 

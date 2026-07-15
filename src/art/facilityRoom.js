@@ -76,6 +76,13 @@ function presentationForItem(item, state) {
   return { tint: state.ambientTint, alpha: state.ambientAlpha };
 }
 
+function createFacilityVisual(scene, item, width, height) {
+  if (item.id === "base-floor" && item.role === "floor" && item.key === TEXTURES.facilityFloor) {
+    return scene.add.tileSprite(item.x, item.y, width, height, item.key);
+  }
+  return scene.add.image(item.x, item.y, item.key);
+}
+
 export function createFacilityRoomController(scene, width, height) {
   const objects = [];
   const byId = new Map();
@@ -85,7 +92,7 @@ export function createFacilityRoomController(scene, width, height) {
   try {
     applyProductionTextureFiltering(scene);
     for (const item of layout) {
-      const visual = scene.add.image(item.x, item.y, item.key);
+      const visual = createFacilityVisual(scene, item, width, height);
       objects.push(visual);
       visual
         .setDepth(item.depth)
