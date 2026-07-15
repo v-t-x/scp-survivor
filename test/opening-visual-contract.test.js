@@ -56,6 +56,7 @@ const expectedFacilityModuleSpecs = {
 
 test("opening visual contract fixes the approved production dimensions", () => {
   assert.deepEqual(OPENING_VIEWPORT, { width: 960, height: 540 });
+  assert.deepEqual(OPENING_ASSET_SPECS.facilityModule.allowedSizes, [64, 96, 128]);
   assert.deepEqual(OPENING_ASSET_SPECS.player, {
     frameWidth: 48,
     frameHeight: 48,

@@ -2,7 +2,7 @@ export const OPENING_VIEWPORT = Object.freeze({ width: 960, height: 540 });
 
 export const OPENING_ASSET_SPECS = Object.freeze({
   floorTile: Object.freeze({ width: 32, height: 32 }),
-  facilityModule: Object.freeze({ allowedSizes: Object.freeze([64, 96]) }),
+  facilityModule: Object.freeze({ allowedSizes: Object.freeze([64, 96, 128]) }),
   player: Object.freeze({
     frameWidth: 48,
     frameHeight: 48,
