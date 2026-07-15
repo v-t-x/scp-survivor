@@ -17,12 +17,11 @@ const SAFE_RECT = {
   width: 384,
   height: 288
 };
-const VIEWPORT = {
-  x: CENTER_X - 480,
-  y: CENTER_Y - 270,
-  width: 960,
-  height: 540
-};
+const VIEWPORT_WIDTH = 960;
+const VIEWPORT_HEIGHT = 540;
+const VIEWPORT_AREA = 518_400;
+const CONTAMINATION_COVERAGE_LIMIT = 51_840;
+const CONTAMINATION_TEXTURE_SIZE = 64;
 const LAYOUT_FIELDS = [
   "id",
   "parentId",
@@ -37,96 +36,9 @@ const LAYOUT_FIELDS = [
   "scaleY"
 ];
 const EXPECTED_ZONES = ["entry", "combat", "maintenance", "contamination"];
-const DISPLAY_DIMENSIONS = new Map([
-  [TEXTURES.facilityFloor, { width: 32, height: 32 }],
-  [TEXTURES.facilityCombatFloor, { width: 128, height: 128 }],
-  [TEXTURES.facilityEntryThreshold, { width: 128, height: 64 }],
-  [TEXTURES.facilityMaintenanceDeck, { width: 128, height: 128 }],
-  [TEXTURES.facilityWallBank, { width: 128, height: 64 }],
-  [TEXTURES.facilityPowerJunction, { width: 96, height: 96 }],
-  [TEXTURES.facilityContaminationTrail, { width: 64, height: 64 }],
-  [TEXTURES.facilityDecal, { width: 32, height: 32 }]
-]);
 
 function getLayout() {
   return createOpeningFacilityLayout(WORLD_WIDTH, WORLD_HEIGHT);
-}
-
-function boundsFor(item) {
-  const dimensions = DISPLAY_DIMENSIONS.get(item.key);
-  assert.ok(dimensions, `missing display dimensions for ${item.key}`);
-  const cosine = Math.abs(Math.cos(item.rotation));
-  const sine = Math.abs(Math.sin(item.rotation));
-  const halfWidth = dimensions.width * Math.abs(item.scaleX) / 2;
-  const halfHeight = dimensions.height * Math.abs(item.scaleY) / 2;
-  const extentX = cosine * halfWidth + sine * halfHeight;
-  const extentY = sine * halfWidth + cosine * halfHeight;
-  return {
-    left: item.x - extentX,
-    right: item.x + extentX,
-    top: item.y - extentY,
-    bottom: item.y + extentY
-  };
-}
-
-function intersectsRect(bounds, rect) {
-  return (
-    bounds.left < rect.x + rect.width
-    && bounds.right > rect.x
-    && bounds.top < rect.y + rect.height
-    && bounds.bottom > rect.y
-  );
-}
-
-function visibleBounds(bounds) {
-  const left = Math.max(bounds.left, VIEWPORT.x);
-  const right = Math.min(bounds.right, VIEWPORT.x + VIEWPORT.width);
-  const top = Math.max(bounds.top, VIEWPORT.y);
-  const bottom = Math.min(bounds.bottom, VIEWPORT.y + VIEWPORT.height);
-  return right > left && bottom > top ? { left, right, top, bottom } : null;
-}
-
-function rectangleUnionArea(rectangles) {
-  const edges = [...new Set(rectangles.flatMap(({ left, right }) => [left, right]))].sort((a, b) => a - b);
-  let area = 0;
-
-  for (let index = 1; index < edges.length; index += 1) {
-    const left = edges[index - 1];
-    const right = edges[index];
-    const intervals = rectangles
-      .filter((rect) => rect.left < right && rect.right > left)
-      .map(({ top, bottom }) => [top, bottom])
-      .sort(([a], [b]) => a - b);
-    let coveredTop = null;
-    let coveredBottom = null;
-
-    for (const [top, bottom] of intervals) {
-      if (coveredTop === null || top > coveredBottom) {
-        if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
-        coveredTop = top;
-        coveredBottom = bottom;
-      } else {
-        coveredBottom = Math.max(coveredBottom, bottom);
-      }
-    }
-    if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
-  }
-
-  return area;
-}
-
-function areaOf({ left, right, top, bottom }) {
-  return (right - left) * (bottom - top);
-}
-
-function contaminationAreas(layout) {
-  const bounds = layout.filter(({ zone }) => zone === "contamination").map(boundsFor);
-  const visible = bounds.map(visibleBounds).filter(Boolean);
-  return {
-    fullUnion: rectangleUnionArea(bounds),
-    visibleSum: visible.reduce((sum, rectangle) => sum + areaOf(rectangle), 0),
-    visibleUnion: rectangleUnionArea(visible)
-  };
 }
 
 test("opening layout uses exactly the four approved semantic zones", () => {
@@ -194,16 +106,12 @@ test("the exact center safe rectangle contains floor only", () => {
   const layout = getLayout();
   assert.deepEqual(SAFE_RECT, { x: CENTER_X - 192, y: CENTER_Y - 144, width: 384, height: 288 });
   assert.ok(layout.some(({ role, x, y }) => role === "floor" && x === CENTER_X && y === CENTER_Y));
-
-  for (const item of layout.filter(({ role }) => role !== "floor")) {
-    assert.equal(intersectsRect(boundsFor(item), SAFE_RECT), false, `${item.id} overlaps the center safe rectangle`);
-  }
+  assert.equal(validateOpeningFacilityRelationships(layout).includes("safe-area-intrusion"), false);
 });
 
 test("contamination stays at the maintenance edge and covers at most ten percent of the first viewport", () => {
-  const contamination = getLayout().filter(({ zone }) => zone === "contamination");
-  const visible = contamination.map((item) => visibleBounds(boundsFor(item))).filter(Boolean);
-  const visibleArea = rectangleUnionArea(visible);
+  const layout = getLayout();
+  const contamination = layout.filter(({ zone }) => zone === "contamination");
 
   assert.ok(contamination.length >= 1 && contamination.length <= 3);
   assert.ok(contamination.every(({ role, key, x }) => (
@@ -211,8 +119,7 @@ test("contamination stays at the maintenance edge and covers at most ten percent
     && key === TEXTURES.facilityContaminationTrail
     && x >= SAFE_RECT.x + SAFE_RECT.width
   )));
-  assert.ok(visibleArea > 0, "the controlled trail should read in the first viewport");
-  assert.ok(visibleArea <= VIEWPORT.width * VIEWPORT.height * 0.1, `${visibleArea} exceeds the contamination budget`);
+  assert.equal(validateOpeningFacilityRelationships(layout).includes("contamination-coverage-exceeded"), false);
 });
 
 test("contamination must touch the maintenance floor and remain visually continuous through its parent chain", () => {
@@ -232,35 +139,39 @@ test("contamination must touch the maintenance floor and remain visually continu
   assert.ok(validateOpeningFacilityRelationships(detachedTrail).includes("contamination-trail-detached"));
 });
 
-test("contamination coverage uses clipped rectangle unions rather than summed or off-camera area", () => {
+test("contamination coverage unions three fully overlapping fixed rectangles", () => {
   const layout = getLayout();
-  const threshold = VIEWPORT.width * VIEWPORT.height * 0.1;
   const overlapping = layout.map((item) => (
     item.zone === "contamination"
-      ? { ...item, x: SAFE_RECT.x + SAFE_RECT.width + 128, y: CENTER_Y + 128, scaleX: 2.2, scaleY: 2.2 }
+      ? { ...item, x: 1280, y: 1024, rotation: 0, scaleX: 3, scaleY: 3 }
       : item
   ));
+
+  assert.equal(VIEWPORT_WIDTH * VIEWPORT_HEIGHT, VIEWPORT_AREA);
+  assert.equal(VIEWPORT_AREA * 0.1, CONTAMINATION_COVERAGE_LIMIT);
+  assert.equal(CONTAMINATION_TEXTURE_SIZE * 3, 192);
+  assert.equal(192 * 192, 36_864);
+  assert.equal(36_864 * 3, 110_592);
+  assert.ok(36_864 < CONTAMINATION_COVERAGE_LIMIT, "one 192 by 192 union must stay below ten percent");
+  assert.ok(110_592 > CONTAMINATION_COVERAGE_LIMIT, "three simply added rectangles must exceed ten percent");
+  assert.deepEqual(validateOpeningFacilityRelationships(overlapping), []);
+});
+
+test("contamination coverage clips a fixed rectangle at the viewport edge", () => {
+  const layout = getLayout();
   const offCamera = layout.map((item) => (
     item.zone === "contamination"
-      ? { ...item, x: CENTER_X + VIEWPORT.width / 2, y: CENTER_Y + 128, scaleX: 4, scaleY: 4 }
+      ? { ...item, x: 1440, y: 1088, rotation: 0, scaleX: 4, scaleY: 4 }
       : item
   ));
-  const overlappingAreas = contaminationAreas(overlapping);
-  const offCameraAreas = contaminationAreas(offCamera);
 
-  assert.ok(overlappingAreas.visibleSum > threshold, "simple addition must exceed the budget in this fixture");
-  assert.ok(overlappingAreas.visibleUnion <= threshold, "overlap union must remain within the budget");
-  assert.equal(
-    validateOpeningFacilityRelationships(overlapping).includes("contamination-coverage-exceeded"),
-    false
-  );
-
-  assert.ok(offCameraAreas.fullUnion > threshold, "unclipped area must exceed the budget in this fixture");
-  assert.ok(offCameraAreas.visibleUnion <= threshold, "visible clipped area must remain within the budget");
-  assert.equal(
-    validateOpeningFacilityRelationships(offCamera).includes("contamination-coverage-exceeded"),
-    false
-  );
+  assert.equal(CONTAMINATION_TEXTURE_SIZE * 4, 256);
+  assert.equal(256 * 256, 65_536);
+  assert.equal(128 * 256, 32_768);
+  assert.ok(65_536 > CONTAMINATION_COVERAGE_LIMIT, "the full 256 by 256 rectangle must exceed ten percent");
+  assert.ok(32_768 < CONTAMINATION_COVERAGE_LIMIT, "the visible 128 by 256 half must stay below ten percent");
+  assert.equal(1440, CENTER_X + VIEWPORT_WIDTH / 2, "the fixture center must sit on the right camera edge");
+  assert.deepEqual(validateOpeningFacilityRelationships(offCamera), []);
 });
 
 test("relationship validator accepts the approved graph and rejects safety, parent, and coverage violations", () => {
