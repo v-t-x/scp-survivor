@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { getHudPresentation } from "../src/ui/hudPresentation.js";
+import * as hudPresentation from "../src/ui/hudPresentation.js";
+
+const { getHudPresentation } = hudPresentation;
 
 const BASE_STATE = Object.freeze({
   isMissionActive: true,
@@ -110,6 +112,37 @@ test("normal vitals retain a deterministic elapsed-time-only pulse and normal sy
   assert.notEqual(normal.vitals.pulseAlpha, later.vitals.pulseAlpha);
   assert.equal(Number.isFinite(normal.vitals.pulseAlpha), true);
   assert.equal(normal.vitals.pulseAlpha >= 0 && normal.vitals.pulseAlpha <= 1, true);
+});
+
+test("pulse alpha stays finite, deterministic and clamped for invalid elapsed time", async (t) => {
+  const cases = [
+    ["negative", -1],
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+    ["-Infinity", Number.NEGATIVE_INFINITY]
+  ];
+
+  for (const [label, elapsedSurvivalMs] of cases) {
+    await t.test(label, () => {
+      const first = getHudPresentation(state({ elapsedSurvivalMs })).vitals.pulseAlpha;
+      const second = getHudPresentation(state({ elapsedSurvivalMs })).vitals.pulseAlpha;
+      assert.equal(Number.isFinite(first), true, `${label} produces a finite alpha`);
+      assert.equal(first >= 0 && first <= 1, true, `${label} stays within alpha bounds`);
+      assert.equal(first, second, `${label} is deterministic`);
+    });
+  }
+});
+
+test("critical health outranks paused, muted and facility warning system tones", () => {
+  const view = getHudPresentation(state({
+    health: 34,
+    isPaused: true,
+    soundMuted: true,
+    activeFacilityEvent: { type: "powerOutage" }
+  }));
+
+  assert.equal(view.vitals.critical, true);
+  assert.equal(view.system.tone, "danger");
 });
 
 test("shotgun presentation reads reload and dash deadlines without changing them", () => {
@@ -363,7 +396,27 @@ test("pickup presentation is a frozen read-only Scene snapshot without cue state
   assert.doesNotMatch(source, /state\.pickupRadius\s*=/);
 });
 
-test("HUD integration keeps compatibility aliases inside four timeline-corrupted containers", async () => {
+test("timeline HUD selector excludes system and preserves corruption target order", () => {
+  const containers = {
+    mission: { id: "mission" },
+    vitals: { id: "vitals" },
+    weapon: { id: "weapon" },
+    facility: { id: "facility" },
+    system: { id: "system" }
+  };
+
+  assert.equal(typeof hudPresentation.selectTimelineHudContainers, "function");
+  const selected = hudPresentation.selectTimelineHudContainers(containers);
+  assert.deepEqual(selected, [
+    containers.mission,
+    containers.vitals,
+    containers.weapon,
+    containers.facility
+  ]);
+  assert.equal(selected.includes(containers.system), false);
+});
+
+test("HUD integration keeps compatibility aliases and presentation delegation", async () => {
   const [hud, timeline, systems] = await Promise.all([
     readFile(new URL("../src/scene/hud.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/timeline.js", import.meta.url), "utf8"),
@@ -379,12 +432,6 @@ test("HUD integration keeps compatibility aliases inside four timeline-corrupted
   assert.match(hud, /this\.phaseText\s*=\s*this\.missionDetailText/);
   assert.doesNotMatch(timeline, /this\.phaseText\.setText/);
   assert.match(systems, /this\.collapseFacilityHud\(\)/);
-
-  const timelinePositionsStart = hud.indexOf("this.timelineHudBasePositions =");
-  const timelinePositionsEnd = hud.indexOf("this.events.off", timelinePositionsStart);
-  const timelinePositions = hud.slice(timelinePositionsStart, timelinePositionsEnd);
-  assert.doesNotMatch(timelinePositions, /systemHudContainer/);
-  assert.doesNotMatch(timeline, /systemHudContainer/);
 
   const updateStart = hud.indexOf("updateUI() {");
   const updateEnd = hud.indexOf("updateWeaponHud() {", updateStart);

@@ -7,7 +7,10 @@ import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { HUD_REGIONS } from "../art/openingVisualContract.js";
 import { TEXTURES } from "../assets/manifest.js";
-import { getHudPresentation } from "../ui/hudPresentation.js";
+import {
+  getHudPresentation,
+  selectTimelineHudContainers
+} from "../ui/hudPresentation.js";
 import { THEME } from "../ui/theme.js";
 import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
 
@@ -334,11 +337,13 @@ export const hudMixin = {
     this.outageLightSprite.setVisible(false);
     this.outageLightSprite.setOrigin(0.5);
 
-    this.timelineHudBasePositions = this.gameplayHudContainers.map((container) => [
-      container,
-      container.x,
-      container.y
-    ]);
+    this.timelineHudBasePositions = selectTimelineHudContainers({
+      mission: this.missionHudContainer,
+      vitals: this.vitalsHudContainer,
+      weapon: this.weaponHudContainer,
+      facility: this.facilityHudContainer,
+      system: this.systemHudContainer
+    }).map((container) => [container, container.x, container.y]);
 
     this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownHud, this);
     this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownHud, this);

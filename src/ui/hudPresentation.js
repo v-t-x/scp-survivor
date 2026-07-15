@@ -6,6 +6,19 @@ const WEAPON_ICONS = Object.freeze({
   tesla: TEXTURES.weaponTeslaIcon
 });
 
+const TIMELINE_HUD_REGION_KEYS = Object.freeze([
+  "mission",
+  "vitals",
+  "weapon",
+  "facility"
+]);
+
+export function selectTimelineHudContainers(containers = {}) {
+  return Object.freeze(
+    TIMELINE_HUD_REGION_KEYS.map((regionKey) => containers[regionKey])
+  );
+}
+
 function finiteNumber(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
