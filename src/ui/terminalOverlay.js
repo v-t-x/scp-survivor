@@ -4,6 +4,7 @@ import { createStatusLamp, createTacticalPanel } from "./tacticalUi.js";
 const DEFAULT_VIEWPORT_WIDTH = 960;
 const DEFAULT_VIEWPORT_HEIGHT = 540;
 const DEFAULT_FADE_DURATION_MS = 120;
+const INITIAL_FADE_ALPHA = 0.001;
 const CARD_TEXT_WIDTH = 180;
 const CARD_ICON_SIZE = 32;
 
@@ -12,8 +13,7 @@ function cleanUpObject(object) {
   try {
     object.disableInteractive?.();
     object.removeInteractive?.();
-    const ownsChildren = Array.isArray(object.list) && typeof object.add === "function";
-    object.destroy?.(ownsChildren);
+    object.destroy?.();
   } finally {
     object.removeAllListeners?.();
   }
@@ -371,7 +371,7 @@ export function createTerminalOverlay(scene, options = {}) {
     }
 
     setTone(tone);
-    container.setAlpha(0);
+    container.setAlpha(INITIAL_FADE_ALPHA);
     if (scene.tweens?.add) {
       fadeTween = scene.tweens.add({
         targets: container,
@@ -478,7 +478,7 @@ export function createTerminalCard(scene, options = {}) {
         color: THEME.text.muted,
         fontFamily: THEME.font.mono,
         fontSize: "12px",
-        wordWrap: { width: CARD_TEXT_WIDTH }
+        wordWrap: { width: CARD_TEXT_WIDTH, useAdvancedWrap: true }
       },
       origin: [0.5, 0],
       depth,
@@ -495,7 +495,7 @@ export function createTerminalCard(scene, options = {}) {
         fontSize: "18px",
         fontStyle: "bold",
         maxLines: 2,
-        wordWrap: { width: CARD_TEXT_WIDTH }
+        wordWrap: { width: CARD_TEXT_WIDTH, useAdvancedWrap: true }
       },
       origin: [0.5, 0],
       depth,
@@ -520,7 +520,7 @@ export function createTerminalCard(scene, options = {}) {
         fontSize: "14px",
         lineSpacing: 0,
         maxLines: 5,
-        wordWrap: { width: CARD_TEXT_WIDTH }
+        wordWrap: { width: CARD_TEXT_WIDTH, useAdvancedWrap: true }
       },
       origin: [0.5, 0],
       depth,
@@ -544,7 +544,7 @@ export function createTerminalCard(scene, options = {}) {
         fontFamily: THEME.font.body,
         fontSize: "13px",
         maxLines: 1,
-        wordWrap: { width: CARD_TEXT_WIDTH }
+        wordWrap: { width: CARD_TEXT_WIDTH, useAdvancedWrap: true }
       },
       origin: [0.5, 0],
       depth,
@@ -568,7 +568,7 @@ export function createTerminalCard(scene, options = {}) {
         fontFamily: THEME.font.body,
         fontSize: "12px",
         maxLines: 1,
-        wordWrap: { width: CARD_TEXT_WIDTH }
+        wordWrap: { width: CARD_TEXT_WIDTH, useAdvancedWrap: true }
       },
       origin: [0.5, 0],
       depth,

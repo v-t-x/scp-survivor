@@ -16,6 +16,64 @@ function parseFontSize(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+const PHASER_RENDER_MASK = 15;
+const PHASER_VISIBLE_FLAG = 1;
+const PHASER_ALPHA_FLAG = 2;
+
+function glyphWidth(character, fontSize) {
+  return character.codePointAt(0) > 255 ? fontSize : fontSize * 0.58;
+}
+
+function measuredWidth(value, fontSize) {
+  return [...String(value ?? "")].reduce(
+    (width, character) => width + glyphWidth(character, fontSize),
+    0
+  );
+}
+
+function advancedWrapLines(value, fontSize, wrapWidth) {
+  const wrapped = [];
+  for (const sourceLine of String(value ?? "").split("\n")) {
+    let line = "";
+    let width = 0;
+    for (const character of [...sourceLine]) {
+      const characterWidth = glyphWidth(character, fontSize);
+      if (line && width + characterWidth > wrapWidth) {
+        wrapped.push(line);
+        line = "";
+        width = 0;
+      }
+      line += character;
+      width += characterWidth;
+    }
+    wrapped.push(line);
+  }
+  return wrapped;
+}
+
+function basicWrapLines(value, fontSize, wrapWidth) {
+  const wrapped = [];
+  for (const sourceLine of String(value ?? "").split("\n")) {
+    const words = sourceLine.split(" ");
+    if (words.length === 1) {
+      wrapped.push(sourceLine);
+      continue;
+    }
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && measuredWidth(candidate, fontSize) > wrapWidth) {
+        wrapped.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    wrapped.push(line);
+  }
+  return wrapped;
+}
+
 function createEventEmitter(target = {}) {
   const handlers = new Map();
   const removeEntry = (event, targetEntry) => {
@@ -84,6 +142,7 @@ function createDisplayObject(scene, type, failure, properties = {}) {
     calls: [],
     visible: true,
     alpha: 1,
+    renderFlags: PHASER_RENDER_MASK,
     depth: undefined,
     scrollFactor: undefined,
     parentContainer: null,
@@ -111,13 +170,20 @@ function createDisplayObject(scene, type, failure, properties = {}) {
     },
     setAlpha(value) {
       throwConfiguredFailure(failure, this, "setAlpha");
-      this.alpha = value;
+      this.alpha = Math.max(0, Math.min(1, value));
+      if (this.alpha === 0) this.renderFlags &= ~PHASER_ALPHA_FLAG;
+      else this.renderFlags |= PHASER_ALPHA_FLAG;
       return this;
     },
     setVisible(value) {
       throwConfiguredFailure(failure, this, "setVisible");
-      this.visible = value;
+      this.visible = value === true;
+      if (this.visible) this.renderFlags |= PHASER_VISIBLE_FLAG;
+      else this.renderFlags &= ~PHASER_VISIBLE_FLAG;
       return this;
+    },
+    willRender() {
+      return this.renderFlags === PHASER_RENDER_MASK;
     },
     setInteractive(options) {
       throwConfiguredFailure(failure, this, "setInteractive");
@@ -178,28 +244,37 @@ function createDisplayObject(scene, type, failure, properties = {}) {
         return { width: this.displayWidth ?? this.width ?? 0, height: this.displayHeight ?? this.height ?? 0 };
       }
       const fontSize = parseFontSize(this.style?.fontSize);
-      const rawWidth = [...String(this.text ?? "")].reduce(
-        (width, character) => width + (character.codePointAt(0) > 255 ? fontSize : fontSize * 0.58),
-        0
-      );
-      const wrapWidth = this.style?.wordWrap?.width ?? rawWidth;
-      const lines = Math.max(1, Math.ceil(rawWidth / Math.max(1, wrapWidth)));
+      const rawWidth = measuredWidth(this.text, fontSize);
+      const wrapWidth = this.style?.wordWrap?.width;
+      const lines = wrapWidth
+        ? this.style.wordWrap.useAdvancedWrap
+          ? advancedWrapLines(this.text, fontSize, wrapWidth)
+          : basicWrapLines(this.text, fontSize, wrapWidth)
+        : String(this.text ?? "").split("\n");
+      const visibleLines = this.style?.maxLines > 0
+        ? lines.slice(0, this.style.maxLines)
+        : lines;
       return {
-        width: Math.min(rawWidth, wrapWidth),
-        height: lines * (fontSize + Number(this.style?.lineSpacing ?? 0) + 2)
+        width: wrapWidth
+          ? Math.max(0, ...visibleLines.map((line) => measuredWidth(line, fontSize)))
+          : rawWidth,
+        height: Math.max(1, visibleLines.length) * (fontSize + Number(this.style?.lineSpacing ?? 0) + 2)
       };
     },
-    destroy(destroyChildren = false) {
+    destroy(fromScene = false) {
       if (this.destroyed) return this;
       this.destroying = true;
-      if (destroyChildren && this.list) {
-        for (const child of [...this.list]) child.destroy?.(true);
+      if (this.list) {
+        for (const child of [...this.list]) {
+          if (this.exclusive !== false) child.destroy?.(false);
+          else this.onChildDestroyed(child);
+        }
       }
       if (this.parentContainer) {
         const parent = this.parentContainer;
         parent.onChildDestroyed(this);
       }
-      this.emit("destroy", this);
+      this.emit("destroy", this, fromScene === true);
       this.removeAllListeners();
       this.active = false;
       this.destroyed = true;
@@ -210,6 +285,7 @@ function createDisplayObject(scene, type, failure, properties = {}) {
 
   if (type === "container") {
     object.list = [];
+    object.exclusive = true;
     object.onChildDestroyed = function onChildDestroyed(child) {
       this.list = this.list.filter((candidate) => candidate !== child);
       if (child.parentContainer === this) child.parentContainer = null;
@@ -310,6 +386,16 @@ function worldPosition(object) {
   return { x, y };
 }
 
+function isPhaserInputCandidate(object) {
+  if (!object.interactive || !object.willRender()) return false;
+  let parent = object.parentContainer;
+  while (parent) {
+    if (!parent.willRender()) return false;
+    parent = parent.parentContainer;
+  }
+  return true;
+}
+
 function assertRolledBack(scene, ignored = []) {
   const ignoredSet = new Set(ignored);
   const owned = scene.created.filter((object) => !ignoredSet.has(object));
@@ -358,6 +444,30 @@ test("terminal overlay owns the Foundation frame, texture slot, scanlines, and d
   assert.equal(scene.tweensCreated[0].config.targets, overlay.container);
 });
 
+test("terminal overlay remains an input candidate before the first fade tween update", () => {
+  const scene = createScene({ availableTextures: ["upgrade-icon"] });
+  const overlay = createTerminalOverlay(scene, {
+    width: 760,
+    height: 420,
+    depth: 60,
+    scrollFactor: 1
+  });
+  const card = createTerminalCard(scene, {
+    x: 240,
+    y: 270,
+    parent: overlay.content,
+    iconKey: "upgrade-icon",
+    title: "现场授权"
+  });
+  const dimmer = overlay.objects.find(({ type, width, height }) => type === "rectangle" && width === 960 && height === 540);
+
+  assert.equal(scene.tweensCreated.length, 1, "the tween exists but has not advanced in this harness");
+  assert.ok(overlay.container.alpha > 0 && overlay.container.alpha <= 0.01);
+  assert.equal(overlay.container.willRender(), true);
+  assert.equal(isPhaserInputCandidate(dimmer), true);
+  assert.equal(isPhaserInputCandidate(card.hitArea), true);
+});
+
 test("terminal card keeps the 220 by 230 hit area, text bounds, icon size, and parent movement aligned", () => {
   const scene = createScene({ availableTextures: ["terminal-surface-grid", "upgrade-icon"] });
   const overlay = createTerminalOverlay(scene, {
@@ -400,15 +510,21 @@ test("terminal card keeps the 220 by 230 hit area, text bounds, icon size, and p
   assert.equal(card.objects.every(({ scrollFactor }) => scrollFactor === 1), true);
 
   const title = card.objects.find(({ type, text }) => type === "text" && text === "现场授权强化");
-  const description = card.objects.find(({ type, text }) => type === "text" && text === LONGEST_UPGRADE_DESCRIPTION);
+  const description = card.objects.find(({ type, style }) => type === "text" && style.maxLines === 5);
   const footer = card.objects.find(({ type, text }) => type === "text" && text === "当前：Lv 3");
   const risk = card.objects.find(({ type, text }) => type === "text" && text === "本局不可撤销");
   assert.equal(title.style.fontSize, "18px");
   assert.equal(title.style.wordWrap.width, 180);
   assert.equal(title.style.maxLines, 2);
   assert.equal(description.style.wordWrap.width, 180);
+  assert.equal(description.style.wordWrap.useAdvancedWrap, true);
+  assert.equal(/\s/.test(LONGEST_UPGRADE_DESCRIPTION), false);
+  assert.equal(description.text, LONGEST_UPGRADE_DESCRIPTION);
   assert.ok(parseFontSize(description.style.fontSize) >= 12);
-  assert.ok(description.getBounds().height <= 92);
+  const descriptionBounds = description.getBounds();
+  assert.ok(descriptionBounds.width <= 180);
+  assert.ok(descriptionBounds.height <= 92);
+  assert.ok(descriptionBounds.height > parseFontSize(description.style.fontSize) + 2, "the Chinese copy uses multiple lines");
   assert.equal(footer.style.fontSize, "13px");
   assert.equal(risk.style.fontSize, "12px");
 
@@ -486,6 +602,30 @@ test("missing surface textures are skipped and overlay teardown preserves destro
   assert.equal(overlay.objects.every(({ destroyed }) => destroyed), true);
   assert.equal(overlay.objects.every(({ listenerCount }) => listenerCount === 0), true);
   assert.equal(scene.tweensCreated[0].removed, true);
+});
+
+test("manual overlay destroy emits fromScene false after reverse child cleanup", () => {
+  const scene = createScene();
+  const overlay = createTerminalOverlay(scene, { width: 700, height: 400 });
+  const descendants = overlay.objects.filter((object) => object !== overlay.container);
+  const observations = [];
+  overlay.container.on("destroy", (target, fromScene) => {
+    observations.push({
+      target,
+      fromScene,
+      childrenDestroyed: descendants.every(({ destroyed }) => destroyed),
+      listenerCountDuringEmit: target.listenerCount
+    });
+  });
+
+  overlay.destroy();
+
+  assert.equal(observations.length, 1);
+  assert.equal(observations[0].target, overlay.container);
+  assert.notEqual(observations[0].fromScene, true);
+  assert.equal(observations[0].childrenDestroyed, true);
+  assert.ok(observations[0].listenerCountDuringEmit > 0);
+  assert.equal(overlay.container.listenerCount, 0);
 });
 
 for (const { type, occurrence } of [
