@@ -53,11 +53,37 @@ function throwContainerAddFailure(failure, children) {
 
 function createDisplayObject(type, initial = {}, failure = {}) {
   const handlers = new Map();
+  const addHandler = (event, handler, context, once) => {
+    handlers.set(event, [
+      ...(handlers.get(event) ?? []),
+      { handler, context, once }
+    ]);
+  };
+  const removeEntry = (event, target) => {
+    const retained = (handlers.get(event) ?? []).filter((entry) => entry !== target);
+    if (retained.length > 0) handlers.set(event, retained);
+    else handlers.delete(event);
+  };
+  const removeHandler = (event, handler, context, once) => {
+    if (handler === undefined) {
+      handlers.delete(event);
+      return;
+    }
+    const retained = (handlers.get(event) ?? []).filter((entry) => {
+      if (entry.handler !== handler) return true;
+      if (context !== undefined && entry.context !== context) return true;
+      if (once !== undefined && entry.once !== once) return true;
+      return false;
+    });
+    if (retained.length > 0) handlers.set(event, retained);
+    else handlers.delete(event);
+  };
   const object = {
     type,
     active: true,
     alpha: 1,
     calls: [],
+    destroying: false,
     destroyed: false,
     interactive: false,
     scrollFactor: undefined,
@@ -134,19 +160,33 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       this.removeInteractiveCount = (this.removeInteractiveCount ?? 0) + 1;
       return this;
     },
-    on(event, handler) {
-      handlers.set(event, handler);
+    on(event, handler, context) {
+      addHandler(event, handler, context, false);
       if (failure.listenerEvent === event && failure.remainingListenerFailures > 0) {
         failure.remainingListenerFailures -= 1;
         throw new Error("listener registration failed");
       }
       return this;
     },
-    emit(event, ...args) {
-      return handlers.get(event)?.(...args);
+    once(event, handler, context) {
+      addHandler(event, handler, context, true);
+      return this;
     },
-    removeAllListeners() {
-      handlers.clear();
+    off(event, handler, context, once) {
+      removeHandler(event, handler, context, once);
+      return this;
+    },
+    emit(event, ...args) {
+      for (const entry of [...(handlers.get(event) ?? [])]) {
+        if (!(handlers.get(event) ?? []).includes(entry)) continue;
+        if (entry.once) removeEntry(event, entry);
+        entry.handler.apply(entry.context ?? this, args);
+      }
+      return this;
+    },
+    removeAllListeners(event) {
+      if (event === undefined) handlers.clear();
+      else handlers.delete(event);
       this.listenersRemoved = true;
       return this;
     },
@@ -201,13 +241,18 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       return this;
     },
     destroy() {
+      if (this.destroyed) return this;
+      this.destroying = true;
+      this.emit("destroy", this);
+      this.removeAllListeners();
       this.active = false;
       this.destroyed = true;
+      this.destroying = false;
       return this;
     }
   };
   Object.defineProperty(object, "listenerCount", {
-    get: () => handlers.size
+    get: () => [...handlers.values()].reduce((count, entries) => count + entries.length, 0)
   });
   return object;
 }
@@ -227,6 +272,7 @@ function createScene(options = {}) {
   const add = (type, factory) => (...args) => {
     const object = factory(...args);
     objects.push(object);
+    options.onCreate?.(object, { type, index: objects.length - 1 });
     return object;
   };
   const scene = {
@@ -569,10 +615,28 @@ test("facility keeps its single-line status while collapse only hides expanded w
 test("destroy is idempotent and removes interactive listeners", () => {
   const scene = createScene();
   const view = createView(scene);
+  const observedControl = view.controls.pauseHitArea;
+  const destroyObservations = [];
+  const persistentContext = { name: "persistent" };
+  const onceContext = { name: "once" };
+  const observeDestroy = function observeDestroy(target) {
+    destroyObservations.push([
+      this.name,
+      target === observedControl,
+      target.destroying,
+      target.destroyed
+    ]);
+  };
+  observedControl.on("destroy", observeDestroy, persistentContext);
+  observedControl.once("destroy", observeDestroy, onceContext);
 
   view.destroy();
   view.destroy();
 
+  assert.deepEqual(destroyObservations, [
+    ["persistent", true, true, false],
+    ["once", true, true, false]
+  ]);
   assert.equal(scene.objects.every((object) => object.destroyed), true);
   for (const control of Object.values(view.controls)) {
     assert.equal(control.listenerCount, 0);
@@ -581,12 +645,32 @@ test("destroy is idempotent and removes interactive listeners", () => {
 });
 
 test("constructor rollback destroys already-created objects and unregisters listeners after a mid-build failure", () => {
-  const scene = createScene({ listenerEvent: "pointerdown", listenerFailures: 1 });
+  const destroyObservations = [];
+  let observedObject;
+  const scene = createScene({
+    listenerEvent: "pointerdown",
+    listenerFailures: 1,
+    onCreate(object) {
+      if (observedObject) return;
+      observedObject = object;
+      object.on("destroy", (target) => {
+        destroyObservations.push(["persistent", target.destroying, target.destroyed]);
+      });
+      object.once("destroy", (target) => {
+        destroyObservations.push(["once", target.destroying, target.destroyed]);
+      });
+    }
+  });
 
   assert.throws(
     () => createView(scene),
     /listener registration failed/
   );
+  assert.deepEqual(destroyObservations, [
+    ["persistent", true, false],
+    ["once", true, false]
+  ]);
+  assert.equal(observedObject.destroyed, true);
   assert.equal(scene.objects.length > 0, true);
   assert.equal(scene.objects.every((object) => object.destroyed), true);
   assert.equal(scene.objects.every((object) => object.listenerCount === 0), true);

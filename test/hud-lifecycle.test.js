@@ -51,9 +51,35 @@ function removeFromList(list, object) {
 function createDisplayObject(scene, type, initial = {}) {
   const listeners = new Map();
   const isContainer = type === "container";
+  const addListener = (event, listener, context, once) => {
+    listeners.set(event, [
+      ...(listeners.get(event) ?? []),
+      { listener, context, once }
+    ]);
+  };
+  const removeEntry = (event, target) => {
+    const retained = (listeners.get(event) ?? []).filter((entry) => entry !== target);
+    if (retained.length > 0) listeners.set(event, retained);
+    else listeners.delete(event);
+  };
+  const removeListener = (event, listener, context, once) => {
+    if (listener === undefined) {
+      listeners.delete(event);
+      return;
+    }
+    const retained = (listeners.get(event) ?? []).filter((entry) => {
+      if (entry.listener !== listener) return true;
+      if (context !== undefined && entry.context !== context) return true;
+      if (once !== undefined && entry.once !== once) return true;
+      return false;
+    });
+    if (retained.length > 0) listeners.set(event, retained);
+    else listeners.delete(event);
+  };
   const object = {
     type,
     active: true,
+    destroying: false,
     destroyed: false,
     alpha: 1,
     visible: true,
@@ -73,9 +99,31 @@ function createDisplayObject(scene, type, initial = {}) {
     setInteractive() { this.interactive = true; return this; },
     disableInteractive() { this.interactive = false; return this; },
     removeInteractive() { this.interactive = false; return this; },
-    on(event, listener) { listeners.set(event, listener); return this; },
-    emit(event, ...args) { listeners.get(event)?.(...args); return this; },
-    removeAllListeners() { listeners.clear(); return this; },
+    on(event, listener, context) {
+      addListener(event, listener, context, false);
+      return this;
+    },
+    once(event, listener, context) {
+      addListener(event, listener, context, true);
+      return this;
+    },
+    off(event, listener, context, once) {
+      removeListener(event, listener, context, once);
+      return this;
+    },
+    emit(event, ...args) {
+      for (const entry of [...(listeners.get(event) ?? [])]) {
+        if (!(listeners.get(event) ?? []).includes(entry)) continue;
+        if (entry.once) removeEntry(event, entry);
+        entry.listener.apply(entry.context ?? this, args);
+      }
+      return this;
+    },
+    removeAllListeners(event) {
+      if (event === undefined) listeners.clear();
+      else listeners.delete(event);
+      return this;
+    },
     clear() { return this; },
     fillStyle() { return this; },
     lineStyle() { return this; },
@@ -90,28 +138,37 @@ function createDisplayObject(scene, type, initial = {}) {
     fill() { return this; },
     erase() { return this; },
     setPosition(x, y) { this.x = x; this.y = y; return this; },
+    onChildDestroyed(child) {
+      removeFromList(this.list, child);
+      if (child.parentContainer === this) child.parentContainer = null;
+    },
     add(children) {
       const candidates = Array.isArray(children) ? children : [children];
       this.list ??= [];
       for (const child of candidates) {
         if (!child) continue;
-        removeFromList(child.parentContainer?.list, child);
+        const previousParent = child.parentContainer;
+        if (previousParent && previousParent !== this) {
+          child.off("destroy", previousParent.onChildDestroyed, previousParent, true);
+          removeFromList(previousParent.list, child);
+        }
         removeFromList(scene.children.list, child);
-        if (!this.list.includes(child)) this.list.push(child);
+        if (!this.list.includes(child)) {
+          this.list.push(child);
+          child.once("destroy", this.onChildDestroyed, this);
+        }
         child.parentContainer = this;
-        child.on("destroy", () => {
-          removeFromList(this.list, child);
-          if (child.parentContainer === this) child.parentContainer = null;
-        });
       }
       return this;
     },
     destroy(destroyChildren = false) {
       if (this.destroyed) return;
+      this.destroying = true;
       if (destroyChildren) {
         for (const child of [...(this.list ?? [])]) child.destroy?.(true);
       } else {
         for (const child of [...(this.list ?? [])]) {
+          child.off("destroy", this.onChildDestroyed, this, true);
           child.parentContainer = null;
           if (!scene.children.list.includes(child)) scene.children.list.push(child);
         }
@@ -122,9 +179,12 @@ function createDisplayObject(scene, type, initial = {}) {
       removeFromList(scene.children.list, this);
       this.active = false;
       this.destroyed = true;
+      this.destroying = false;
     }
   };
-  Object.defineProperty(object, "listenerCount", { get: () => listeners.size });
+  Object.defineProperty(object, "listenerCount", {
+    get: () => [...listeners.values()].reduce((count, entries) => count + entries.length, 0)
+  });
   scene.children.list.push(object);
   scene.allObjects.push(object);
   return object;
@@ -233,6 +293,99 @@ test("three tactical HUD create-teardown cycles do not grow Phaser objects or sc
   }
 
   assert.equal(liveCounts.every((count) => count === liveCounts[0] && count > 0), true);
+});
+
+test("normal tactical teardown emits DESTROY to Container and external observers before cleanup", async () => {
+  const scene = createScene();
+  Object.assign(scene, await loadHudMixin());
+  scene.createUI();
+
+  const child = scene.eventBannerDetail;
+  const parent = child.parentContainer;
+  const observations = [];
+  const persistentContext = { name: "persistent" };
+  const onceContext = { name: "once" };
+  const observe = function observeDestroy(target) {
+    observations.push({
+      observer: this.name,
+      target,
+      destroying: target.destroying,
+      destroyed: target.destroyed,
+      parentContainsChild: parent.list.includes(target),
+      listenerCountDuringEmit: target.listenerCount
+    });
+  };
+  child.on("destroy", observe, persistentContext);
+  child.once("destroy", observe, onceContext);
+
+  assert.equal(parent.list.includes(child), true);
+  assert.equal(child.listenerCount, 3, "Container observer plus two external observers are registered");
+
+  scene.teardownHud();
+
+  assert.deepEqual(observations.map(({ target, ...entry }) => entry), [
+    {
+      observer: "persistent",
+      destroying: true,
+      destroyed: false,
+      parentContainsChild: false,
+      listenerCountDuringEmit: 2
+    },
+    {
+      observer: "once",
+      destroying: true,
+      destroyed: false,
+      parentContainsChild: false,
+      listenerCountDuringEmit: 1
+    }
+  ]);
+  assert.equal(observations.every(({ target }) => target === child), true);
+  assert.equal(parent.list.includes(child), false);
+  assert.equal(child.listenerCount, 0);
+});
+
+test("tactical constructor rollback emits DESTROY observers from its internal catch", () => {
+  const scene = createScene();
+  const originalText = scene.add.text;
+  const observations = [];
+  let textCreates = 0;
+  let observedChild;
+
+  scene.add.text = (...args) => {
+    const object = originalText(...args);
+    textCreates += 1;
+    if (textCreates === 1) {
+      observedChild = object;
+      object.on("destroy", (target) => {
+        observations.push(["persistent", target.destroying, target.destroyed]);
+      });
+      object.once("destroy", (target) => {
+        observations.push(["once", target.destroying, target.destroyed]);
+      });
+    }
+    if (textCreates === 3) {
+      object.setOrigin = () => {
+        scene.add.text = originalText;
+        throw new Error("forced tactical rollback after ownership");
+      };
+    }
+    return object;
+  };
+
+  assert.throws(
+    () => createTacticalHudView(scene, { regions: HUD_REGIONS }),
+    /forced tactical rollback after ownership/
+  );
+
+  assert.ok(observedChild);
+  assert.deepEqual(observations, [
+    ["persistent", true, false],
+    ["once", true, false]
+  ]);
+  assert.equal(observedChild.destroyed, true);
+  assert.equal(observedChild.listenerCount, 0);
+  assert.equal(observedChild.parentContainer, null);
+  assert.equal(scene.allObjects.every((object) => object.destroyed), true);
 });
 
 test("tactical construction failure executes the extracted legacy HUD and keeps update pause mute and shutdown safe", async () => {

@@ -41,10 +41,10 @@ function getLampColor(state) {
 
 function destroyObjects(objects) {
   for (const object of objects) {
-    object?.removeAllListeners?.();
     object?.disableInteractive?.();
     object?.removeInteractive?.();
     object?.destroy?.();
+    object?.removeAllListeners?.();
   }
 }
 

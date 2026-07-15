@@ -17,10 +17,10 @@ function toneColor(tone) {
 }
 
 function cleanUpObject(object) {
-  object?.removeAllListeners?.();
   object?.disableInteractive?.();
   object?.removeInteractive?.();
   object?.destroy?.();
+  object?.removeAllListeners?.();
 }
 
 function createTracker() {

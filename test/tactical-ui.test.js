@@ -16,9 +16,36 @@ function throwConfiguredFailure(failure, object, method) {
 
 function createDisplayObject(type, failure = {}) {
   const handlers = new Map();
+  const addHandler = (event, handler, context, once) => {
+    handlers.set(event, [
+      ...(handlers.get(event) ?? []),
+      { handler, context, once }
+    ]);
+  };
+  const removeEntry = (event, target) => {
+    const retained = (handlers.get(event) ?? []).filter((entry) => entry !== target);
+    if (retained.length > 0) handlers.set(event, retained);
+    else handlers.delete(event);
+  };
+  const removeHandler = (event, handler, context, once) => {
+    if (handler === undefined) {
+      handlers.delete(event);
+      return;
+    }
+    const retained = (handlers.get(event) ?? []).filter((entry) => {
+      if (entry.handler !== handler) return true;
+      if (context !== undefined && entry.context !== context) return true;
+      if (once !== undefined && entry.once !== once) return true;
+      return false;
+    });
+    if (retained.length > 0) handlers.set(event, retained);
+    else handlers.delete(event);
+  };
   const object = {
     type,
+    active: true,
     calls: [],
+    destroying: false,
     destroyed: false,
     interactive: false,
     depth: undefined,
@@ -63,15 +90,29 @@ function createDisplayObject(type, failure = {}) {
       this.removeInteractiveCount = (this.removeInteractiveCount ?? 0) + 1;
       return this;
     },
-    on(event, handler) {
-      handlers.set(event, handler);
+    on(event, handler, context) {
+      addHandler(event, handler, context, false);
       return this;
     },
-    emit(event) {
-      handlers.get(event)?.();
+    once(event, handler, context) {
+      addHandler(event, handler, context, true);
+      return this;
     },
-    removeAllListeners() {
-      handlers.clear();
+    off(event, handler, context, once) {
+      removeHandler(event, handler, context, once);
+      return this;
+    },
+    emit(event, ...args) {
+      for (const entry of [...(handlers.get(event) ?? [])]) {
+        if (!(handlers.get(event) ?? []).includes(entry)) continue;
+        if (entry.once) removeEntry(event, entry);
+        entry.handler.apply(entry.context ?? this, args);
+      }
+      return this;
+    },
+    removeAllListeners(event) {
+      if (event === undefined) handlers.clear();
+      else handlers.delete(event);
       this.listenersRemoved = true;
       return this;
     },
@@ -120,11 +161,18 @@ function createDisplayObject(type, failure = {}) {
       return this;
     },
     destroy() {
+      if (this.destroyed) return this;
+      this.destroying = true;
+      this.emit("destroy", this);
+      this.removeAllListeners();
+      this.active = false;
       this.destroyed = true;
+      this.destroying = false;
+      return this;
     }
   };
   Object.defineProperty(object, "listenerCount", {
-    get: () => handlers.size
+    get: () => [...handlers.values()].reduce((count, entries) => count + entries.length, 0)
   });
   return object;
 }
@@ -291,6 +339,55 @@ test("status lamps redraw state and release their graphics", () => {
   assert.ok(lamp.lamp.calls.filter(([name]) => name === "clear").length >= 2);
   lamp.destroy();
   assert.equal(lamp.lamp.destroyed, true);
+});
+
+test("standalone panel lamp and button destroy observers fire before listener cleanup", () => {
+  const cases = [
+    {
+      label: "panel",
+      create: (scene) => createTacticalPanel(scene, { width: 120, height: 36 }),
+      object: (component) => component.frame
+    },
+    {
+      label: "lamp",
+      create: (scene) => createStatusLamp(scene, { state: "warning" }),
+      object: (component) => component.lamp
+    },
+    {
+      label: "button",
+      create: (scene) => createTerminalButton(scene, { width: 120, text: "AUTHORIZE" }),
+      object: (component) => component.hitArea
+    }
+  ];
+
+  for (const { label, create, object: selectObject } of cases) {
+    const scene = createScene();
+    const component = create(scene);
+    const observedObject = selectObject(component);
+    const observations = [];
+    const persistentContext = { name: `${label}-persistent` };
+    const onceContext = { name: `${label}-once` };
+    const observeDestroy = function observeDestroy(target) {
+      observations.push([
+        this.name,
+        target === observedObject,
+        target.destroying,
+        target.destroyed
+      ]);
+    };
+    observedObject.on("destroy", observeDestroy, persistentContext);
+    observedObject.once("destroy", observeDestroy, onceContext);
+
+    component.destroy();
+    component.destroy();
+
+    assert.deepEqual(observations, [
+      [`${label}-persistent`, true, true, false],
+      [`${label}-once`, true, true, false]
+    ], `${label} emits all DESTROY observers during destroy`);
+    assert.equal(observedObject.listenerCount, 0, `${label} listeners are cleared after emit`);
+    assert.equal(observedObject.destroyed, true, `${label} object is destroyed`);
+  }
 });
 
 test("tactical panel construction rolls back its graphics when setup throws", () => {
