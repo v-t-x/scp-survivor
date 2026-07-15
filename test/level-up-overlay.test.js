@@ -17,6 +17,20 @@ const TEST_UPGRADES = ["moveSpeed", "damage", "pistolBoomerang"].map((key) =>
   UPGRADE_DEFINITIONS.find((upgrade) => upgrade.key === key)
 );
 
+function createTrackedChoices(label) {
+  return TEST_UPGRADES.map((definition, index) => {
+    let trackedUpgrade = null;
+    trackedUpgrade = {
+      ...definition,
+      name: `${definition.name} / ${label}-${index + 1}`,
+      apply(scene) {
+        scene.appliedUpgradeObjects.push(trackedUpgrade);
+      }
+    };
+    return trackedUpgrade;
+  });
+}
+
 function stripImports(source) {
   return source.replace(/import[\s\S]*?from\s+["'][^"']+["'];\s*/g, "");
 }
@@ -222,7 +236,7 @@ function isOwnedBy(object, container) {
 
 function createScene(options = {}) {
   const addCounts = new Map();
-  const failureState = { terminalFailed: false };
+  const failureState = { terminalFailed: false, terminalButtonFailed: false };
   const scene = {
     created: [],
     delayedCalls: [],
@@ -231,6 +245,7 @@ function createScene(options = {}) {
     hideBuildPanelCount: 0,
     updateCount: 0,
     sounds: [],
+    appliedUpgradeObjects: [],
     isGameOver: false,
     isLevelUpActive: false,
     isResolvingLevelUp: false,
@@ -280,13 +295,26 @@ function createScene(options = {}) {
     }
   };
 
-  const shouldFail = (type, occurrence) => {
+  const shouldFail = (type, occurrence, args) => {
     if (options.failTerminal === "overlay" && type === "tileSprite" && occurrence === 1) {
       failureState.terminalFailed = true;
       return true;
     }
-    if (options.failTerminal === "card" && type === "image" && occurrence === 1) {
+    const failedCardImageOccurrence = options.failTerminalCardAtImageOccurrence
+      ?? (options.failTerminal === "card" ? 1 : null);
+    if (type === "image" && occurrence === failedCardImageOccurrence) {
       failureState.terminalFailed = true;
+      return true;
+    }
+    if (
+      options.failTerminal === "button"
+      && !failureState.terminalButtonFailed
+      && type === "rectangle"
+      && args[2] === 200
+      && args[3] === 46
+    ) {
+      failureState.terminalFailed = true;
+      failureState.terminalButtonFailed = true;
       return true;
     }
     return options.failLegacy === true && failureState.terminalFailed && type === "rectangle";
@@ -294,7 +322,7 @@ function createScene(options = {}) {
   const add = (type, factory) => (...args) => {
     const occurrence = (addCounts.get(type) ?? 0) + 1;
     addCounts.set(type, occurrence);
-    if (shouldFail(type, occurrence)) throw new Error(`forced ${type} failure`);
+    if (shouldFail(type, occurrence, args)) throw new Error(`forced ${type} failure`);
     return factory(...args);
   };
   scene.add = {
@@ -317,6 +345,12 @@ function createScene(options = {}) {
   scene.choiceSets = options.choiceSets ?? [TEST_UPGRADES];
   scene.choiceCallCount = 0;
   Object.assign(scene, progressionMixin);
+  const renderLegacyLevelUpCards = scene.renderLegacyLevelUpCards;
+  scene.legacyChoiceArrays = [];
+  scene.renderLegacyLevelUpCards = function renderTrackedLegacyLevelUpCards(choices) {
+    this.legacyChoiceArrays.push(choices);
+    return renderLegacyLevelUpCards.call(this, choices);
+  };
   scene.getLevelUpChoices = function getLevelUpChoices() {
     const index = Math.min(this.choiceCallCount, this.choiceSets.length - 1);
     this.choiceCallCount += 1;
@@ -351,6 +385,7 @@ test("showLevelUpOverlay builds three world-space terminal card controllers from
     { x: scene.cameras.main.scrollX, y: scene.cameras.main.scrollY }
   );
   assert.equal(scene.levelUpCards.length, 3);
+  assert.equal(scene.choiceCallCount, 1);
   assert.equal(scene.levelUpCards.every((card) => typeof card.disableInteractive === "function"), true);
   assert.equal(
     scene.levelUpCards.every((card) =>
@@ -386,6 +421,32 @@ test("showLevelUpOverlay builds three world-space terminal card controllers from
   );
 });
 
+for (const terminalFailure of ["card", "button"]) {
+  test(`initial terminal ${terminalFailure} failure reuses one exact choice array in the legacy fallback`, () => {
+    const originalChoices = createTrackedChoices(`${terminalFailure}-original`);
+    const replacementChoices = createTrackedChoices(`${terminalFailure}-replacement`);
+    const scene = createScene({
+      failTerminal: terminalFailure,
+      choiceSets: [originalChoices, replacementChoices]
+    });
+
+    scene.showLevelUpOverlay();
+
+    assert.equal(scene.choiceCallCount, 1);
+    assert.equal(scene.legacyChoiceArrays[0], originalChoices);
+    assert.equal(scene.levelUpOverlayController, null);
+    originalChoices.forEach((upgrade) => {
+      assert.ok(findText(scene.levelUpCardObjects, upgrade.name));
+    });
+    replacementChoices.forEach((upgrade) => {
+      assert.equal(findText(scene.levelUpCardObjects, upgrade.name), undefined);
+    });
+
+    scene.levelUpCards[0].emit("pointerdown");
+    assert.equal(scene.appliedUpgradeObjects[0], originalChoices[0]);
+  });
+}
+
 test("reroll uses a 200 by 46 pointerdown terminal button and releases old card listeners", () => {
   const nextChoices = [TEST_UPGRADES[2], TEST_UPGRADES[0], TEST_UPGRADES[1]];
   const scene = createScene({ choiceSets: [TEST_UPGRADES, nextChoices], rerollsRemaining: 1 });
@@ -409,9 +470,40 @@ test("reroll uses a 200 by 46 pointerdown terminal button and releases old card 
   assert.equal(scene.choiceCallCount, 2, "disabled reroll cannot activate again");
 });
 
+test("reroll terminal card failure reuses that reroll's exact choices in the legacy fallback", () => {
+  const initialChoices = createTrackedChoices("initial");
+  const rerolledChoices = createTrackedChoices("rerolled");
+  const replacementChoices = createTrackedChoices("replacement");
+  const scene = createScene({
+    choiceSets: [initialChoices, rerolledChoices, replacementChoices],
+    rerollsRemaining: 1,
+    failTerminalCardAtImageOccurrence: 4
+  });
+  scene.showLevelUpOverlay();
+  const rerollHit = scene.levelUpOverlayController.content.list.find(
+    (object) => object.type === "rectangle" && object.width === 200 && object.height === 46 && object.x < 480
+  );
+
+  rerollHit.emit("pointerdown");
+
+  assert.equal(scene.choiceCallCount, 2);
+  assert.equal(scene.legacyChoiceArrays[0], rerolledChoices);
+  assert.equal(scene.levelUpOverlayController, null);
+  rerolledChoices.forEach((upgrade) => {
+    assert.ok(findText(scene.levelUpCardObjects, upgrade.name));
+  });
+  replacementChoices.forEach((upgrade) => {
+    assert.equal(findText(scene.levelUpCardObjects, upgrade.name), undefined);
+  });
+
+  scene.levelUpCards[0].emit("pointerdown");
+  assert.equal(scene.appliedUpgradeObjects[0], rerolledChoices[0]);
+});
+
 test("apply keeps selected feedback, upgrade levels, weapon currentLevel, pending, and 160ms sequencing", () => {
   const scene = createScene({ pendingLevelUps: 2 });
   scene.showLevelUpOverlay();
+  assert.equal(scene.choiceCallCount, 1);
   const damageCard = scene.levelUpCards[1];
   const states = [];
   const setState = damageCard.setState;
@@ -434,6 +526,7 @@ test("apply keeps selected feedback, upgrade levels, weapon currentLevel, pendin
   assert.equal(scene.pendingLevelUps, 1);
   assert.equal(scene.resumeCount, 0);
   assert.equal(scene.levelUpCards.length, 3);
+  assert.equal(scene.choiceCallCount, 2);
 
   scene.levelUpCards[0].hitArea.emit("pointerdown");
   assert.equal(scene.pendingLevelUps, 0);
@@ -475,6 +568,7 @@ for (const failure of ["overlay", "card"]) {
     assert.equal(scene.levelUpOverlayController, null);
     assert.ok(scene.levelUpOverlay?.active);
     assert.equal(scene.levelUpCards.length, 3);
+    assert.equal(scene.choiceCallCount, 1);
     assert.equal(scene.levelUpCards.every((card) => card.type === "rectangle"), true);
     assert.equal(
       scene.created.every((object) => object.destroyed || isOwnedBy(object, scene.levelUpOverlay)),

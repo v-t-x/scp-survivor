@@ -127,6 +127,7 @@ export const progressionMixin = {
 
     this.destroyLevelUpOverlay();
 
+    let choices;
     try {
       this.levelUpOverlayController = createTerminalOverlay(this, {
         x: 0,
@@ -145,18 +146,19 @@ export const progressionMixin = {
       // Keep this overlay in world space so visuals and Phaser hit areas share
       // the same camera transform.
       this.syncScreenOverlayPosition(this.levelUpOverlay);
-      this.renderLevelUpCards();
+      choices = this.getLevelUpChoices();
+      this.renderLevelUpCards(choices);
       this.createLevelUpButtons();
     } catch {
-      this.replaceFailedTerminalWithLegacyLevelUpOverlay();
+      this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices);
     }
   },
 
 
-  replaceFailedTerminalWithLegacyLevelUpOverlay() {
+  replaceFailedTerminalWithLegacyLevelUpOverlay(choices) {
     this.destroyLevelUpOverlay();
     try {
-      this.createLegacyLevelUpOverlay();
+      this.createLegacyLevelUpOverlay(choices);
       return true;
     } catch {
       this.handleLevelUpPresentationFailure();
@@ -175,7 +177,7 @@ export const progressionMixin = {
   },
 
 
-  createLegacyLevelUpOverlay() {
+  createLegacyLevelUpOverlay(choices) {
     const created = [];
     let container = null;
     try {
@@ -222,7 +224,7 @@ export const progressionMixin = {
       subtitle.setOrigin(0.5);
       container.add([backdrop, title, subtitle]);
 
-      this.renderLegacyLevelUpCards();
+      this.renderLegacyLevelUpCards(choices);
       this.createLegacyLevelUpButtons();
       return container;
     } catch (error) {
@@ -250,19 +252,18 @@ export const progressionMixin = {
   },
 
 
-  renderLevelUpCards() {
+  renderLevelUpCards(choices = this.getLevelUpChoices()) {
     this.destroyLevelUpCards();
 
     if (!this.levelUpOverlayController) {
-      this.renderLegacyLevelUpCards();
+      this.renderLegacyLevelUpCards(choices);
       return;
     }
 
-    const options = this.getLevelUpChoices();
     const startX = GAME_WIDTH / 2 - 240;
     const controllers = [];
     try {
-      options.forEach((upgrade, index) => {
+      choices.forEach((upgrade, index) => {
         const presentation = UPGRADE_PRESENTATION[upgrade.key];
         const currentLevel = this.getUpgradeCurrentLevel(upgrade);
         let cardController = null;
@@ -300,15 +301,14 @@ export const progressionMixin = {
   },
 
 
-  renderLegacyLevelUpCards() {
+  renderLegacyLevelUpCards(choices = this.getLevelUpChoices()) {
     this.destroyLevelUpCards();
     const objects = [];
     const cards = [];
-    const options = this.getLevelUpChoices();
     const startX = GAME_WIDTH / 2 - 240;
 
     try {
-      options.forEach((upgrade, index) => {
+      choices.forEach((upgrade, index) => {
         const optionX = startX + index * 240;
         const optionY = GAME_HEIGHT / 2 - 15;
         const currentLevel = this.getUpgradeCurrentLevel(upgrade);
@@ -534,11 +534,13 @@ export const progressionMixin = {
       return;
     }
     this.rerollsRemaining -= 1;
+    let choices;
     try {
-      this.renderLevelUpCards();
+      choices = this.getLevelUpChoices();
+      this.renderLevelUpCards(choices);
     } catch {
       if (this.levelUpOverlayController) {
-        if (!this.replaceFailedTerminalWithLegacyLevelUpOverlay()) return;
+        if (!this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices)) return;
       } else {
         this.handleLevelUpPresentationFailure();
         return;
