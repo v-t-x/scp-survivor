@@ -278,10 +278,12 @@ test("terminal buttons draw clipped frames, honor display options, and clean up"
   assert.ok(button.objects[0].calls.some(([name]) => name === "lineTo"));
   assert.equal(button.objects[0].calls.some(([name]) => name === "fillRoundedRect"), false);
   assert.ok(button.signal.calls.some(([name]) => name === "strokeCircle"));
+  assert.equal(button.hitArea.interactive, true, "the default button is interactive on its first frame");
 
   button.hitArea.emit("pointerover");
   assert.equal(button.hitArea.interactive, true);
   button.hitArea.emit("pointerdown");
+  assert.equal(activations, 0, "legacy buttons still wait for pointerup");
   button.hitArea.emit("pointerup");
   assert.equal(activations, 1);
 
@@ -297,6 +299,33 @@ test("terminal buttons draw clipped frames, honor display options, and clean up"
   for (const object of button.objects) {
     assert.equal(object.destroyed, true);
   }
+});
+
+test("terminal button variants select presentation tokens and pointerdown can activate immediately", () => {
+  const standard = getTerminalButtonPalette("idle", "standard");
+  const primary = getTerminalButtonPalette("idle", "primary");
+  const danger = getTerminalButtonPalette("idle", "danger");
+  const success = getTerminalButtonPalette("idle", "success");
+
+  assert.equal(new Set([standard, primary, danger, success].map(({ border, text, signal }) => `${border}/${text}/${signal}`)).size, 4);
+  assert.equal(danger.border, THEME.terminal.danger);
+  assert.equal(success.border, THEME.terminal.contained);
+
+  const scene = createScene();
+  let activations = 0;
+  const button = createTerminalButton(scene, {
+    width: 200,
+    text: "立即授权",
+    variant: "danger",
+    activateOn: "pointerdown",
+    onActivate: () => { activations += 1; }
+  });
+
+  assert.equal(button.hitArea.interactive, true);
+  button.hitArea.emit("pointerdown");
+  assert.equal(activations, 1);
+  button.hitArea.emit("pointerup");
+  assert.equal(activations, 1, "pointerup does not double-activate a pointerdown button");
 });
 
 test("tactical panels use a clipped Foundation frame and expose lifecycle cleanup", () => {

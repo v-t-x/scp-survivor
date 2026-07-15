@@ -48,13 +48,68 @@ function destroyObjects(objects) {
   }
 }
 
-export function getTerminalButtonPalette(state) {
+function getTerminalButtonVariant(variant) {
+  return {
+    standard: {
+      idleBorder: THEME.terminal.frame,
+      focusBorder: THEME.terminal.frameFocus,
+      text: THEME.text.primary,
+      signal: "standby"
+    },
+    primary: {
+      idleBorder: THEME.terminal.frameFocus,
+      focusBorder: THEME.terminal.scanline,
+      text: THEME.text.onButton,
+      signal: "standby"
+    },
+    danger: {
+      idleBorder: THEME.terminal.danger,
+      focusBorder: THEME.terminal.danger,
+      text: THEME.text.critical,
+      signal: "danger"
+    },
+    success: {
+      idleBorder: THEME.terminal.contained,
+      focusBorder: THEME.terminal.contained,
+      text: THEME.text.contained,
+      signal: "contained"
+    }
+  }[variant] ?? null;
+}
+
+export function getTerminalButtonPalette(state, variant = "standard") {
+  const selectedVariant = getTerminalButtonVariant(variant)
+    ?? getTerminalButtonVariant("standard");
   const palettes = {
     disabled: { fill: THEME.terminal.panelFill, border: THEME.terminal.disabled, text: THEME.text.muted, signal: "off", interactive: false },
-    idle: { fill: THEME.terminal.panelRaised, border: THEME.terminal.frame, text: THEME.text.primary, signal: "standby", interactive: true },
-    hover: { fill: 0x1b2a38, border: THEME.terminal.frameFocus, text: THEME.text.onButton, signal: "standby", interactive: true },
-    pressed: { fill: 0x243747, border: THEME.terminal.warning, text: THEME.text.onButton, signal: "warning", interactive: true },
-    armed: { fill: 0x163229, border: THEME.terminal.contained, text: THEME.text.onButton, signal: "contained", interactive: true }
+    idle: {
+      fill: THEME.terminal.panelRaised,
+      border: selectedVariant.idleBorder,
+      text: selectedVariant.text,
+      signal: selectedVariant.signal,
+      interactive: true
+    },
+    hover: {
+      fill: 0x1b2a38,
+      border: selectedVariant.focusBorder,
+      text: THEME.text.onButton,
+      signal: selectedVariant.signal,
+      interactive: true
+    },
+    pressed: {
+      fill: 0x243747,
+      border: variant === "danger" ? THEME.terminal.danger : THEME.terminal.warning,
+      text: THEME.text.onButton,
+      signal: variant === "danger" ? "danger" : "warning",
+      interactive: true
+    },
+    armed: {
+      fill: 0x163229,
+      border: variant === "danger" ? THEME.terminal.danger : THEME.terminal.contained,
+      text: THEME.text.onButton,
+      signal: variant === "danger" ? "danger" : "contained",
+      interactive: true
+    }
   };
   return Object.freeze({ ...palettes[state] });
 }
@@ -150,6 +205,8 @@ export function createTerminalButton(scene, options = {}) {
     height = THEME.layout.buttonHeight,
     text = "",
     state = "idle",
+    variant = "standard",
+    activateOn = "pointerup",
     depth = 0,
     scrollFactor = 0,
     onActivate = () => {}
@@ -178,7 +235,7 @@ export function createTerminalButton(scene, options = {}) {
 
     function setState(nextState) {
       if (destroyed) return;
-      const palette = getTerminalButtonPalette(nextState);
+      const palette = getTerminalButtonPalette(nextState, variant);
       if (palette.interactive === undefined) return;
 
       currentState = nextState;
@@ -208,7 +265,7 @@ export function createTerminalButton(scene, options = {}) {
     }
 
     function isEnabled() {
-      return !destroyed && getTerminalButtonPalette(currentState).interactive;
+      return !destroyed && getTerminalButtonPalette(currentState, variant).interactive;
     }
 
     hitArea.on("pointerover", () => {
@@ -218,10 +275,16 @@ export function createTerminalButton(scene, options = {}) {
       if (isEnabled()) setState(restingState);
     });
     hitArea.on("pointerdown", () => {
-      if (isEnabled()) setState("pressed");
+      if (!isEnabled()) return;
+      setState("pressed");
+      if (activateOn === "pointerdown") {
+        setState("armed");
+        onActivate();
+      }
     });
     hitArea.on("pointerup", () => {
       if (!isEnabled()) return;
+      if (activateOn === "pointerdown") return;
       setState("armed");
       onActivate();
     });
