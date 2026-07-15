@@ -2,265 +2,219 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { TEXTURES } from "../src/assets/manifest.js";
-import { OPENING_FACILITY_ZONES } from "../src/art/openingVisualContract.js";
 import {
   createOpeningFacilityLayout,
   validateOpeningFacilityRelationships
 } from "../src/art/openingFacilityLayout.js";
 
-const WORLD_SIZE = 1920;
-const CENTER = WORLD_SIZE / 2;
-const SAFE_RADIUS = 260;
-const CAMERA = {
-  left: CENTER - 480,
-  top: CENTER - 270,
+const WORLD_WIDTH = 1920;
+const WORLD_HEIGHT = 1920;
+const CENTER_X = WORLD_WIDTH / 2;
+const CENTER_Y = WORLD_HEIGHT / 2;
+const SAFE_RECT = {
+  x: CENTER_X - 192,
+  y: CENTER_Y - 144,
+  width: 384,
+  height: 288
+};
+const VIEWPORT = {
+  x: CENTER_X - 480,
+  y: CENTER_Y - 270,
   width: 960,
   height: 540
 };
-const HUD_BOUNDS = { left: 0, right: 400, top: 0, bottom: 180 };
-const KNOWN_ROLES = new Set([
-  "wall",
-  "door",
-  "window",
-  "console",
-  "pipe",
-  "vent",
-  "incident-origin",
-  "incident-trail"
-]);
-const TEXTURE_DIMENSIONS = new Map([
-  [TEXTURES.facilityWall, { width: 64, height: 64 }],
-  [TEXTURES.facilityDoor, { width: 64, height: 64 }],
-  [TEXTURES.facilityObservationWindow, { width: 96, height: 64 }],
-  [TEXTURES.facilityConsole, { width: 64, height: 64 }],
-  [TEXTURES.facilityPipeBank, { width: 96, height: 64 }],
-  [TEXTURES.facilityVent, { width: 32, height: 32 }],
+const LAYOUT_FIELDS = [
+  "id",
+  "parentId",
+  "zone",
+  "role",
+  "key",
+  "x",
+  "y",
+  "depth",
+  "rotation",
+  "scaleX",
+  "scaleY"
+];
+const EXPECTED_ZONES = ["entry", "combat", "maintenance", "contamination"];
+const DISPLAY_DIMENSIONS = new Map([
+  [TEXTURES.facilityFloor, { width: 32, height: 32 }],
+  [TEXTURES.facilityCombatFloor, { width: 128, height: 128 }],
+  [TEXTURES.facilityEntryThreshold, { width: 128, height: 64 }],
+  [TEXTURES.facilityMaintenanceDeck, { width: 128, height: 128 }],
+  [TEXTURES.facilityWallBank, { width: 128, height: 64 }],
+  [TEXTURES.facilityPowerJunction, { width: 96, height: 96 }],
+  [TEXTURES.facilityContaminationTrail, { width: 64, height: 64 }],
   [TEXTURES.facilityDecal, { width: 32, height: 32 }]
 ]);
 
 function getLayout() {
-  return createOpeningFacilityLayout(WORLD_SIZE, WORLD_SIZE);
+  return createOpeningFacilityLayout(WORLD_WIDTH, WORLD_HEIGHT);
 }
 
-function getById(layout, id) {
-  return layout.find((item) => item.id === id);
-}
-
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function rotatedHalfExtents(item) {
-  const dimensions = TEXTURE_DIMENSIONS.get(item.key);
-  assert.ok(dimensions, `missing dimensions for ${item.key}`);
+function boundsFor(item) {
+  const dimensions = DISPLAY_DIMENSIONS.get(item.key);
+  assert.ok(dimensions, `missing display dimensions for ${item.key}`);
   const cosine = Math.abs(Math.cos(item.rotation));
   const sine = Math.abs(Math.sin(item.rotation));
   const halfWidth = dimensions.width * Math.abs(item.scaleX) / 2;
   const halfHeight = dimensions.height * Math.abs(item.scaleY) / 2;
+  const extentX = cosine * halfWidth + sine * halfHeight;
+  const extentY = sine * halfWidth + cosine * halfHeight;
   return {
-    x: cosine * halfWidth + sine * halfHeight,
-    y: sine * halfWidth + cosine * halfHeight
+    left: item.x - extentX,
+    right: item.x + extentX,
+    top: item.y - extentY,
+    bottom: item.y + extentY
   };
 }
 
-function textureBoundsGap(a, b) {
-  const aHalf = rotatedHalfExtents(a);
-  const bHalf = rotatedHalfExtents(b);
-  const gapX = Math.max(Math.abs(a.x - b.x) - aHalf.x - bHalf.x, 0);
-  const gapY = Math.max(Math.abs(a.y - b.y) - aHalf.y - bHalf.y, 0);
-  return Math.hypot(gapX, gapY);
-}
-
-function projectedBounds(item) {
-  const half = rotatedHalfExtents(item);
-  const x = item.x - CAMERA.left;
-  const y = item.y - CAMERA.top;
-  return {
-    left: x - half.x,
-    right: x + half.x,
-    top: y - half.y,
-    bottom: y + half.y
-  };
-}
-
-function closestTextureBoundsDistance(item) {
-  const half = rotatedHalfExtents(item);
-  const closestX = Math.max(Math.abs(item.x - CENTER) - half.x, 0);
-  const closestY = Math.max(Math.abs(item.y - CENTER) - half.y, 0);
-  return Math.hypot(closestX, closestY);
-}
-
-function assertAttachedChain(layout, ids) {
-  for (let index = 1; index < ids.length; index += 1) {
-    const previous = getById(layout, ids[index - 1]);
-    const current = getById(layout, ids[index]);
-    assert.ok(previous, `${ids[index - 1]} should exist`);
-    assert.ok(current, `${ids[index]} should exist`);
-    assert.equal(current.parentId, previous.id, `${current.id} should continue its structural chain`);
-    assert.ok(textureBoundsGap(current, previous) <= 8, `${current.id} should touch ${previous.id}`);
-  }
-}
-
-test("opening facility entries have unique semantic identities", () => {
-  const layout = getLayout();
-  assert.equal(new Set(layout.map(({ id }) => id)).size, layout.length);
-  assert.ok(layout.every(({ id, parentId, zone, role, key, x, y, depth, rotation, scaleX, scaleY }) => (
-    typeof id === "string"
-    && (parentId === null || typeof parentId === "string")
-    && Object.hasOwn(OPENING_FACILITY_ZONES, zone)
-    && KNOWN_ROLES.has(role)
-    && typeof key === "string"
-    && [x, y, depth, rotation, scaleX, scaleY].every(Number.isFinite)
-  )));
-});
-
-test("doors remain attached to nearby wall segments", () => {
-  const layout = getLayout();
-  const walls = layout.filter(({ role }) => role === "wall");
-  for (const door of layout.filter(({ role }) => role === "door")) {
-    assert.ok(walls.some((wall) => distance(door, wall) <= 72), door.id);
-  }
-});
-
-test("consoles stay in functional zones beside their assigned door or window", () => {
-  const layout = getLayout();
-  for (const console of layout.filter(({ role }) => role === "console")) {
-    const parent = getById(layout, console.parentId);
-    assert.ok(["maintenance", "observation"].includes(console.zone), console.id);
-    assert.ok(parent && ["door", "window"].includes(parent.role), console.id);
-    assert.ok(distance(console, parent) <= 128, console.id);
-    assert.ok(textureBoundsGap(console, parent) <= 8, `${console.id} should touch ${parent.id}`);
-  }
-});
-
-test("vents and pipes sit against their declared structural parent", () => {
-  const layout = getLayout();
-  for (const utility of layout.filter(({ role }) => ["vent", "pipe"].includes(role))) {
-    const parent = getById(layout, utility.parentId);
-    assert.ok(parent, utility.id);
-    assert.ok(parent.role === "wall" || parent.zone === "maintenance", utility.id);
-    assert.ok(textureBoundsGap(utility, parent) <= 8, `${utility.id} should touch ${parent.id}`);
-  }
-});
-
-test("observation windows are mounted directly into their wall chain", () => {
-  const layout = getLayout();
-  for (const window of layout.filter(({ role }) => role === "window")) {
-    const parent = getById(layout, window.parentId);
-    assert.equal(parent?.role, "wall", window.id);
-    assert.ok(textureBoundsGap(window, parent) <= 8, `${window.id} should touch ${parent?.id}`);
-  }
-});
-
-test("left entry and right observation-maintenance boundaries form continuous chains", () => {
-  const layout = getLayout();
-  assertAttachedChain(layout, [
-    "entry-wall-left",
-    "entry-door",
-    "entry-wall-right",
-    "entry-wall-lower",
-    "entry-wall-bottom"
-  ]);
-  assertAttachedChain(layout, [
-    "observation-wall",
-    "observation-window",
-    "observation-corner-wall",
-    "maintenance-wall-upper",
-    "maintenance-wall-middle",
-    "maintenance-wall-lower",
-    "maintenance-wall-bottom"
-  ]);
-});
-
-test("contamination is one parent-linked incident trail", () => {
-  const contamination = getLayout().filter(({ zone }) => zone === "contamination");
-  const origins = contamination.filter(({ role }) => role === "incident-origin");
-  assert.equal(origins.length, 1);
-  const visited = new Set([origins[0].id]);
-  while (visited.size < contamination.length) {
-    const next = contamination.find(({ id, parentId }) => !visited.has(id) && visited.has(parentId));
-    assert.ok(next, "contamination entries must form one connected trail");
-    visited.add(next.id);
-  }
-});
-
-test("all semantic texture bounds preserve the 260px center safe radius", () => {
-  for (const item of getLayout()) {
-    assert.ok(closestTextureBoundsDistance(item) >= SAFE_RADIUS, item.id);
-  }
-});
-
-test("the initial 960x540 camera reads entry, walls and functional equipment", () => {
-  const layout = getLayout();
-  const camera = {
-    left: CAMERA.left,
-    right: CAMERA.left + CAMERA.width,
-    top: CAMERA.top,
-    bottom: CAMERA.top + CAMERA.height
-  };
-  const visible = layout.filter(({ x, y }) => (
-    x >= camera.left && x <= camera.right && y >= camera.top && y <= camera.bottom
-  ));
-  assert.ok(visible.some(({ zone, role }) => zone === "entry" && role === "door"));
-  assert.ok(visible.some(({ role }) => role === "wall"));
-  assert.ok(visible.some(({ zone, role }) => (
-    zone === "maintenance" && ["console", "pipe", "vent"].includes(role)
-  )));
-});
-
-test("the projected entry is fully visible below the current top-left HUD", () => {
-  const entry = getById(getLayout(), "entry-door");
-  const bounds = projectedBounds(entry);
-  const overlapsHud = (
-    bounds.left < HUD_BOUNDS.right
-    && bounds.right > HUD_BOUNDS.left
-    && bounds.top < HUD_BOUNDS.bottom
-    && bounds.bottom > HUD_BOUNDS.top
+function intersectsRect(bounds, rect) {
+  return (
+    bounds.left < rect.x + rect.width
+    && bounds.right > rect.x
+    && bounds.top < rect.y + rect.height
+    && bounds.bottom > rect.y
   );
+}
 
-  assert.ok(bounds.left >= 0 && bounds.right <= CAMERA.width, "entry should fit horizontally");
-  assert.ok(bounds.top >= 0 && bounds.bottom <= CAMERA.height, "entry should fit vertically");
-  assert.equal(overlapsHud, false, "entry should not project under the top-left HUD");
+function visibleBounds(bounds) {
+  const left = Math.max(bounds.left, VIEWPORT.x);
+  const right = Math.min(bounds.right, VIEWPORT.x + VIEWPORT.width);
+  const top = Math.max(bounds.top, VIEWPORT.y);
+  const bottom = Math.min(bounds.bottom, VIEWPORT.y + VIEWPORT.height);
+  return right > left && bottom > top ? { left, right, top, bottom } : null;
+}
+
+function rectangleUnionArea(rectangles) {
+  const edges = [...new Set(rectangles.flatMap(({ left, right }) => [left, right]))].sort((a, b) => a - b);
+  let area = 0;
+
+  for (let index = 1; index < edges.length; index += 1) {
+    const left = edges[index - 1];
+    const right = edges[index];
+    const intervals = rectangles
+      .filter((rect) => rect.left < right && rect.right > left)
+      .map(({ top, bottom }) => [top, bottom])
+      .sort(([a], [b]) => a - b);
+    let coveredTop = null;
+    let coveredBottom = null;
+
+    for (const [top, bottom] of intervals) {
+      if (coveredTop === null || top > coveredBottom) {
+        if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
+        coveredTop = top;
+        coveredBottom = bottom;
+      } else {
+        coveredBottom = Math.max(coveredBottom, bottom);
+      }
+    }
+    if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
+  }
+
+  return area;
+}
+
+test("opening layout uses exactly the four approved semantic zones", () => {
+  const layout = getLayout();
+  const ids = new Set();
+
+  assert.deepEqual([...new Set(layout.map(({ zone }) => zone))].sort(), [...EXPECTED_ZONES].sort());
+  for (const [index, item] of layout.entries()) {
+    assert.deepEqual(Object.keys(item).sort(), [...LAYOUT_FIELDS].sort(), item.id);
+    assert.equal(typeof item.id, "string");
+    assert.equal(typeof item.key, "string");
+    assert.ok([item.x, item.y, item.depth, item.rotation, item.scaleX, item.scaleY].every(Number.isFinite), item.id);
+    assert.equal(ids.has(item.id), false, `duplicate id ${item.id}`);
+    ids.add(item.id);
+
+    if (item.parentId !== null) {
+      const parentIndex = layout.findIndex(({ id }) => id === item.parentId);
+      assert.ok(parentIndex >= 0 && parentIndex < index, `${item.id} must point at an earlier item`);
+      assert.equal(layout[parentIndex].zone, item.zone, `${item.id} must stay inside its parent zone`);
+    }
+  }
 });
 
-test("relationship validator accepts the approved opening graph", () => {
-  assert.deepEqual(validateOpeningFacilityRelationships(getLayout()), []);
+test("three production floor types establish entry, combat, and maintenance reads", () => {
+  const layout = getLayout();
+  const floors = layout.filter(({ role }) => role === "floor");
+
+  assert.deepEqual(
+    [...new Set(floors.map(({ key }) => key))].sort(),
+    [
+      TEXTURES.facilityFloor,
+      TEXTURES.facilityCombatFloor,
+      TEXTURES.facilityMaintenanceDeck
+    ].sort()
+  );
+  assert.ok(floors.some(({ zone, key }) => zone === "entry" && key === TEXTURES.facilityFloor));
+  assert.ok(floors.some(({ zone, key }) => zone === "combat" && key === TEXTURES.facilityCombatFloor));
+  assert.ok(floors.some(({ zone, key }) => zone === "maintenance" && key === TEXTURES.facilityMaintenanceDeck));
+
+  const threshold = layout.find(({ role }) => role === "entry-threshold");
+  const wallBank = layout.find(({ role }) => role === "wall-bank");
+  const powerJunction = layout.find(({ role }) => role === "power-junction");
+  assert.equal(threshold?.zone, "entry");
+  assert.equal(threshold?.key, TEXTURES.facilityEntryThreshold);
+  assert.equal(wallBank?.zone, "maintenance");
+  assert.equal(wallBank?.key, TEXTURES.facilityWallBank);
+  assert.equal(powerJunction?.zone, "maintenance");
+  assert.equal(powerJunction?.key, TEXTURES.facilityPowerJunction);
 });
 
-test("relationship validator reports broken semantic relationships", () => {
-  const duplicate = getLayout().map((item, index) => (
-    index === 1 ? { ...item, id: "entry-wall-left" } : item
+test("the exact center safe rectangle contains floor only", () => {
+  const layout = getLayout();
+  assert.deepEqual(SAFE_RECT, { x: CENTER_X - 192, y: CENTER_Y - 144, width: 384, height: 288 });
+  assert.ok(layout.some(({ role, x, y }) => role === "floor" && x === CENTER_X && y === CENTER_Y));
+
+  for (const item of layout.filter(({ role }) => role !== "floor")) {
+    assert.equal(intersectsRect(boundsFor(item), SAFE_RECT), false, `${item.id} overlaps the center safe rectangle`);
+  }
+});
+
+test("contamination stays at the maintenance edge and covers at most ten percent of the first viewport", () => {
+  const contamination = getLayout().filter(({ zone }) => zone === "contamination");
+  const visible = contamination.map((item) => visibleBounds(boundsFor(item))).filter(Boolean);
+  const visibleArea = rectangleUnionArea(visible);
+
+  assert.ok(contamination.length >= 1 && contamination.length <= 3);
+  assert.ok(contamination.every(({ role, key, x }) => (
+    role === "contamination-trail"
+    && key === TEXTURES.facilityContaminationTrail
+    && x >= SAFE_RECT.x + SAFE_RECT.width
+  )));
+  assert.ok(visibleArea > 0, "the controlled trail should read in the first viewport");
+  assert.ok(visibleArea <= VIEWPORT.width * VIEWPORT.height * 0.1, `${visibleArea} exceeds the contamination budget`);
+});
+
+test("relationship validator accepts the approved graph and rejects safety, parent, and coverage violations", () => {
+  const layout = getLayout();
+  assert.deepEqual(validateOpeningFacilityRelationships(layout), []);
+
+  const safeIntrusion = layout.map((item) => (
+    item.role === "entry-threshold" ? { ...item, x: CENTER_X, y: CENTER_Y } : item
   ));
-  const detachedDoor = getLayout().map((item) => (
-    item.id === "entry-door" ? { ...item, x: CENTER } : item
+  const missingParent = layout.map((item) => (
+    item.role === "entry-threshold" ? { ...item, parentId: "missing-parent" } : item
   ));
-  const detachedConsole = getLayout().map((item) => (
-    item.id === "maintenance-console" ? { ...item, parentId: "lower-wall" } : item
+  const crossZoneParent = layout.map((item) => (
+    item.role === "entry-threshold" ? { ...item, parentId: "combat-floor-center" } : item
   ));
-  const brokenUtility = getLayout().map((item) => (
-    item.id === "maintenance-pipes" ? { ...item, parentId: "incident-origin" } : item
+  const orphanedDecoration = layout.map((item) => (
+    item.role === "power-junction" ? { ...item, parentId: null } : item
   ));
-  const distantUtility = getLayout().map((item) => (
-    item.id === "maintenance-pipes" ? { ...item, x: item.x - 160 } : item
-  ));
-  const detachedWindow = getLayout().map((item) => (
-    item.id === "observation-window" ? { ...item, x: item.x - 192 } : item
-  ));
-  const brokenStructure = getLayout().map((item) => (
-    item.id === "maintenance-wall-middle" ? { ...item, y: item.y + 64 } : item
-  ));
-  const brokenTrail = getLayout().map((item) => (
-    item.id === "incident-trail-b" ? { ...item, parentId: null } : item
+  const excessiveCoverage = layout.map((item) => (
+    item.id === "contamination-trail-c"
+      ? { ...item, x: CENTER_X + 640, y: CENTER_Y, scaleX: 10, scaleY: 10 }
+      : item
   ));
 
-  assert.ok(validateOpeningFacilityRelationships(duplicate).includes("duplicate-id"));
-  assert.ok(validateOpeningFacilityRelationships(detachedDoor).includes("door-detached"));
-  assert.ok(validateOpeningFacilityRelationships(detachedConsole).includes("console-detached"));
-  assert.ok(validateOpeningFacilityRelationships(brokenUtility).includes("utility-detached"));
-  assert.ok(validateOpeningFacilityRelationships(distantUtility).includes("utility-detached"));
-  assert.ok(validateOpeningFacilityRelationships(detachedWindow).includes("window-detached"));
-  assert.ok(validateOpeningFacilityRelationships(brokenStructure).includes("structure-detached"));
-  assert.ok(validateOpeningFacilityRelationships(brokenTrail).includes("contamination-disconnected"));
+  assert.ok(validateOpeningFacilityRelationships(safeIntrusion).includes("safe-area-intrusion"));
+  assert.ok(validateOpeningFacilityRelationships(missingParent).includes("parent-invalid"));
+  assert.ok(validateOpeningFacilityRelationships(crossZoneParent).includes("parent-zone-mismatch"));
+  assert.ok(validateOpeningFacilityRelationships(orphanedDecoration).includes("decorative-orphan"));
+  assert.ok(validateOpeningFacilityRelationships(excessiveCoverage).includes("contamination-coverage-exceeded"));
 });
 
 test("semantic layout remains display-only", async () => {

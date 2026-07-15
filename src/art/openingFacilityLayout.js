@@ -1,153 +1,242 @@
 import { TEXTURES } from "../assets/manifest.js";
-import { OPENING_FACILITY_ZONES } from "./openingVisualContract.js";
 
-const KNOWN_ROLES = new Set([
-  "wall",
-  "door",
-  "window",
-  "console",
-  "pipe",
-  "vent",
-  "incident-origin",
-  "incident-trail"
+const SAFE_HALF_WIDTH = 192;
+const SAFE_HALF_HEIGHT = 144;
+const OPENING_VIEWPORT_WIDTH = 960;
+const OPENING_VIEWPORT_HEIGHT = 540;
+const MAX_CONTAMINATION_SEGMENTS = 3;
+const APPROVED_ZONES = new Set(["entry", "combat", "maintenance", "contamination"]);
+const FLOOR_KEYS = new Set([
+  TEXTURES.facilityFloor,
+  TEXTURES.facilityCombatFloor,
+  TEXTURES.facilityMaintenanceDeck
 ]);
-const STRUCTURAL_ROLES = new Set(["wall", "door", "window"]);
+const ROLE_KEYS = new Map([
+  ["entry-threshold", TEXTURES.facilityEntryThreshold],
+  ["wall-bank", TEXTURES.facilityWallBank],
+  ["power-junction", TEXTURES.facilityPowerJunction],
+  ["contamination-trail", TEXTURES.facilityContaminationTrail]
+]);
 const TEXTURE_DIMENSIONS = new Map([
-  [TEXTURES.facilityWall, { width: 64, height: 64 }],
-  [TEXTURES.facilityDoor, { width: 64, height: 64 }],
-  [TEXTURES.facilityObservationWindow, { width: 96, height: 64 }],
-  [TEXTURES.facilityConsole, { width: 64, height: 64 }],
-  [TEXTURES.facilityPipeBank, { width: 96, height: 64 }],
-  [TEXTURES.facilityVent, { width: 32, height: 32 }],
-  [TEXTURES.facilityDecal, { width: 32, height: 32 }]
+  [TEXTURES.facilityFloor, { width: 32, height: 32 }],
+  [TEXTURES.facilityCombatFloor, { width: 128, height: 128 }],
+  [TEXTURES.facilityEntryThreshold, { width: 128, height: 64 }],
+  [TEXTURES.facilityMaintenanceDeck, { width: 128, height: 128 }],
+  [TEXTURES.facilityWallBank, { width: 128, height: 64 }],
+  [TEXTURES.facilityPowerJunction, { width: 96, height: 96 }],
+  [TEXTURES.facilityContaminationTrail, { width: 64, height: 64 }]
 ]);
-
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function rotatedHalfExtents(item) {
-  const dimensions = TEXTURE_DIMENSIONS.get(item.key);
-  if (!dimensions) return null;
-  const cosine = Math.abs(Math.cos(item.rotation));
-  const sine = Math.abs(Math.sin(item.rotation));
-  const halfWidth = dimensions.width * Math.abs(item.scaleX) / 2;
-  const halfHeight = dimensions.height * Math.abs(item.scaleY) / 2;
-  return {
-    x: cosine * halfWidth + sine * halfHeight,
-    y: sine * halfWidth + cosine * halfHeight
-  };
-}
-
-function textureBoundsGap(a, b) {
-  const aHalf = rotatedHalfExtents(a);
-  const bHalf = rotatedHalfExtents(b);
-  if (!aHalf || !bHalf) return Number.POSITIVE_INFINITY;
-  const gapX = Math.max(Math.abs(a.x - b.x) - aHalf.x - bHalf.x, 0);
-  const gapY = Math.max(Math.abs(a.y - b.y) - aHalf.y - bHalf.y, 0);
-  return Math.hypot(gapX, gapY);
-}
 
 function addViolation(violations, code) {
   if (!violations.includes(code)) violations.push(code);
 }
 
+function createSafeRect(centerX, centerY) {
+  return {
+    x: centerX - SAFE_HALF_WIDTH,
+    y: centerY - SAFE_HALF_HEIGHT,
+    width: SAFE_HALF_WIDTH * 2,
+    height: SAFE_HALF_HEIGHT * 2
+  };
+}
+
+function displayBounds(item) {
+  const dimensions = TEXTURE_DIMENSIONS.get(item.key);
+  if (!dimensions || ![item.x, item.y, item.rotation, item.scaleX, item.scaleY].every(Number.isFinite)) {
+    return null;
+  }
+
+  const cosine = Math.abs(Math.cos(item.rotation));
+  const sine = Math.abs(Math.sin(item.rotation));
+  const halfWidth = dimensions.width * Math.abs(item.scaleX) / 2;
+  const halfHeight = dimensions.height * Math.abs(item.scaleY) / 2;
+  const extentX = cosine * halfWidth + sine * halfHeight;
+  const extentY = sine * halfWidth + cosine * halfHeight;
+  return {
+    left: item.x - extentX,
+    right: item.x + extentX,
+    top: item.y - extentY,
+    bottom: item.y + extentY
+  };
+}
+
+function intersectsRect(bounds, rect) {
+  return (
+    bounds.left < rect.x + rect.width
+    && bounds.right > rect.x
+    && bounds.top < rect.y + rect.height
+    && bounds.bottom > rect.y
+  );
+}
+
+function clipToViewport(bounds, viewport) {
+  const left = Math.max(bounds.left, viewport.x);
+  const right = Math.min(bounds.right, viewport.x + viewport.width);
+  const top = Math.max(bounds.top, viewport.y);
+  const bottom = Math.min(bounds.bottom, viewport.y + viewport.height);
+  return right > left && bottom > top ? { left, right, top, bottom } : null;
+}
+
+function rectangleUnionArea(rectangles) {
+  const edges = [...new Set(rectangles.flatMap(({ left, right }) => [left, right]))].sort((a, b) => a - b);
+  let area = 0;
+
+  for (let index = 1; index < edges.length; index += 1) {
+    const left = edges[index - 1];
+    const right = edges[index];
+    const intervals = rectangles
+      .filter((rect) => rect.left < right && rect.right > left)
+      .map(({ top, bottom }) => [top, bottom])
+      .sort(([a], [b]) => a - b);
+    let coveredTop = null;
+    let coveredBottom = null;
+
+    for (const [top, bottom] of intervals) {
+      if (coveredTop === null || top > coveredBottom) {
+        if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
+        coveredTop = top;
+        coveredBottom = bottom;
+      } else {
+        coveredBottom = Math.max(coveredBottom, bottom);
+      }
+    }
+    if (coveredTop !== null) area += (right - left) * (coveredBottom - coveredTop);
+  }
+
+  return area;
+}
+
+function hasExpectedKey(item) {
+  if (item.role === "floor") return FLOOR_KEYS.has(item.key);
+  return ROLE_KEYS.get(item.role) === item.key;
+}
+
+function findCombatCenter(layout) {
+  return layout.find(({ id }) => id === "combat-floor-center") ?? null;
+}
+
 export function createOpeningFacilityLayout(width, height) {
-  const cx = width / 2;
-  const cy = height / 2;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const safeRect = createSafeRect(centerX, centerY);
+  const maintenanceX = safeRect.x + safeRect.width + 160;
+
   return [
-    { id: "entry-wall-left", parentId: null, zone: "entry", role: "wall", key: TEXTURES.facilityWall, x: cx - 416, y: cy - 96, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "entry-door", parentId: "entry-wall-left", zone: "entry", role: "door", key: TEXTURES.facilityDoor, x: cx - 416, y: cy - 32, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "entry-wall-right", parentId: "entry-door", zone: "entry", role: "wall", key: TEXTURES.facilityWall, x: cx - 416, y: cy + 32, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "entry-wall-lower", parentId: "entry-wall-right", zone: "entry", role: "wall", key: TEXTURES.facilityWall, x: cx - 416, y: cy + 96, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "entry-wall-bottom", parentId: "entry-wall-lower", zone: "entry", role: "wall", key: TEXTURES.facilityWall, x: cx - 416, y: cy + 160, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "observation-wall", parentId: null, zone: "observation", role: "wall", key: TEXTURES.facilityWall, x: cx + 288, y: cy - 96, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "observation-window", parentId: "observation-wall", zone: "observation", role: "window", key: TEXTURES.facilityObservationWindow, x: cx + 368, y: cy - 96, depth: -9, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "observation-corner-wall", parentId: "observation-window", zone: "observation", role: "wall", key: TEXTURES.facilityWall, x: cx + 448, y: cy - 96, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-wall-upper", parentId: "observation-corner-wall", zone: "maintenance", role: "wall", key: TEXTURES.facilityWall, x: cx + 448, y: cy - 32, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-wall-middle", parentId: "maintenance-wall-upper", zone: "maintenance", role: "wall", key: TEXTURES.facilityWall, x: cx + 448, y: cy + 32, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-wall-lower", parentId: "maintenance-wall-middle", zone: "maintenance", role: "wall", key: TEXTURES.facilityWall, x: cx + 448, y: cy + 96, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-wall-bottom", parentId: "maintenance-wall-lower", zone: "maintenance", role: "wall", key: TEXTURES.facilityWall, x: cx + 448, y: cy + 160, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-console", parentId: "observation-window", zone: "maintenance", role: "console", key: TEXTURES.facilityConsole, x: cx + 368, y: cy - 32, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "maintenance-pipes", parentId: "maintenance-wall-middle", zone: "maintenance", role: "pipe", key: TEXTURES.facilityPipeBank, x: cx + 368, y: cy + 32, depth: -9, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "lower-vent", parentId: "maintenance-wall-lower", zone: "maintenance", role: "vent", key: TEXTURES.facilityVent, x: cx + 400, y: cy + 96, depth: -9, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "incident-origin", parentId: null, zone: "contamination", role: "incident-origin", key: TEXTURES.facilityDecal, x: cx + 352, y: cy + 208, depth: -7, rotation: 0, scaleX: 1, scaleY: 1 },
-    { id: "incident-trail-a", parentId: "incident-origin", zone: "contamination", role: "incident-trail", key: TEXTURES.facilityDecal, x: cx + 304, y: cy + 176, depth: -7, rotation: 0.35, scaleX: 0.8, scaleY: 0.8 },
-    { id: "incident-trail-b", parentId: "incident-trail-a", zone: "contamination", role: "incident-trail", key: TEXTURES.facilityDecal, x: cx + 272, y: cy + 152, depth: -7, rotation: -0.2, scaleX: 0.65, scaleY: 0.65 }
+    { id: "entry-floor", parentId: null, zone: "entry", role: "floor", key: TEXTURES.facilityFloor, x: safeRect.x - 160, y: centerY, depth: -20, rotation: 0, scaleX: 8, scaleY: 8 },
+    { id: "entry-threshold", parentId: "entry-floor", zone: "entry", role: "entry-threshold", key: TEXTURES.facilityEntryThreshold, x: safeRect.x - 160, y: centerY, depth: -11, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "combat-floor-left", parentId: null, zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
+    { id: "combat-floor-center", parentId: "combat-floor-left", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: centerX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
+    { id: "combat-floor-right", parentId: "combat-floor-center", zone: "combat", role: "floor", key: TEXTURES.facilityCombatFloor, x: safeRect.x + safeRect.width - 64, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
+    { id: "maintenance-floor", parentId: null, zone: "maintenance", role: "floor", key: TEXTURES.facilityMaintenanceDeck, x: maintenanceX, y: centerY, depth: -20, rotation: 0, scaleX: 1, scaleY: 2 },
+    { id: "maintenance-wall-bank", parentId: "maintenance-floor", zone: "maintenance", role: "wall-bank", key: TEXTURES.facilityWallBank, x: maintenanceX, y: centerY - 80, depth: -10, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "maintenance-power-junction", parentId: "maintenance-wall-bank", zone: "maintenance", role: "power-junction", key: TEXTURES.facilityPowerJunction, x: maintenanceX, y: centerY + 16, depth: -9, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "contamination-trail-a", parentId: null, zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 128, y: centerY + 128, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "contamination-trail-b", parentId: "contamination-trail-a", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 160, y: centerY + 160, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 },
+    { id: "contamination-trail-c", parentId: "contamination-trail-b", zone: "contamination", role: "contamination-trail", key: TEXTURES.facilityContaminationTrail, x: safeRect.x + safeRect.width + 192, y: centerY + 192, depth: -8, rotation: 0, scaleX: 1, scaleY: 1 }
   ];
 }
 
 export function validateOpeningFacilityRelationships(layout) {
+  if (!Array.isArray(layout)) return ["layout-invalid"];
+
   const violations = [];
   const byId = new Map();
+  const indexById = new Map();
 
-  for (const item of layout) {
-    if (byId.has(item.id)) addViolation(violations, "duplicate-id");
+  for (const [index, item] of layout.entries()) {
+    if (!item || typeof item !== "object") {
+      addViolation(violations, "layout-item-invalid");
+      continue;
+    }
+    if (typeof item.id !== "string" || byId.has(item.id)) addViolation(violations, "duplicate-id");
     byId.set(item.id, item);
-    if (!Object.hasOwn(OPENING_FACILITY_ZONES, item.zone)) {
-      addViolation(violations, "unknown-zone");
-    }
-    if (!KNOWN_ROLES.has(item.role)) addViolation(violations, "unknown-role");
+    indexById.set(item.id, index);
+    if (!APPROVED_ZONES.has(item.zone)) addViolation(violations, "unknown-zone");
+    if (item.role !== "floor" && !ROLE_KEYS.has(item.role)) addViolation(violations, "unknown-role");
+    if (!hasExpectedKey(item)) addViolation(violations, "role-key-mismatch");
+    if (!displayBounds(item)) addViolation(violations, "unknown-texture");
   }
 
-  const walls = layout.filter(({ role }) => role === "wall");
-  for (const door of layout.filter(({ role }) => role === "door")) {
-    if (!walls.some((wall) => distance(door, wall) <= 72)) {
-      addViolation(violations, "door-detached");
+  const center = findCombatCenter(layout);
+  const safeRect = center ? createSafeRect(center.x, center.y) : null;
+  if (!safeRect) addViolation(violations, "combat-center-missing");
+
+  for (const [index, item] of layout.entries()) {
+    if (!item || typeof item !== "object") continue;
+    const parent = item.parentId === null ? null : byId.get(item.parentId);
+    if (item.parentId !== null && !parent) {
+      addViolation(violations, "parent-invalid");
+    }
+    if (parent && parent.zone !== item.zone) {
+      addViolation(violations, "parent-zone-mismatch");
+    }
+    if (parent && indexById.get(item.parentId) >= index) {
+      addViolation(violations, "parent-order-invalid");
+    }
+    if (item.parentId === null && item.role !== "floor" && item.role !== "contamination-trail") {
+      addViolation(violations, "decorative-orphan");
+    }
+
+    const bounds = displayBounds(item);
+    if (!bounds || !safeRect) continue;
+    if (item.role !== "floor" && intersectsRect(bounds, safeRect)) {
+      addViolation(violations, "safe-area-intrusion");
+    }
+    if (item.zone === "entry" && bounds.right > safeRect.x) {
+      addViolation(violations, "entry-not-left");
+    }
+    if (item.zone === "combat" && !intersectsRect(bounds, safeRect)) {
+      addViolation(violations, "combat-not-centered");
+    }
+    if ((item.zone === "maintenance" || item.zone === "contamination") && bounds.left < safeRect.x + safeRect.width) {
+      addViolation(violations, item.zone === "maintenance" ? "maintenance-not-right" : "contamination-not-at-maintenance-edge");
     }
   }
 
-  for (const console of layout.filter(({ role }) => role === "console")) {
-    const parent = byId.get(console.parentId);
-    const validZone = console.zone === "maintenance" || console.zone === "observation";
-    const validParent = parent && (parent.role === "door" || parent.role === "window");
-    if (!validZone || !validParent || distance(console, parent) > 128 || textureBoundsGap(console, parent) > 8) {
-      addViolation(violations, "console-detached");
-    }
+  for (const zone of APPROVED_ZONES) {
+    if (!layout.some((item) => item?.zone === zone)) addViolation(violations, "missing-zone");
   }
 
-  for (const window of layout.filter(({ role }) => role === "window")) {
-    const parent = byId.get(window.parentId);
-    if (!parent || parent.role !== "wall" || textureBoundsGap(window, parent) > 8) {
-      addViolation(violations, "window-detached");
-    }
-  }
-
-  for (const structure of layout.filter(({ role, parentId }) => (
-    parentId !== null && STRUCTURAL_ROLES.has(role)
-  ))) {
-    const parent = byId.get(structure.parentId);
-    if (!parent || !STRUCTURAL_ROLES.has(parent.role) || textureBoundsGap(structure, parent) > 8) {
-      addViolation(violations, "structure-detached");
-    }
-  }
-
-  for (const utility of layout.filter(({ role }) => role === "vent" || role === "pipe")) {
-    const parent = byId.get(utility.parentId);
-    if (
-      !parent
-      || (parent.role !== "wall" && parent.zone !== "maintenance")
-      || textureBoundsGap(utility, parent) > 8
-    ) {
-      addViolation(violations, "utility-detached");
-    }
+  const floorKeys = new Set(layout.filter(({ role }) => role === "floor").map(({ key }) => key));
+  if (floorKeys.size !== FLOOR_KEYS.size || [...FLOOR_KEYS].some((key) => !floorKeys.has(key))) {
+    addViolation(violations, "missing-floor-type");
   }
 
   const contamination = layout.filter(({ zone }) => zone === "contamination");
-  const origins = contamination.filter(({ role }) => role === "incident-origin");
-  const connected = new Set(origins.map(({ id }) => id));
-  let changed = true;
-  while (changed) {
-    changed = false;
+  if (contamination.length === 0) addViolation(violations, "contamination-missing");
+  if (contamination.length > MAX_CONTAMINATION_SEGMENTS) addViolation(violations, "contamination-too-large");
+  const contaminationRoots = contamination.filter(({ parentId }) => parentId === null);
+  const connectedContamination = new Set(contaminationRoots.map(({ id }) => id));
+  let connectedChanged = true;
+  while (connectedChanged) {
+    connectedChanged = false;
     for (const item of contamination) {
-      if (!connected.has(item.id) && connected.has(item.parentId)) {
-        connected.add(item.id);
-        changed = true;
+      if (!connectedContamination.has(item.id) && connectedContamination.has(item.parentId)) {
+        connectedContamination.add(item.id);
+        connectedChanged = true;
       }
     }
   }
-  if (origins.length !== 1 || connected.size !== contamination.length) {
+  if (contaminationRoots.length !== 1 || connectedContamination.size !== contamination.length) {
     addViolation(violations, "contamination-disconnected");
+  }
+
+  if (safeRect) {
+    const viewport = {
+      x: safeRect.x + SAFE_HALF_WIDTH - OPENING_VIEWPORT_WIDTH / 2,
+      y: safeRect.y + SAFE_HALF_HEIGHT - OPENING_VIEWPORT_HEIGHT / 2,
+      width: OPENING_VIEWPORT_WIDTH,
+      height: OPENING_VIEWPORT_HEIGHT
+    };
+    const visibleContamination = contamination
+      .map(displayBounds)
+      .filter(Boolean)
+      .map((bounds) => clipToViewport(bounds, viewport))
+      .filter(Boolean);
+    const contaminationArea = rectangleUnionArea(visibleContamination);
+    if (contaminationArea > OPENING_VIEWPORT_WIDTH * OPENING_VIEWPORT_HEIGHT * 0.1) {
+      addViolation(violations, "contamination-coverage-exceeded");
+    }
   }
 
   return violations;

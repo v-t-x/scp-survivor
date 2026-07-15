@@ -2,24 +2,26 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createOpeningFacilityLayout } from "../src/art/openingFacilityLayout.js";
-import { createFacilityRoomVisuals } from "../src/art/facilityRoom.js";
-import { TEXTURES } from "../src/assets/manifest.js";
 
-function createSceneStub() {
+function createSceneStub({ failOnImageCall = null, failure = new Error("image creation failed") } = {}) {
   const created = [];
+  let imageCalls = 0;
 
-  function makeDisplayObject(kind, x, y, width, height, key) {
+  function makeDisplayObject(x, y, key) {
     const object = {
-      kind,
+      kind: "image",
       x,
       y,
-      width,
-      height,
       key,
       depth: 0,
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
+      tint: 0xffffff,
+      alpha: 1,
+      visible: true,
+      destroyed: false,
+      destroyCalls: 0,
       data: new Map(),
       setDepth(value) {
         this.depth = value;
@@ -34,9 +36,25 @@ function createSceneStub() {
         this.scaleY = yScale;
         return this;
       },
+      setTint(value) {
+        this.tint = value;
+        return this;
+      },
+      setAlpha(value) {
+        this.alpha = value;
+        return this;
+      },
+      setVisible(value) {
+        this.visible = value;
+        return this;
+      },
       setData(name, value) {
         this.data.set(name, value);
         return this;
+      },
+      destroy() {
+        this.destroyCalls += 1;
+        this.destroyed = true;
       }
     };
     created.push(object);
@@ -55,78 +73,132 @@ function createSceneStub() {
     },
     add: {
       image(x, y, key) {
-        return makeDisplayObject("image", x, y, null, null, key);
-      },
-      tileSprite(x, y, width, height, key) {
-        return makeDisplayObject("tileSprite", x, y, width, height, key);
+        imageCalls += 1;
+        if (imageCalls === failOnImageCall) throw failure;
+        return makeDisplayObject(x, y, key);
       }
     }
   };
 }
 
-test("facility room renders the semantic graph with debugging metadata", () => {
-  const scene = createSceneStub();
-  const layout = createOpeningFacilityLayout(1920, 1920);
-  const visuals = createFacilityRoomVisuals(scene, 1920, 1920);
+async function loadFacilityRoom() {
+  const facilityRoom = await import("../src/art/facilityRoom.js");
+  assert.equal(typeof facilityRoom.createFacilityRoomController, "function", "controller export is required");
+  assert.equal(typeof facilityRoom.createFacilityRoomVisuals, "function", "compatibility façade is required");
+  return facilityRoom;
+}
 
-  assert.equal(visuals.length, scene.created.length, "facilityVisuals must own every created room visual");
-  assert.ok(scene.created.some(({ key }) => key === TEXTURES.facilityFloor));
-  assert.ok(scene.created.some(({ key }) => key === TEXTURES.facilityServiceFloor));
-  assert.ok(scene.created.some(({ key }) => key === TEXTURES.facilityHazardStripe));
+test("facility room controller owns every semantic visual and the façade returns its objects", async () => {
+  const { createFacilityRoomController, createFacilityRoomVisuals } = await loadFacilityRoom();
+  const layout = createOpeningFacilityLayout(1920, 1920);
+  const scene = createSceneStub();
+  const controller = createFacilityRoomController(scene, 1920, 1920);
+
+  assert.deepEqual(Object.keys(controller).sort(), ["byId", "destroy", "objects", "reset", "setPresentation"]);
+  assert.ok(controller.byId instanceof Map);
+  assert.equal(controller.objects.length, layout.length);
+  assert.equal(scene.created.length, layout.length);
 
   for (const item of layout) {
-    const visual = scene.created.find((candidate) => (
-      candidate.kind === "image"
-      && candidate.key === item.key
-      && candidate.x === item.x
-      && candidate.y === item.y
-    ));
-    assert.ok(visual, `${item.id} should render from the semantic layout`);
-    assert.equal(visual.data.get("facilityRole"), item.role);
-    assert.equal(visual.data.get("facilityZone"), item.zone);
+    const visual = controller.byId.get(item.id);
+    assert.ok(visual, `${item.id} should have one owned visual`);
+    assert.equal(visual.x, item.x);
+    assert.equal(visual.y, item.y);
+    assert.equal(visual.key, item.key);
     assert.equal(visual.depth, item.depth);
     assert.equal(visual.rotation, item.rotation);
     assert.equal(visual.scaleX, item.scaleX);
     assert.equal(visual.scaleY, item.scaleY);
+    assert.equal(visual.data.get("facilityId"), item.id);
+    assert.equal(visual.data.get("facilityRole"), item.role);
+    assert.equal(visual.data.get("facilityZone"), item.zone);
   }
 
-  assert.ok(visuals.every((visual) => (
-    typeof visual.data.get("facilityRole") === "string"
-    && typeof visual.data.get("facilityZone") === "string"
-  )));
+  const façadeScene = createSceneStub();
+  const visuals = createFacilityRoomVisuals(façadeScene, 1920, 1920);
+  assert.equal(visuals.length, layout.length);
+  assert.equal(visuals.length, façadeScene.created.length);
 });
 
-test("service-floor and hazard-stripe lanes follow the left and right structural boundaries", () => {
-  const scene = createSceneStub();
+test("facility room controller rolls back created visuals and rethrows image creation failures", async () => {
+  const { createFacilityRoomController } = await loadFacilityRoom();
+  const failure = new Error("fourth image failed");
+  const scene = createSceneStub({ failOnImageCall: 4, failure });
+
+  assert.throws(
+    () => createFacilityRoomController(scene, 1920, 1920),
+    (error) => error === failure
+  );
+  assert.equal(scene.created.length, 3);
+  assert.ok(scene.created.every(({ destroyed, destroyCalls }) => destroyed && destroyCalls === 1));
+});
+
+test("facility room presentation changes tint alpha and visibility without changing layout geometry", async () => {
+  const { createFacilityRoomController } = await loadFacilityRoom();
   const layout = createOpeningFacilityLayout(1920, 1920);
-  createFacilityRoomVisuals(scene, 1920, 1920);
+  const scene = createSceneStub();
+  const controller = createFacilityRoomController(scene, 1920, 1920);
+  const geometry = new Map(controller.objects.map((visual) => [visual, {
+    x: visual.x,
+    y: visual.y,
+    depth: visual.depth,
+    rotation: visual.rotation,
+    scaleX: visual.scaleX,
+    scaleY: visual.scaleY
+  }]));
 
-  const tileSprites = scene.created.filter(({ kind }) => kind === "tileSprite");
-  const serviceLanes = tileSprites.filter(({ key }) => key === TEXTURES.facilityServiceFloor);
-  const hazardLanes = tileSprites.filter(({ key }) => key === TEXTURES.facilityHazardStripe);
-  const entryWall = layout.find(({ id }) => id === "entry-wall-left");
-  const observationWall = layout.find(({ id }) => id === "observation-wall");
-  const maintenanceWall = layout.find(({ id }) => id === "maintenance-wall-middle");
+  controller.setPresentation({
+    ambientTint: 0x617487,
+    ambientAlpha: 0.45,
+    maintenanceTint: 0x947751,
+    maintenanceAlpha: 0.6,
+    contaminationTint: 0x8d355a,
+    contaminationAlpha: 0.8,
+    warningPulseAlpha: 0.5,
+    visible: false
+  });
 
-  assert.deepEqual(
-    serviceLanes.map(({ x, y, width, height }) => [x, y, width, height]),
-    [
-      [608, 992, 64, 320],
-      [1328, 928, 160, 64],
-      [1328, 1024, 96, 320]
-    ]
-  );
-  assert.deepEqual(
-    hazardLanes.map(({ x, y, width, height }) => [x, y, width, height]),
-    [
-      [576, 992, 8, 320],
-      [1328, 896, 160, 8],
-      [1376, 1024, 8, 320]
-    ]
-  );
-  assert.equal(entryWall.x + 32, serviceLanes[0].x - serviceLanes[0].width / 2);
-  assert.equal(observationWall.y + 32, serviceLanes[1].y - serviceLanes[1].height / 2);
-  assert.equal(maintenanceWall.x - 32, serviceLanes[2].x + serviceLanes[2].width / 2);
+  for (const item of layout) {
+    const visual = controller.byId.get(item.id);
+    const expected = item.zone === "contamination"
+      ? { tint: 0x8d355a, alpha: 0.8 }
+      : item.zone === "maintenance"
+        ? { tint: 0x947751, alpha: item.role === "power-junction" ? 0.3 : 0.6 }
+        : { tint: 0x617487, alpha: 0.45 };
+    assert.equal(visual.tint, expected.tint, item.id);
+    assert.equal(visual.alpha, expected.alpha, item.id);
+    assert.equal(visual.visible, false, item.id);
+    assert.deepEqual(geometry.get(visual), {
+      x: visual.x,
+      y: visual.y,
+      depth: visual.depth,
+      rotation: visual.rotation,
+      scaleX: visual.scaleX,
+      scaleY: visual.scaleY
+    }, `${item.id} geometry changed during presentation update`);
+  }
+
+  controller.reset();
+  for (const visual of controller.objects) {
+    assert.equal(visual.tint, 0xffffff);
+    assert.equal(visual.alpha, 1);
+    assert.equal(visual.visible, true);
+  }
+});
+
+test("facility room controller destroy is idempotent and releases ownership", async () => {
+  const { createFacilityRoomController } = await loadFacilityRoom();
+  const scene = createSceneStub();
+  const controller = createFacilityRoomController(scene, 1920, 1920);
+
+  controller.destroy();
+  controller.destroy();
+  controller.setPresentation({ ambientAlpha: 0.1, visible: false });
+  controller.reset();
+
+  assert.equal(controller.objects.length, 0);
+  assert.equal(controller.byId.size, 0);
+  assert.ok(scene.created.every(({ destroyed, destroyCalls }) => destroyed && destroyCalls === 1));
 });
 
 test("facility room rendering is display-only", async () => {

@@ -2,11 +2,21 @@ import { TEXTURES } from "../assets/manifest.js";
 import { createOpeningFacilityLayout } from "./openingFacilityLayout.js";
 
 const NEAREST_FILTER = 1;
+const NORMAL_PRESENTATION = Object.freeze({
+  ambientTint: 0xffffff,
+  ambientAlpha: 1,
+  maintenanceTint: 0xffffff,
+  maintenanceAlpha: 1,
+  contaminationTint: 0xffffff,
+  contaminationAlpha: 1,
+  warningPulseAlpha: 1,
+  visible: true
+});
 
-function tagFacilityVisual(visual, role, zone, id = null) {
+function tagFacilityVisual(visual, role, zone, id) {
   visual.setData("facilityRole", role);
   visual.setData("facilityZone", zone);
-  if (id !== null) visual.setData("facilityId", id);
+  visual.setData("facilityId", id);
   return visual;
 }
 
@@ -18,60 +28,109 @@ export function applyProductionTextureFiltering(scene) {
   }
 }
 
-export function createFacilityRoomVisuals(scene, width, height) {
-  applyProductionTextureFiltering(scene);
+function normalizeTint(value, fallback) {
+  return Number.isInteger(value) ? value : fallback;
+}
 
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const objects = [];
-  const addLayer = (visual, role, zone, id = null) => {
-    objects.push(tagFacilityVisual(visual, role, zone, id));
+function normalizeAlpha(value, fallback) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(1, Math.max(0, value));
+}
+
+function normalizePresentation(state = {}) {
+  return {
+    ambientTint: normalizeTint(state.ambientTint, NORMAL_PRESENTATION.ambientTint),
+    ambientAlpha: normalizeAlpha(state.ambientAlpha, NORMAL_PRESENTATION.ambientAlpha),
+    maintenanceTint: normalizeTint(state.maintenanceTint, NORMAL_PRESENTATION.maintenanceTint),
+    maintenanceAlpha: normalizeAlpha(state.maintenanceAlpha, NORMAL_PRESENTATION.maintenanceAlpha),
+    contaminationTint: normalizeTint(state.contaminationTint, NORMAL_PRESENTATION.contaminationTint),
+    contaminationAlpha: normalizeAlpha(state.contaminationAlpha, NORMAL_PRESENTATION.contaminationAlpha),
+    warningPulseAlpha: normalizeAlpha(state.warningPulseAlpha, NORMAL_PRESENTATION.warningPulseAlpha),
+    visible: typeof state.visible === "boolean" ? state.visible : NORMAL_PRESENTATION.visible
   };
+}
 
-  addLayer(
-    scene.add.tileSprite(centerX, centerY, width, height, TEXTURES.facilityFloor).setDepth(-20),
-    "base-floor",
-    "maintenance"
-  );
+function destroyVisuals(objects) {
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    try {
+      objects[index].destroy?.();
+    } catch {
+      // Continue releasing the rest of the transaction even if one visual rejects destruction.
+    }
+  }
+  objects.length = 0;
+}
 
-  addLayer(
-    scene.add.tileSprite(centerX - 352, centerY + 32, 64, 320, TEXTURES.facilityServiceFloor).setDepth(-19),
-    "service-floor",
-    "entry"
-  );
-  addLayer(
-    scene.add.tileSprite(centerX + 368, centerY - 32, 160, 64, TEXTURES.facilityServiceFloor).setDepth(-19),
-    "service-floor",
-    "maintenance"
-  );
-  addLayer(
-    scene.add.tileSprite(centerX + 368, centerY + 64, 96, 320, TEXTURES.facilityServiceFloor).setDepth(-19),
-    "service-floor",
-    "maintenance"
-  );
-  addLayer(
-    scene.add.tileSprite(centerX - 384, centerY + 32, 8, 320, TEXTURES.facilityHazardStripe).setDepth(-18),
-    "hazard-stripe",
-    "entry"
-  );
-  addLayer(
-    scene.add.tileSprite(centerX + 368, centerY - 64, 160, 8, TEXTURES.facilityHazardStripe).setDepth(-18),
-    "hazard-stripe",
-    "observation"
-  );
-  addLayer(
-    scene.add.tileSprite(centerX + 416, centerY + 64, 8, 320, TEXTURES.facilityHazardStripe).setDepth(-18),
-    "hazard-stripe",
-    "maintenance"
-  );
+function presentationForItem(item, state) {
+  if (item.zone === "contamination") {
+    return { tint: state.contaminationTint, alpha: state.contaminationAlpha };
+  }
+  if (item.zone === "maintenance") {
+    return {
+      tint: state.maintenanceTint,
+      alpha: item.role === "power-junction"
+        ? state.maintenanceAlpha * state.warningPulseAlpha
+        : state.maintenanceAlpha
+    };
+  }
+  return { tint: state.ambientTint, alpha: state.ambientAlpha };
+}
 
-  for (const item of createOpeningFacilityLayout(width, height)) {
-    const visual = scene.add.image(item.x, item.y, item.key)
-      .setDepth(item.depth)
-      .setRotation(item.rotation)
-      .setScale(item.scaleX, item.scaleY);
-    addLayer(visual, item.role, item.zone, item.id);
+export function createFacilityRoomController(scene, width, height) {
+  const objects = [];
+  const byId = new Map();
+  const layout = createOpeningFacilityLayout(width, height);
+  let destroyed = false;
+
+  try {
+    applyProductionTextureFiltering(scene);
+    for (const item of layout) {
+      const visual = scene.add.image(item.x, item.y, item.key);
+      objects.push(visual);
+      visual
+        .setDepth(item.depth)
+        .setRotation(item.rotation)
+        .setScale(item.scaleX, item.scaleY);
+      tagFacilityVisual(visual, item.role, item.zone, item.id);
+      byId.set(item.id, visual);
+    }
+  } catch (error) {
+    destroyVisuals(objects);
+    byId.clear();
+    throw error;
   }
 
-  return objects;
+  function setPresentation(state) {
+    if (destroyed) return;
+    const presentation = normalizePresentation(state);
+    for (const item of layout) {
+      const visual = byId.get(item.id);
+      if (!visual) continue;
+      const style = presentationForItem(item, presentation);
+      visual.setTint(style.tint).setAlpha(style.alpha).setVisible(presentation.visible);
+    }
+  }
+
+  function reset() {
+    setPresentation(NORMAL_PRESENTATION);
+  }
+
+  function destroy() {
+    if (destroyed) return;
+    destroyed = true;
+    destroyVisuals(objects);
+    byId.clear();
+  }
+
+  return {
+    objects,
+    byId,
+    setPresentation,
+    reset,
+    destroy
+  };
+}
+
+export function createFacilityRoomVisuals(scene, width, height) {
+  return createFacilityRoomController(scene, width, height).objects;
 }
