@@ -29,8 +29,34 @@ const approvedImageAssets = [
   { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [96, 96] },
   { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [96, 96] },
   { key: "title-facility-backdrop", path: "assets/art/menus/title-facility-backdrop.png", size: [960, 540] },
-  { key: "armory-rack-backdrop", path: "assets/art/menus/armory-rack-backdrop.png", size: [960, 540] }
+  { key: "armory-rack-backdrop", path: "assets/art/menus/armory-rack-backdrop.png", size: [960, 540] },
+  { key: "upgrade-damage", path: "assets/art/upgrades/damage.png", size: [32, 32] },
+  { key: "upgrade-attack-speed", path: "assets/art/upgrades/attack-speed.png", size: [32, 32] },
+  { key: "upgrade-move-speed", path: "assets/art/upgrades/move-speed.png", size: [32, 32] },
+  { key: "upgrade-max-health", path: "assets/art/upgrades/max-health.png", size: [32, 32] },
+  { key: "upgrade-projectile-count", path: "assets/art/upgrades/projectile-count.png", size: [32, 32] },
+  { key: "upgrade-penetration", path: "assets/art/upgrades/penetration.png", size: [32, 32] },
+  { key: "upgrade-pickup-radius", path: "assets/art/upgrades/pickup-radius.png", size: [32, 32] },
+  { key: "upgrade-emergency-heal", path: "assets/art/upgrades/emergency-heal.png", size: [32, 32] },
+  { key: "upgrade-breacher-knockback", path: "assets/art/upgrades/breacher-knockback.png", size: [32, 32] },
+  { key: "upgrade-breacher-suppression", path: "assets/art/upgrades/breacher-suppression.png", size: [32, 32] },
+  { key: "upgrade-breacher-magazine", path: "assets/art/upgrades/breacher-magazine.png", size: [32, 32] },
+  { key: "upgrade-tesla-chains", path: "assets/art/upgrades/tesla-chains.png", size: [32, 32] },
+  { key: "upgrade-tesla-cooldown", path: "assets/art/upgrades/tesla-cooldown.png", size: [32, 32] },
+  { key: "upgrade-pistol-boomerang", path: "assets/art/upgrades/pistol-boomerang.png", size: [32, 32] },
+  { key: "upgrade-breacher-explosive", path: "assets/art/upgrades/breacher-explosive.png", size: [32, 32] },
+  { key: "upgrade-tesla-field", path: "assets/art/upgrades/tesla-field.png", size: [32, 32] },
+  { key: "terminal-surface-grid", path: "assets/art/ui/terminal-surface-grid.png", size: [128, 128] },
+  { key: "incident-stamp-frame", path: "assets/art/ui/incident-stamp-frame.png", size: [96, 32] },
+  { key: "recontainment-stamp-frame", path: "assets/art/ui/recontainment-stamp-frame.png", size: [96, 32] }
 ];
+
+const upgradeIconAssets = approvedImageAssets.filter(({ key }) => key.startsWith("upgrade-"));
+const terminalSurfaceAssets = approvedImageAssets.filter(({ key }) => [
+  "terminal-surface-grid",
+  "incident-stamp-frame",
+  "recontainment-stamp-frame"
+].includes(key));
 
 const expected = new Map(approvedImageAssets.map(({ key, size }) => [key, size]));
 const expectedImageAssetPaths = new Map(
@@ -518,6 +544,46 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
     }
+  }
+});
+
+test("upgrade icons and terminal surfaces preserve their frozen transparent pixel contracts", async () => {
+  for (const { key, path } of upgradeIconAssets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
+    assert.deepEqual([width, height], [32, 32], key);
+    const alphaValues = new Set();
+    const colors = new Set();
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const alpha = pixels[offset + 3];
+      alphaValues.add(alpha);
+      if (alpha === 0) {
+        assert.deepEqual([...pixels.subarray(offset, offset + 3)], [0, 0, 0], `${key} has transparent RGB residue`);
+      } else {
+        colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      }
+    }
+    assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must use binary transparency`);
+    assert.ok(colors.size <= 32, `${key} exceeds the 32-color icon palette`);
+  }
+
+  for (const { key, path, size } of terminalSurfaceAssets) {
+    const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
+    const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
+    assert.deepEqual([width, height], size, key);
+    const alphaValues = new Set();
+    const colors = new Set();
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const alpha = pixels[offset + 3];
+      alphaValues.add(alpha);
+      if (alpha === 0) {
+        assert.deepEqual([...pixels.subarray(offset, offset + 3)], [0, 0, 0], `${key} has transparent RGB residue`);
+      } else {
+        colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      }
+    }
+    assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must use binary transparency`);
+    assert.ok(colors.size <= 16, `${key} exceeds the 16-color terminal palette`);
   }
 });
 

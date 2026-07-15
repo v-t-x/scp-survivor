@@ -334,6 +334,203 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.weaponTeslaIcon, 96, 96);
   });
 
+  // Upgrade and terminal fallbacks are intentionally simple glyphs. Formal PNGs
+  // from the manifest take precedence because ensureTexture never overwrites a key.
+  ensureTexture(scene, TEXTURES.upgradeDamage, () => {
+    graphics.clear();
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillTriangle(3, 16, 20, 4, 14, 15);
+    graphics.fillTriangle(29, 16, 12, 28, 18, 17);
+    graphics.generateTexture(TEXTURES.upgradeDamage, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeAttackSpeed, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillCircle(16, 16, 10);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillTriangle(16, 2, 21, 12, 11, 12);
+    graphics.fillTriangle(30, 16, 20, 21, 20, 11);
+    graphics.fillTriangle(16, 30, 11, 20, 21, 20);
+    graphics.generateTexture(TEXTURES.upgradeAttackSpeed, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeMoveSpeed, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(5, 7, 11, 18);
+    graphics.fillRect(12, 21, 9, 6);
+    graphics.fillStyle(0x4fd6e8, 1);
+    graphics.fillTriangle(18, 8, 29, 13, 18, 18);
+    graphics.generateTexture(TEXTURES.upgradeMoveSpeed, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeMaxHealth, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillTriangle(16, 2, 29, 7, 25, 23);
+    graphics.fillTriangle(16, 30, 7, 23, 3, 7);
+    graphics.fillStyle(0x4fd6e8, 1);
+    graphics.fillRect(13, 8, 6, 16);
+    graphics.fillRect(8, 13, 16, 6);
+    graphics.generateTexture(TEXTURES.upgradeMaxHealth, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeProjectileCount, () => {
+    graphics.clear();
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillTriangle(4, 5, 17, 9, 7, 13);
+    graphics.fillTriangle(4, 12, 20, 16, 4, 20);
+    graphics.fillTriangle(7, 19, 17, 23, 4, 27);
+    graphics.generateTexture(TEXTURES.upgradeProjectileCount, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradePenetration, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(8, 4, 4, 24);
+    graphics.fillRect(20, 4, 4, 24);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(3, 13, 22, 6);
+    graphics.fillTriangle(29, 16, 23, 10, 23, 22);
+    graphics.generateTexture(TEXTURES.upgradePenetration, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradePickupRadius, () => {
+    graphics.clear();
+    graphics.lineStyle(3, 0x4fd6e8, 1);
+    graphics.strokeCircle(16, 16, 12);
+    graphics.fillStyle(0x8be7f1, 1);
+    graphics.fillTriangle(16, 8, 23, 16, 16, 24);
+    graphics.fillTriangle(16, 8, 9, 16, 16, 24);
+    graphics.generateTexture(TEXTURES.upgradePickupRadius, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeEmergencyHeal, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(4, 8, 15, 16);
+    graphics.fillStyle(0x4fd6e8, 1);
+    graphics.fillRect(21, 9, 5, 14);
+    graphics.fillRect(17, 13, 13, 6);
+    graphics.generateTexture(TEXTURES.upgradeEmergencyHeal, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeBreacherKnockback, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(3, 11, 17, 10);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillTriangle(29, 5, 21, 16, 29, 27);
+    graphics.generateTexture(TEXTURES.upgradeBreacherKnockback, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeBreacherSuppression, () => {
+    graphics.clear();
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(13, 3, 7, 15);
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillTriangle(4, 28, 16, 15, 16, 28);
+    graphics.fillTriangle(28, 28, 16, 15, 16, 28);
+    graphics.generateTexture(TEXTURES.upgradeBreacherSuppression, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeBreacherMagazine, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(5, 4, 22, 24);
+    graphics.fillStyle(0xd39c3c, 1);
+    graphics.fillRect(17, 7, 6, 5);
+    graphics.fillRect(17, 14, 6, 5);
+    graphics.fillRect(17, 21, 6, 5);
+    graphics.generateTexture(TEXTURES.upgradeBreacherMagazine, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeTeslaChains, () => {
+    graphics.clear();
+    graphics.lineStyle(3, 0x4fd6e8, 1);
+    graphics.lineBetween(8, 8, 24, 12);
+    graphics.lineBetween(24, 12, 10, 25);
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillCircle(7, 7, 5);
+    graphics.fillCircle(25, 11, 5);
+    graphics.fillCircle(9, 25, 5);
+    graphics.generateTexture(TEXTURES.upgradeTeslaChains, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeTeslaCooldown, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(8, 6, 12, 21);
+    graphics.lineStyle(3, 0x4fd6e8, 1);
+    graphics.strokeCircle(20, 16, 9);
+    graphics.lineBetween(20, 16, 25, 11);
+    graphics.generateTexture(TEXTURES.upgradeTeslaCooldown, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradePistolBoomerang, () => {
+    graphics.clear();
+    graphics.fillStyle(0xa66cff, 1);
+    graphics.fillRect(5, 13, 14, 6);
+    graphics.fillTriangle(23, 16, 17, 10, 17, 22);
+    graphics.lineStyle(3, 0xd3b4ff, 1);
+    graphics.strokeCircle(16, 16, 12);
+    graphics.generateTexture(TEXTURES.upgradePistolBoomerang, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeBreacherExplosive, () => {
+    graphics.clear();
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillRect(4, 12, 19, 8);
+    graphics.fillStyle(0xa66cff, 1);
+    graphics.fillTriangle(29, 3, 25, 13, 20, 6);
+    graphics.fillTriangle(29, 29, 25, 19, 20, 26);
+    graphics.fillTriangle(29, 16, 22, 12, 22, 20);
+    graphics.generateTexture(TEXTURES.upgradeBreacherExplosive, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.upgradeTeslaField, () => {
+    graphics.clear();
+    graphics.lineStyle(3, 0xa66cff, 1);
+    graphics.strokeCircle(16, 16, 13);
+    graphics.fillStyle(0x34465a, 1);
+    graphics.fillCircle(16, 16, 6);
+    graphics.fillStyle(0xd3b4ff, 1);
+    graphics.fillRect(14, 5, 4, 7);
+    graphics.fillRect(14, 20, 4, 7);
+    graphics.generateTexture(TEXTURES.upgradeTeslaField, 32, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.terminalSurfaceGrid, () => {
+    graphics.clear();
+    graphics.lineStyle(1, 0x31517d, 0.8);
+    for (let x = 8; x < 128; x += 16) graphics.lineBetween(x, 0, x, 128);
+    for (let y = 8; y < 128; y += 16) graphics.lineBetween(0, y, 128, y);
+    graphics.fillStyle(0x4fd6e8, 0.8);
+    for (let x = 8; x < 128; x += 32) {
+      for (let y = 8; y < 128; y += 32) graphics.fillRect(x - 1, y - 1, 3, 3);
+    }
+    graphics.generateTexture(TEXTURES.terminalSurfaceGrid, 128, 128);
+  });
+
+  ensureTexture(scene, TEXTURES.incidentStampFrame, () => {
+    graphics.clear();
+    graphics.lineStyle(3, 0xa52a31, 1);
+    graphics.strokeRect(2, 2, 92, 28);
+    graphics.lineStyle(1, 0xe05b61, 1);
+    graphics.strokeRect(6, 6, 84, 20);
+    graphics.generateTexture(TEXTURES.incidentStampFrame, 96, 32);
+  });
+
+  ensureTexture(scene, TEXTURES.recontainmentStampFrame, () => {
+    graphics.clear();
+    graphics.lineStyle(3, 0x2b7a4b, 1);
+    graphics.strokeRect(2, 2, 92, 28);
+    graphics.lineStyle(1, 0x68d9a1, 1);
+    graphics.strokeRect(6, 6, 84, 20);
+    graphics.generateTexture(TEXTURES.recontainmentStampFrame, 96, 32);
+  });
+
   // Static character textures remain the safe fallback when an opening sheet is
   // missing or incomplete. Do not synthesize formal spritesheet keys here.
   ensureTexture(scene, TEXTURES.player, () => {
