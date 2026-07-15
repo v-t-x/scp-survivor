@@ -329,6 +329,7 @@ function createEliteVisualScene() {
   };
   return {
     created,
+    clearEliteWarningCalls: 0,
     add: {
       text(...args) {
         const object = createDisplaySpy("text");
@@ -352,7 +353,9 @@ function createEliteVisualScene() {
     registerTransientEffect(object) {
       created.transients.push(object);
     },
-    clearEliteWarning() {}
+    clearEliteWarning() {
+      this.clearEliteWarningCalls += 1;
+    }
   };
 }
 
@@ -384,6 +387,7 @@ async function loadEliteVisualMethods() {
       "getRiotArmorArcPresentation",
       `"use strict"; return ({${updateSource}}).updateEliteVisuals;`
     )(enemyPresentationModule.getRiotArmorArcPresentation),
+    attachSource,
     updateSource
   };
 }
@@ -507,36 +511,30 @@ test("riot armor arc presentation has a fixed radius and symmetric approved angl
   }
 });
 
-test("riot elite owns a Graphics shield indicator and destroys it with existing visuals", async () => {
+test("riot elite owns only its functional armor arc and destroys it cleanly", async () => {
   const { attachEliteVisuals } = await loadEliteVisualMethods();
   const scene = createEliteVisualScene();
   const enemy = createEliteVisualEnemy("riotUnit");
 
   attachEliteVisuals.call(scene, enemy);
 
+  assert.equal(scene.created.texts.length, 0);
   assert.equal(scene.created.triangles.length, 0);
-  assert.equal(scene.created.graphics.length, 2);
-  assert.equal(enemy.eliteOutline, scene.created.graphics[0]);
-  assert.equal(enemy.shieldIndicator, scene.created.graphics[1]);
-  assert.deepEqual(enemy.shieldIndicator.createArgs, []);
+  assert.equal(scene.created.graphics.length, 1);
+  assert.equal(enemy.eliteMarker, undefined);
+  assert.equal(enemy.eliteOutline, undefined);
+  assert.equal(enemy.shieldIndicator, scene.created.graphics[0]);
   assert.deepEqual(enemy.shieldIndicator.commands, [["setDepth", 11]]);
-  assert.deepEqual(scene.created.transients, [
-    enemy.eliteMarker,
-    enemy.eliteOutline,
-    enemy.shieldIndicator
-  ]);
+  assert.deepEqual(scene.created.transients, [enemy.shieldIndicator]);
 
   enemy.listeners.get("destroy")();
 
-  assert.equal(enemy.eliteMarker.destroyCount, 1);
-  assert.equal(enemy.eliteOutline.destroyCount, 1);
+  assert.equal(scene.clearEliteWarningCalls, 1);
   assert.equal(enemy.shieldIndicator.destroyCount, 1);
 });
 
-test("riot armor Graphics redraws the exact two-line arc at gameplay position and facing", async () => {
+test("riot armor arc updates without a generic marker or outline", async () => {
   const { updateEliteVisuals } = await loadEliteVisualMethods();
-  const outline = createDisplaySpy("outline");
-  const marker = createDisplaySpy("marker");
   const shield = createDisplaySpy("shield");
   const enemy = {
     x: 145,
@@ -544,8 +542,6 @@ test("riot armor Graphics redraws the exact two-line arc at gameplay position an
     eliteType: "riotUnit",
     frontArcDegrees: 120,
     facingAngle: -0.625,
-    eliteOutline: outline,
-    eliteMarker: marker,
     shieldIndicator: shield
   };
 
@@ -562,52 +558,41 @@ test("riot armor Graphics redraws the exact two-line arc at gameplay position an
     ["setPosition", enemy.x, enemy.y],
     ["setRotation", enemy.facingAngle]
   ]);
+});
 
-  for (const frontArcDegrees of [90, 180]) {
-    shield.commands.length = 0;
-    enemy.frontArcDegrees = frontArcDegrees;
+test("blink and biomass elites create no permanent generic decoration", async () => {
+  const { attachEliteVisuals, updateEliteVisuals } = await loadEliteVisualMethods();
+  for (const eliteType of ["blinkStalker", "biomass"]) {
+    const scene = createEliteVisualScene();
+    const enemy = createEliteVisualEnemy(eliteType);
+
+    attachEliteVisuals.call(scene, enemy);
     updateEliteVisuals.call({}, enemy);
-    const halfArc = (frontArcDegrees * Math.PI) / 360;
-    assert.deepEqual(
-      shield.commands.find(([command]) => command === "arc"),
-      ["arc", 0, 0, 28, -halfArc, halfArc, false]
-    );
+
+    assert.equal(scene.created.texts.length, 0);
+    assert.equal(scene.created.graphics.length, 0);
+    assert.equal(scene.created.triangles.length, 0);
+    assert.deepEqual(scene.created.transients, []);
+    assert.equal(enemy.eliteMarker, undefined);
+    assert.equal(enemy.eliteOutline, undefined);
+    assert.equal(enemy.shieldIndicator, undefined);
+
+    enemy.listeners.get("destroy")();
+    assert.equal(scene.clearEliteWarningCalls, 1);
   }
 });
 
-test("non-riot elite marker and outline behavior remains unchanged", async () => {
-  const { attachEliteVisuals, updateEliteVisuals } = await loadEliteVisualMethods();
-  const cases = [
-    ["blinkStalker", 20],
-    ["biomass", 22]
-  ];
+test("elite visuals contain no generic title or yellow outline source path", async () => {
+  const { attachSource, updateSource } = await loadEliteVisualMethods();
 
-  for (const [eliteType, radius] of cases) {
-    const scene = createEliteVisualScene();
-    const enemy = createEliteVisualEnemy(eliteType);
-    attachEliteVisuals.call(scene, enemy);
-
-    assert.equal(scene.created.graphics.length, 1);
-    assert.equal(scene.created.triangles.length, 0);
-    assert.equal(enemy.shieldIndicator, undefined);
-
-    enemy.eliteOutline.commands.length = 0;
-    enemy.eliteMarker.commands.length = 0;
-    updateEliteVisuals.call({}, enemy);
-
-    assert.deepEqual(enemy.eliteOutline.commands, [
-      ["clear"],
-      ["lineStyle", 2, 0xfff08e, 0.95],
-      ["strokeCircle", enemy.x, enemy.y, radius]
-    ]);
-    assert.deepEqual(enemy.eliteMarker.commands, [
-      ["setPosition", enemy.x, enemy.y - 34]
-    ]);
-
-    enemy.listeners.get("destroy")();
-    assert.equal(enemy.eliteMarker.destroyCount, 1);
-    assert.equal(enemy.eliteOutline.destroyCount, 1);
-  }
+  assert.doesNotMatch(attachSource, /add\.text\s*\(/);
+  assert.doesNotMatch(attachSource, /eliteMarker|eliteOutline/);
+  assert.doesNotMatch(updateSource, /eliteMarker|eliteOutline|0xfff08e/);
+  assert.match(
+    updateSource,
+    /getRiotArmorArcPresentation\(enemy\.frontArcDegrees\)/
+  );
+  assert.match(updateSource, /setRotation\(enemy\.facingAngle\)/);
 });
 
 test("riot arc update reads gameplay geometry without writing multipliers facing or body rotation", async () => {

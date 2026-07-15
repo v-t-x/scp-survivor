@@ -608,20 +608,6 @@ export const enemiesMixin = {
 
 
   attachEliteVisuals(enemy) {
-    const marker = this.add.text(enemy.x, enemy.y - 32, "精英", {
-      fontSize: "12px",
-      color: "#ffd4d4"
-    });
-    marker.setOrigin(0.5);
-    marker.setDepth(22);
-    this.registerTransientEffect(marker);
-    enemy.eliteMarker = marker;
-
-    const outline = this.add.graphics();
-    outline.setDepth(9);
-    this.registerTransientEffect(outline);
-    enemy.eliteOutline = outline;
-
     if (enemy.eliteType === "riotUnit") {
       const shield = this.add.graphics();
       shield.setDepth(11);
@@ -631,12 +617,6 @@ export const enemiesMixin = {
 
     enemy.once("destroy", () => {
       this.clearEliteWarning(enemy);
-      if (enemy.eliteMarker?.active) {
-        enemy.eliteMarker.destroy();
-      }
-      if (enemy.eliteOutline?.active) {
-        enemy.eliteOutline.destroy();
-      }
       if (enemy.shieldIndicator?.active) {
         enemy.shieldIndicator.destroy();
       }
@@ -645,43 +625,27 @@ export const enemiesMixin = {
 
 
   updateEliteVisuals(enemy) {
-    if (!enemy.eliteOutline) {
+    if (!enemy.shieldIndicator) {
       return;
     }
 
-    enemy.eliteOutline.clear();
-    enemy.eliteOutline.lineStyle(2, 0xfff08e, 0.95);
-    if (enemy.eliteType === "riotUnit") {
-      enemy.eliteOutline.strokeRect(enemy.x - 22, enemy.y - 22, 44, 44);
-    } else if (enemy.eliteType === "blinkStalker") {
-      enemy.eliteOutline.strokeCircle(enemy.x, enemy.y, 20);
-    } else {
-      enemy.eliteOutline.strokeCircle(enemy.x, enemy.y, 22);
-    }
-
-    if (enemy.eliteMarker) {
-      enemy.eliteMarker.setPosition(enemy.x, enemy.y - 34);
-    }
-
-    if (enemy.shieldIndicator) {
-      const arc = getRiotArmorArcPresentation(enemy.frontArcDegrees);
-      enemy.shieldIndicator.clear();
-      enemy.shieldIndicator.lineStyle(3, 0x9fc7da, 0.95);
-      enemy.shieldIndicator.beginPath();
-      enemy.shieldIndicator.arc(
-        0,
-        0,
-        arc.radius,
-        arc.startAngle,
-        arc.endAngle,
-        false
-      );
-      enemy.shieldIndicator.strokePath();
-      enemy.shieldIndicator.lineStyle(1, 0x5f8294, 0.8);
-      enemy.shieldIndicator.lineBetween(22, -11, 22, 11);
-      enemy.shieldIndicator.setPosition(enemy.x, enemy.y);
-      enemy.shieldIndicator.setRotation(enemy.facingAngle);
-    }
+    const arc = getRiotArmorArcPresentation(enemy.frontArcDegrees);
+    enemy.shieldIndicator.clear();
+    enemy.shieldIndicator.lineStyle(3, 0x9fc7da, 0.95);
+    enemy.shieldIndicator.beginPath();
+    enemy.shieldIndicator.arc(
+      0,
+      0,
+      arc.radius,
+      arc.startAngle,
+      arc.endAngle,
+      false
+    );
+    enemy.shieldIndicator.strokePath();
+    enemy.shieldIndicator.lineStyle(1, 0x5f8294, 0.8);
+    enemy.shieldIndicator.lineBetween(22, -11, 22, 11);
+    enemy.shieldIndicator.setPosition(enemy.x, enemy.y);
+    enemy.shieldIndicator.setRotation(enemy.facingAngle);
   },
 
 
