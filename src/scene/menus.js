@@ -799,6 +799,7 @@ export const menusMixin = {
     // Return to the title screen; a fresh create() resets all run state.
     this.isPaused = false;
     this.hidePauseOverlay();
+    this.destroyLevelUpOverlay();
     this.scene.restart();
   },
 
@@ -815,11 +816,7 @@ export const menusMixin = {
     this.moveSpeedBuffMultiplier = 1;
     this.clearFacilitySystems();
 
-    if (this.levelUpOverlay) {
-      this.levelUpOverlay.destroy(true);
-      this.levelUpOverlay = null;
-    }
-    this.levelUpCards = [];
+    this.destroyLevelUpOverlay();
     this.isLevelUpActive = false;
     this.isResolvingLevelUp = false;
     this.isPaused = false;

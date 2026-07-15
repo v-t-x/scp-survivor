@@ -50,6 +50,7 @@ class PrototypeScene extends Phaser.Scene {
     this.isGameOver = false;
     this.isLevelUpActive = false;
     this.isResolvingLevelUp = false;
+    this._levelUpPresentationUnavailable = false;
     this.pendingLevelUps = 0;
     this.rerollsRemaining = BALANCE.upgrades.rerollsPerRun;
     this.levelUpOverlay = null;
