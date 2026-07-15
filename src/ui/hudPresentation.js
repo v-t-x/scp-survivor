@@ -22,6 +22,11 @@ function ratio(current, total) {
   return clampRatio(finiteNumber(current) / safeTotal);
 }
 
+function pulseAlpha(elapsedSurvivalMs) {
+  const elapsedMs = Math.max(0, finiteNumber(elapsedSurvivalMs));
+  return clampRatio(0.8 + Math.sin(elapsedMs * 0.012) * 0.2);
+}
+
 function secondsText(milliseconds) {
   return `${(Math.max(0, finiteNumber(milliseconds)) / 1000).toFixed(1)}秒`;
 }
@@ -168,6 +173,33 @@ function getFacilityPresentation(state) {
   });
 }
 
+function getSystemPresentation(state, critical) {
+  const muted = state.soundMuted === true;
+  const paused = state.isPaused === true;
+  const hasFacilityWarning = state.activeFacilityEvent?.type != null;
+  const tone = state.bossPhaseActive === true || critical
+    ? "danger"
+    : paused || muted || hasFacilityWarning
+      ? "warning"
+      : "normal";
+
+  return Object.freeze({
+    muteLabel: muted ? "音频：静音 (M)" : "音频：开启 (M)",
+    muted,
+    pauseLabel: paused ? "继续 (ESC)" : "暂停 (ESC)",
+    paused,
+    tone
+  });
+}
+
+function getPickupPresentation(state) {
+  return Object.freeze({
+    radius: Math.max(0, finiteNumber(state.pickupRadius)),
+    buildPanelVisible: state.buildPanelVisible === true,
+    nowMs: Math.max(0, finiteNumber(state.elapsedSurvivalMs))
+  });
+}
+
 export function getHudPresentation(state = {}) {
   const healthRatio = ratio(state.health, state.maxHealth);
   const xpRatio = ratio(state.currentXp, state.xpToNextLevel);
@@ -178,6 +210,8 @@ export function getHudPresentation(state = {}) {
     Math.ceil(finiteNumber(state.nextNodeSeconds))
   );
   const kills = Math.max(0, Math.floor(finiteNumber(state.killCount)));
+  const critical = healthRatio < 0.35;
+  const bossActive = state.bossPhaseActive === true;
   const missionDetail = !missionActive
     ? "尚未开始"
     : state.missionDetail
@@ -192,17 +226,21 @@ export function getHudPresentation(state = {}) {
       detail: missionDetail,
       kills,
       killsText: `击杀 ${kills}`,
-      bossHealthRatio
+      bossHealthRatio,
+      bossActive
     }),
     vitals: Object.freeze({
       healthText: `${Math.max(0, Math.floor(finiteNumber(state.health)))} / ${Math.max(0, Math.floor(finiteNumber(state.maxHealth)))}`,
       healthRatio,
-      critical: healthRatio < 0.35,
+      critical,
       levelText: `等级 ${Math.max(0, Math.floor(finiteNumber(state.level)))}`,
       xpText: `${Math.max(0, Math.floor(finiteNumber(state.currentXp)))} / ${Math.max(0, Math.floor(finiteNumber(state.xpToNextLevel)))}`,
-      xpRatio
+      xpRatio,
+      pulseAlpha: pulseAlpha(state.elapsedSurvivalMs)
     }),
     weapon: getWeaponPresentation(state),
-    facility: getFacilityPresentation(state)
+    facility: getFacilityPresentation(state),
+    system: getSystemPresentation(state, critical),
+    pickup: getPickupPresentation(state)
   });
 }

@@ -69,7 +69,8 @@ export const HUD_REGIONS = Object.freeze({
   mission: Object.freeze({ anchor: "top-left", x: 16, y: 16, width: 292, height: 92 }),
   vitals: Object.freeze({ anchor: "bottom-left", x: 16, y: 462, width: 268, height: 62 }),
   weapon: Object.freeze({ anchor: "bottom-right", x: 676, y: 446, width: 268, height: 78 }),
-  facility: Object.freeze({ anchor: "top-center", x: 320, y: 12, width: 320, height: 48 })
+  facility: Object.freeze({ anchor: "top-center", x: 320, y: 12, width: 320, height: 48 }),
+  system: Object.freeze({ anchor: "top-right", x: 824, y: 12, width: 120, height: 64 })
 });
 
 export const OPENING_FACILITY_ZONES = Object.freeze({
