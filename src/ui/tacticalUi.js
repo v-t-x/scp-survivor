@@ -41,7 +41,10 @@ function getLampColor(state) {
 
 function destroyObjects(objects) {
   for (const object of objects) {
-    object.destroy();
+    object?.removeAllListeners?.();
+    object?.disableInteractive?.();
+    object?.removeInteractive?.();
+    object?.destroy?.();
   }
 }
 
@@ -65,34 +68,41 @@ export function createStatusLamp(scene, options = {}) {
     depth = 0,
     scrollFactor = 0
   } = options;
-  const lamp = scene.add.graphics();
-  const objects = [lamp];
+  const objects = [];
   let destroyed = false;
 
-  applyDisplayOptions(objects, depth, scrollFactor);
+  try {
+    const lamp = scene.add.graphics();
+    objects.push(lamp);
+    applyDisplayOptions(objects, depth, scrollFactor);
 
-  function setState(nextState) {
-    if (destroyed) return;
-    const color = getLampColor(nextState);
-    lamp.clear();
-    lamp.fillStyle(color, nextState === "off" ? 0.45 : 1);
-    lamp.fillCircle(x, y, radius);
-    lamp.lineStyle(1, THEME.terminal.frameFocus, 0.8);
-    lamp.strokeCircle(x, y, radius);
-  }
-
-  setState(state);
-
-  return {
-    objects,
-    lamp,
-    setState,
-    destroy() {
+    function setState(nextState) {
       if (destroyed) return;
-      destroyed = true;
-      destroyObjects(objects);
+      const color = getLampColor(nextState);
+      lamp.clear();
+      lamp.fillStyle(color, nextState === "off" ? 0.45 : 1);
+      lamp.fillCircle(x, y, radius);
+      lamp.lineStyle(1, THEME.terminal.frameFocus, 0.8);
+      lamp.strokeCircle(x, y, radius);
     }
-  };
+
+    setState(state);
+
+    return {
+      objects,
+      lamp,
+      setState,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        destroyObjects(objects);
+      }
+    };
+  } catch (error) {
+    destroyed = true;
+    destroyObjects(objects);
+    throw error;
+  }
 }
 
 export function createTacticalPanel(scene, options = {}) {
@@ -107,22 +117,29 @@ export function createTacticalPanel(scene, options = {}) {
     border = THEME.terminal.frame,
     cornerCut = THEME.layout.cornerCut
   } = options;
-  const frame = scene.add.graphics();
-  const objects = [frame];
+  const objects = [];
   let destroyed = false;
 
-  applyDisplayOptions(objects, depth, scrollFactor);
-  drawClippedFrame(frame, { x, y, width, height, fill, border, cornerCut });
+  try {
+    const frame = scene.add.graphics();
+    objects.push(frame);
+    applyDisplayOptions(objects, depth, scrollFactor);
+    drawClippedFrame(frame, { x, y, width, height, fill, border, cornerCut });
 
-  return {
-    objects,
-    frame,
-    destroy() {
-      if (destroyed) return;
-      destroyed = true;
-      destroyObjects(objects);
-    }
-  };
+    return {
+      objects,
+      frame,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        destroyObjects(objects);
+      }
+    };
+  } catch (error) {
+    destroyed = true;
+    destroyObjects(objects);
+    throw error;
+  }
 }
 
 export function createTerminalButton(scene, options = {}) {
@@ -137,86 +154,90 @@ export function createTerminalButton(scene, options = {}) {
     scrollFactor = 0,
     onActivate = () => {}
   } = options;
-  const frame = scene.add.graphics();
-  const hitArea = scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0);
-  const label = scene.add.text(x + THEME.layout.panelPadding, y + height / 2, text, {
-    color: THEME.text.primary,
-    fontFamily: THEME.font.label,
-    fontSize: THEME.fontSize.weaponHud
-  }).setOrigin(0, 0.5);
-  const signal = scene.add.graphics();
-  const objects = [frame, hitArea, label, signal];
-  let currentState = state;
-  let restingState = state === "armed" ? "armed" : "idle";
-  let destroyed = false;
+  const objects = [];
 
-  applyDisplayOptions(objects, depth, scrollFactor);
+  try {
+    const frame = scene.add.graphics();
+    const hitArea = scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0);
+    const label = scene.add.text(x + THEME.layout.panelPadding, y + height / 2, text, {
+      color: THEME.text.primary,
+      fontFamily: THEME.font.label,
+      fontSize: THEME.fontSize.weaponHud
+    }).setOrigin(0, 0.5);
+    const signal = scene.add.graphics();
+    objects.push(frame, hitArea, label, signal);
+    let currentState = state;
+    let restingState = state === "armed" ? "armed" : "idle";
+    let destroyed = false;
 
-  function setState(nextState) {
-    if (destroyed) return;
-    const palette = getTerminalButtonPalette(nextState);
-    if (palette.interactive === undefined) return;
+    applyDisplayOptions(objects, depth, scrollFactor);
 
-    currentState = nextState;
-    if (nextState === "idle" || nextState === "armed" || nextState === "disabled") {
-      restingState = nextState;
-    }
-    drawClippedFrame(frame, {
-      x,
-      y,
-      width,
-      height,
-      fill: palette.fill,
-      border: palette.border
-    });
-    label.setStyle({ color: palette.text });
-    signal.clear();
-    signal.fillStyle(getLampColor(palette.signal), palette.signal === "off" ? 0.45 : 1);
-    signal.fillCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
-    signal.lineStyle(1, THEME.terminal.frameFocus, 0.8);
-    signal.strokeCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
-
-    if (palette.interactive) {
-      hitArea.setInteractive({ useHandCursor: true });
-    } else {
-      hitArea.disableInteractive();
-    }
-  }
-
-  function isEnabled() {
-    return !destroyed && getTerminalButtonPalette(currentState).interactive;
-  }
-
-  hitArea.on("pointerover", () => {
-    if (isEnabled()) setState("hover");
-  });
-  hitArea.on("pointerout", () => {
-    if (isEnabled()) setState(restingState);
-  });
-  hitArea.on("pointerdown", () => {
-    if (isEnabled()) setState("pressed");
-  });
-  hitArea.on("pointerup", () => {
-    if (!isEnabled()) return;
-    setState("armed");
-    onActivate();
-  });
-
-  setState(state);
-
-  return {
-    objects,
-    hitArea,
-    label,
-    signal,
-    setState,
-    destroy() {
+    function setState(nextState) {
       if (destroyed) return;
-      destroyed = true;
-      hitArea.removeAllListeners();
-      hitArea.disableInteractive();
-      hitArea.removeInteractive();
-      destroyObjects(objects);
+      const palette = getTerminalButtonPalette(nextState);
+      if (palette.interactive === undefined) return;
+
+      currentState = nextState;
+      if (nextState === "idle" || nextState === "armed" || nextState === "disabled") {
+        restingState = nextState;
+      }
+      drawClippedFrame(frame, {
+        x,
+        y,
+        width,
+        height,
+        fill: palette.fill,
+        border: palette.border
+      });
+      label.setStyle({ color: palette.text });
+      signal.clear();
+      signal.fillStyle(getLampColor(palette.signal), palette.signal === "off" ? 0.45 : 1);
+      signal.fillCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
+      signal.lineStyle(1, THEME.terminal.frameFocus, 0.8);
+      signal.strokeCircle(x + width - THEME.layout.panelPadding - 5, y + height / 2, 5);
+
+      if (palette.interactive) {
+        hitArea.setInteractive({ useHandCursor: true });
+      } else {
+        hitArea.disableInteractive();
+      }
     }
-  };
+
+    function isEnabled() {
+      return !destroyed && getTerminalButtonPalette(currentState).interactive;
+    }
+
+    hitArea.on("pointerover", () => {
+      if (isEnabled()) setState("hover");
+    });
+    hitArea.on("pointerout", () => {
+      if (isEnabled()) setState(restingState);
+    });
+    hitArea.on("pointerdown", () => {
+      if (isEnabled()) setState("pressed");
+    });
+    hitArea.on("pointerup", () => {
+      if (!isEnabled()) return;
+      setState("armed");
+      onActivate();
+    });
+
+    setState(state);
+
+    return {
+      objects,
+      hitArea,
+      label,
+      signal,
+      setState,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        destroyObjects(objects);
+      }
+    };
+  } catch (error) {
+    destroyObjects(objects);
+    throw error;
+  }
 }

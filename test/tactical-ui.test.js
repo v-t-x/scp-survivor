@@ -262,3 +262,42 @@ test("status lamps redraw state and release their graphics", () => {
   lamp.destroy();
   assert.equal(lamp.lamp.destroyed, true);
 });
+
+test("tactical panel construction rolls back its graphics when setup throws", () => {
+  const scene = createScene();
+  const createGraphics = scene.add.graphics;
+  let frame;
+  scene.add.graphics = () => {
+    frame = createGraphics();
+    frame.setDepth = () => {
+      throw new Error("depth setup failed");
+    };
+    return frame;
+  };
+
+  assert.throws(
+    () => createTacticalPanel(scene, { width: 120, height: 36 }),
+    /depth setup failed/
+  );
+  assert.equal(frame.destroyed, true);
+});
+
+test("terminal button construction rolls back objects and listeners when registration throws", () => {
+  const scene = createScene();
+  const createRectangle = scene.add.rectangle;
+  let hitArea;
+  scene.add.rectangle = (...args) => {
+    hitArea = createRectangle(...args);
+    hitArea.on = () => {
+      throw new Error("listener registration failed");
+    };
+    return hitArea;
+  };
+
+  assert.throws(
+    () => createTerminalButton(scene, { width: 120, text: "AUTHORIZE" }),
+    /listener registration failed/
+  );
+  assert.equal(scene.objects.every((object) => object.destroyed), true);
+  assert.equal(hitArea.listenersRemoved, true);
+});
