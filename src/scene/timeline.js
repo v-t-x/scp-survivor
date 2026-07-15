@@ -12,9 +12,9 @@ import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import {
-  getOutagePresentation,
-  resetFacilityPresentation
+  getOutagePresentation
 } from "../art/presentationRules.js";
+import { getFacilityPresentation } from "../art/facilityPresentation.js";
 
 // Domain mixin: timeline. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const timelineMixin = {
@@ -217,6 +217,7 @@ export const timelineMixin = {
     this.showTopBanner(config.name, config.warning, 1900);
     this.triggerEventPulse();
     this.playSound("facilityWarning");
+    this.refreshFacilityPresentation();
   },
 
 
@@ -228,6 +229,20 @@ export const timelineMixin = {
     this.activeFacilityEvent = null;
     this.activeFacilityEventEndAtMs = 0;
     this.showTopBanner("事件结束", message, 1400);
+    this.refreshFacilityPresentation();
+  },
+
+
+  refreshFacilityPresentation() {
+    try {
+      this.facilityRoomController?.setPresentation?.(getFacilityPresentation({
+        outageStrength: this.outageVisualStrength,
+        activeEventType: this.activeFacilityEvent?.type ?? null,
+        bossPhaseActive: this.bossPhaseActive === true
+      }));
+    } catch {
+      // Facility presentation is best-effort and must not alter timeline state.
+    }
   },
 
 
@@ -249,12 +264,11 @@ export const timelineMixin = {
       this.outageVisualStrength,
       this.elapsedSurvivalMs
     );
-    const facilityVisuals = this.facilityVisuals ?? [];
 
     if (this.outageVisualStrength <= 0) {
       this.outageDarknessRt.setVisible(false);
       this.outageDarknessRt.clear();
-      resetFacilityPresentation(facilityVisuals);
+      this.refreshFacilityPresentation();
       return;
     }
 
@@ -269,13 +283,7 @@ export const timelineMixin = {
       this.player.y - cam.scrollY
     );
     this.outageDarknessRt.erase(this.outageLightSprite);
-
-    for (const visual of facilityVisuals) {
-      if (visual.active) {
-        visual.setAlpha(presentation.facilityAlpha);
-        visual.setTint(presentation.facilityTint);
-      }
-    }
+    this.refreshFacilityPresentation();
   },
 
 

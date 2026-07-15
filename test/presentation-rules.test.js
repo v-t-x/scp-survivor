@@ -173,13 +173,21 @@ test("outage preserves facility readability at full strength", () => {
   assert.equal(state.facilityTint, 0x9b3942);
 });
 
-test("outage integration no longer depends on removed arenaGrid", async () => {
+test("facility controller wiring replaces legacy visual-array outage resets", async () => {
   const timeline = await readFile(new URL("../src/scene/timeline.js", import.meta.url), "utf8");
   const world = await readFile(new URL("../src/scene/world.js", import.meta.url), "utf8");
   const systems = await readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8");
   assert.doesNotMatch(timeline, /arenaGrid/);
-  assert.match(world, /this\.facilityVisuals\s*=\s*createFacilityRoomVisuals/);
-  assert.match(systems, /resetFacilityPresentation\(this\.facilityVisuals\)/);
+  assert.match(world, /createFacilityRoomController/);
+  assert.match(world, /createMinimalFacilityFallback/);
+  assert.match(world, /this\.facilityRoomController\s*=/);
+  assert.match(world, /Phaser\.Scenes\.Events\.SHUTDOWN/);
+  assert.match(world, /Phaser\.Scenes\.Events\.DESTROY/);
+  assert.match(timeline, /getFacilityPresentation/);
+  assert.match(timeline, /refreshFacilityPresentation/);
+  assert.match(systems, /facilityRoomController/);
+  assert.doesNotMatch(timeline, /resetFacilityPresentation/);
+  assert.doesNotMatch(systems, /resetFacilityPresentation/);
 });
 
 test("display scaling preserves rectangular and circular physics geometry", () => {
