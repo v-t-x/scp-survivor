@@ -80,6 +80,7 @@ test("tracked actors receive one display-only contact shadow without actor mutat
   assert.equal(scene.created[0].key, "contact-shadow");
   assert.equal(scene.created[0].x, 100);
   assert.equal(scene.created[0].y, 221, "shadow belongs below actor feet");
+  assert.equal(scene.created[0].depth, 41, "shadow follows actor.depth - 1 on every update");
   assert.deepEqual([scene.created[0].displayWidth, scene.created[0].displayHeight], [36, 18]);
 });
 
@@ -191,4 +192,75 @@ test("effect activation configuration failures roll back pooled records and all 
     controller.destroy();
   });
   assert.ok(scene.created.every((visual) => visual.destroyCalls === 1), "destroy remains idempotent after activation rollback");
+});
+
+test("production graphics render distinct material silhouettes instead of recolored contact-shadow ovals", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const graphics = [];
+  let imageCalls = 0;
+  function createGraphics() {
+    const commands = [];
+    const visual = {
+      commands,
+      clear() { commands.push(["clear"]); return this; },
+      fillStyle(...args) { commands.push(["fillStyle", ...args]); return this; },
+      fillRect(...args) { commands.push(["fillRect", ...args]); return this; },
+      lineStyle(...args) { commands.push(["lineStyle", ...args]); return this; },
+      lineBetween(...args) { commands.push(["lineBetween", ...args]); return this; },
+      strokeRect(...args) { commands.push(["strokeRect", ...args]); return this; },
+      strokeCircle(...args) { commands.push(["strokeCircle", ...args]); return this; },
+      setPosition(...args) { commands.push(["setPosition", ...args]); return this; },
+      setAlpha(...args) { commands.push(["setAlpha", ...args]); return this; },
+      setVisible(...args) { commands.push(["setVisible", ...args]); return this; },
+      setRotation(...args) { commands.push(["setRotation", ...args]); return this; },
+      setDepth(...args) { commands.push(["setDepth", ...args]); return this; },
+      destroy() {}
+    };
+    graphics.push(visual);
+    return visual;
+  }
+  const scene = {
+    add: {
+      image() { imageCalls += 1; return createVisualForUnexpectedImage(); },
+      graphics: createGraphics
+    }
+  };
+  function createVisualForUnexpectedImage() {
+    return {
+      setOrigin() { return this; }, setVisible() { return this; }, setAlpha() { return this; },
+      setPosition() { return this; }, setDisplaySize() { return this; }, setRotation() { return this; },
+      setTint() { return this; }, setDepth() { return this; }, destroy() {}
+    };
+  }
+
+  const controller = createCombatFeedbackController(scene, {
+    poolLimits: { attack: 1, hit: 5, death: 5 }
+  });
+  const families = [
+    { enemyType: "biomass", eliteType: "biomass", isBoss: false },
+    { enemyType: "drone", eliteType: null, isBoss: false },
+    { enemyType: "blinkStalker", eliteType: "blinkStalker", isBoss: false },
+    { enemyType: "scp049", eliteType: null, isBoss: true },
+    { enemyType: "unknown", eliteType: null, isBoss: false }
+  ];
+  for (const metadata of families) {
+    assert.equal(controller.notifyHit({ x: 1, y: 2, impactX: 1, impactY: 2, lethal: false, ...metadata }), true);
+  }
+  for (const metadata of families) {
+    assert.equal(controller.notifyDeath({ x: 1, y: 2, ...metadata }), true);
+  }
+
+  assert.equal(imageCalls, 0, "production effects must not reuse the contact-shadow image");
+  assert.equal(graphics.length, 10);
+  const hit = graphics.slice(0, 5).map((visual) => visual.commands.map(([name]) => name));
+  const death = graphics.slice(5).map((visual) => visual.commands.map(([name]) => name));
+  assert.ok(hit[0].includes("fillRect"), "biomass hit uses short tissue fragments");
+  assert.ok(hit[1].filter((name) => name === "lineBetween").length >= 4, "metal hit uses cold spark rays");
+  assert.ok(hit[2].filter((name) => name === "strokeRect").length >= 2, "spatial hit uses broken frame blocks");
+  assert.ok(hit[3].includes("strokeCircle") && hit[3].includes("lineBetween"), "Boss hit is a restrained composite");
+  assert.ok(death[0].filter((name) => name === "fillRect").length >= 3, "biomass death expands the fragment burst");
+  assert.ok(death[1].filter((name) => name === "lineBetween").length >= 6, "metal death expands the spark burst");
+  assert.ok(death[2].filter((name) => name === "strokeRect").length >= 3, "spatial death expands the broken frames");
+  assert.ok(death[3].filter((name) => name === "strokeCircle").length >= 2, "Boss death combines two restrained rings");
+  assert.equal(new Set(hit.map((names) => names.join(","))).size, 5, "all five hit silhouettes remain structurally distinct");
 });

@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { COMBAT_PRESENTATION_DEPTH } from "../art/combatFeedback.js";
 
 // Domain mixin: weapons. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const weaponsMixin = {
@@ -178,7 +179,7 @@ export const weaponsMixin = {
 
   spawnTeslaFieldPulse(x, y, radius) {
     const pulse = this.add.circle(x, y, radius, 0x74e0ff, 0.16);
-    pulse.setDepth(15);
+    pulse.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin);
     this.registerTransientEffect(pulse);
     this.tweens.add({
       targets: pulse,
@@ -615,7 +616,7 @@ export const weaponsMixin = {
       graphics.setActive(true).setVisible(true);
     } else {
       graphics = this.add.graphics();
-      graphics.setDepth(19);
+      graphics.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin + 3);
     }
     graphics.lineStyle(2, 0x99f0ff, 0.95);
     graphics.beginPath();
@@ -648,7 +649,7 @@ export const weaponsMixin = {
       0xffee9c,
       0.85
     );
-    flash.setDepth(18);
+    flash.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin + 2);
     this.registerTransientEffect(flash);
 
     this.tweens.add({

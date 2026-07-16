@@ -11,6 +11,7 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { COMBAT_PRESENTATION_DEPTH } from "../art/combatFeedback.js";
 
 // Domain mixin: effects. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const effectsMixin = {
@@ -38,7 +39,7 @@ export const effectsMixin = {
       impact.setActive(true).setVisible(true);
     } else {
       impact = this.add.circle(x, y, 4, 0xfff7bf, 0.9);
-      impact.setDepth(17);
+      impact.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin + 1);
     }
 
     this.tweens.add({
@@ -53,7 +54,7 @@ export const effectsMixin = {
 
   spawnExplosionEffect(x, y, radius) {
     const blast = this.add.circle(x, y, radius * 0.4, 0xffa040, 0.35);
-    blast.setDepth(17);
+    blast.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin + 1);
     this.registerTransientEffect(blast);
     this.tweens.add({
       targets: blast,
@@ -70,7 +71,7 @@ export const effectsMixin = {
       fontSize: "16px",
       color: "#ffe6a2"
     });
-    label.setDepth(24);
+    label.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMax - 2);
     label.setOrigin(0.5);
     this.registerTransientEffect(label);
     this.tweens.add({
@@ -128,7 +129,7 @@ export const effectsMixin = {
         color: "#ffe9a8"
       });
       damageText.setOrigin(0.5);
-      damageText.setDepth(26);
+      damageText.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMax);
     }
 
     this.tweens.add({
@@ -154,7 +155,7 @@ export const effectsMixin = {
         particle.setActive(true).setVisible(true);
       } else {
         particle = this.add.circle(x, y, 2.5, color, 0.95);
-        particle.setDepth(16);
+        particle.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin);
       }
 
       this.tweens.add({
@@ -169,12 +170,14 @@ export const effectsMixin = {
   },
 
 
-  playEnemyDeathEffect(enemy) {
+  playEnemyDeathEffect(enemy, { spawnParticles = true } = {}) {
     enemy.isDying = true;
     this.clearEliteWarning(enemy);
     enemy.body.enable = false;
     enemy.setVelocity(0, 0);
-    this.spawnDeathParticles(enemy.x, enemy.y, enemy.enemyColor);
+    if (spawnParticles) {
+      this.spawnDeathParticles(enemy.x, enemy.y, enemy.enemyColor);
+    }
 
     this.tweens.add({
       targets: enemy,

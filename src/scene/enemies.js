@@ -26,6 +26,7 @@ import {
   centerCircularBody,
   CHARACTER_DISPLAY_SCALE
 } from "../art/presentationRules.js";
+import { COMBAT_PRESENTATION_DEPTH } from "../art/combatFeedback.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -435,7 +436,7 @@ export const enemiesMixin = {
       WORLD_HEIGHT - 16
     );
     const blink = this.add.circle(enemy.x, enemy.y, 6, 0xd8b0ff, 0.5);
-    blink.setDepth(16);
+    blink.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin);
     this.registerTransientEffect(blink);
     this.tweens.add({
       targets: blink,
@@ -658,7 +659,7 @@ export const enemiesMixin = {
   createChargeWarning(enemy) {
     this.clearEliteWarning(enemy);
     const warning = this.add.graphics();
-    warning.setDepth(15);
+    warning.setDepth(COMBAT_PRESENTATION_DEPTH.warning);
     warning.lineStyle(3, 0xffa773, 0.95);
     warning.lineBetween(
       enemy.x,
@@ -674,7 +675,7 @@ export const enemiesMixin = {
   createTeleportWarning(enemy, x, y) {
     this.clearEliteWarning(enemy);
     const warning = this.add.graphics();
-    warning.setDepth(15);
+    warning.setDepth(COMBAT_PRESENTATION_DEPTH.warning);
     warning.lineStyle(2, 0x9df7ff, 0.95);
     warning.strokeCircle(x, y, 24);
     warning.lineBetween(x - 10, y, x + 10, y);
@@ -972,7 +973,7 @@ export const enemiesMixin = {
     this.killCount += 1;
     this.bossPhaseActive = false;
     this.showTopBanner("收容完成", "SCP-049 已被击败", 2200);
-    this.playEnemyDeathEffect(boss);
+    this.playEnemyDeathEffect(boss, { spawnParticles: false });
     this.time.delayedCall(BALANCE.feedback.deathShrinkMs + 120, () => {
       if (!this.isGameOver) {
         this.triggerVictory();

@@ -163,20 +163,65 @@ export const combatMixin = {
       combatContext
     );
     const damage = Math.max(1, Math.round(damageAmount * damageMultiplier));
-    enemy.health -= damage;
+    const nextHealth = enemy.health - damage;
+    const lethal = nextHealth <= 0;
+    const hitSnapshot = Object.freeze({
+      x: enemy.x,
+      y: enemy.y,
+      impactX,
+      impactY,
+      enemyType: enemy.enemyType ?? "unknown",
+      eliteType: enemy.eliteType ?? null,
+      isBoss: enemy.isBoss === true,
+      damage,
+      lethal
+    });
+    const deathSnapshot = lethal
+      ? Object.freeze({
+          x: enemy.x,
+          y: enemy.y,
+          enemyType: enemy.enemyType ?? "unknown",
+          eliteType: enemy.eliteType ?? null,
+          isBoss: enemy.isBoss === true,
+          color: Number.isFinite(enemy.enemyColor) ? enemy.enemyColor : 0x8b2635
+        })
+      : null;
+
+    enemy.health = nextHealth;
     this.flashEnemyOnHit(enemy);
     this.spawnFloatingDamage(enemy.x, enemy.y, damage);
-    this.spawnImpactEffect(impactX, impactY);
     this.playSound("enemyHit");
 
-    if (enemy.health <= 0) {
+    if (lethal) {
       if (enemy.isBoss) {
         this.handleBossDefeat(enemy);
-        return;
+      } else {
+        this.handleEnemyDefeatRewards(enemy, combatContext);
+        this.playEnemyDeathEffect(enemy, { spawnParticles: false });
+        this.killCount += 1;
       }
-      this.handleEnemyDefeatRewards(enemy, combatContext);
-      this.playEnemyDeathEffect(enemy);
-      this.killCount += 1;
+    }
+
+    let controllerHandledHit = false;
+    try {
+      controllerHandledHit = this.combatFeedback?.notifyHit(hitSnapshot) === true;
+    } catch {
+      // Presentation failures cannot roll back committed damage or death state.
+    }
+    if (!controllerHandledHit) {
+      this.spawnImpactEffect(hitSnapshot.impactX, hitSnapshot.impactY);
+    }
+
+    if (deathSnapshot) {
+      let controllerHandledDeath = false;
+      try {
+        controllerHandledDeath = this.combatFeedback?.notifyDeath(deathSnapshot) === true;
+      } catch {
+        // Hit and death feedback are independent fallback boundaries.
+      }
+      if (!controllerHandledDeath) {
+        this.spawnDeathParticles(deathSnapshot.x, deathSnapshot.y, deathSnapshot.color);
+      }
     }
   },
 
