@@ -15,6 +15,20 @@ import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.j
 // Domain mixin: effects. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const effectsMixin = {
 
+  emitAttackPresentation(snapshot, fallbackDirection) {
+    try {
+      if (this.combatFeedback?.notifyAttack(snapshot) === true) {
+        return;
+      }
+    } catch {
+      // Presentation feedback must not interrupt committed gameplay.
+    }
+
+    if (Number.isFinite(fallbackDirection)) {
+      this.spawnMuzzleFlash(fallbackDirection);
+    }
+  },
+
   spawnImpactEffect(x, y) {
     let impact = this._impactPool.pop();
     if (impact) {

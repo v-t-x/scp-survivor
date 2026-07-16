@@ -136,6 +136,8 @@ export const weaponsMixin = {
     const cx = Math.floor(px / cellSize);
     const cy = Math.floor(py / cellSize);
     const cellRadius = Math.ceil(radius / cellSize);
+    let committedHitCount = 0;
+    let firstAffectedAngle = null;
     for (let gx = cx - cellRadius; gx <= cx + cellRadius; gx += 1) {
       for (let gy = cy - cellRadius; gy <= cy + cellRadius; gy += 1) {
         const bucket = grid.get(gx * ENEMY_GRID_STRIDE + gy);
@@ -150,12 +152,27 @@ export const weaponsMixin = {
             this.damageEnemy(enemy, damage, enemy.x, enemy.y, px, py, {
               sourceWeaponId: "tesla"
             });
+            committedHitCount += 1;
+            if (firstAffectedAngle === null) {
+              firstAffectedAngle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
+            }
           }
         }
       }
     }
 
     this.spawnTeslaFieldPulse(px, py, radius);
+
+    if (committedHitCount > 0) {
+      this.emitAttackPresentation?.({
+        weaponId: "tesla-field",
+        originX: px,
+        originY: py,
+        angle: firstAffectedAngle,
+        shotCount: committedHitCount,
+        heavy: true
+      });
+    }
   },
 
 
@@ -280,7 +297,6 @@ export const weaponsMixin = {
       nearest.x,
       nearest.y
     );
-    this.spawnMuzzleFlash(baseAngle);
     this.playSound("shoot");
 
     const projectileTotal = Math.min(
@@ -315,6 +331,14 @@ export const weaponsMixin = {
     );
     if (committedPresentationAngle !== null) {
       this.playerFacingAngle = committedPresentationAngle;
+      this.emitAttackPresentation?.({
+        weaponId: "pistol",
+        originX: this.player.x,
+        originY: this.player.y,
+        angle: committedPresentationAngle,
+        shotCount: committedBullets.length,
+        heavy: false
+      }, committedPresentationAngle);
     }
     return true;
   },
@@ -344,7 +368,6 @@ export const weaponsMixin = {
       nearest.x,
       nearest.y
     );
-    this.spawnMuzzleFlash(baseAngle);
     this.playSound("shoot");
 
     const shotId = weapon.nextShotId++;
@@ -388,6 +411,17 @@ export const weaponsMixin = {
       weapon.nextAttackAtMs = weapon.reloadEndAtMs;
     }
 
+    if (committedPresentationAngle !== null) {
+      this.emitAttackPresentation?.({
+        weaponId: "shotgun",
+        originX: this.player.x,
+        originY: this.player.y,
+        angle: committedPresentationAngle,
+        shotCount: committedBullets.length,
+        heavy: true
+      }, committedPresentationAngle);
+    }
+
     return true;
   },
 
@@ -409,6 +443,7 @@ export const weaponsMixin = {
       let currentOrigin = { x: this.player.x, y: this.player.y };
       let currentDamage = weapon.damage;
       let committedPresentationAngle = null;
+      let committedHitCount = 0;
       for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
         this.spawnLightningSegment(
           currentOrigin.x,
@@ -433,6 +468,7 @@ export const weaponsMixin = {
             )
           }
         );
+        committedHitCount += 1;
         if (chainIndex === 0) {
           committedPresentationAngle = Phaser.Math.Angle.Between(
             this.player.x,
@@ -446,6 +482,14 @@ export const weaponsMixin = {
       }
       if (committedPresentationAngle !== null) {
         this.playerFacingAngle = committedPresentationAngle;
+        this.emitAttackPresentation?.({
+          weaponId: "tesla",
+          originX: this.player.x,
+          originY: this.player.y,
+          angle: committedPresentationAngle,
+          shotCount: committedHitCount,
+          heavy: true
+        });
       }
       return true;
     }
@@ -455,6 +499,7 @@ export const weaponsMixin = {
     let currentTarget = firstTarget;
     let currentDamage = weapon.damage;
     let committedPresentationAngle = null;
+    let committedHitCount = 0;
 
     for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
       if (!currentTarget || hitEnemies.has(currentTarget) || !currentTarget.active) {
@@ -485,6 +530,7 @@ export const weaponsMixin = {
           )
         }
       );
+      committedHitCount += 1;
       if (chainIndex === 0) {
         committedPresentationAngle = Phaser.Math.Angle.Between(
           this.player.x,
@@ -506,6 +552,14 @@ export const weaponsMixin = {
 
     if (committedPresentationAngle !== null) {
       this.playerFacingAngle = committedPresentationAngle;
+      this.emitAttackPresentation?.({
+        weaponId: "tesla",
+        originX: this.player.x,
+        originY: this.player.y,
+        angle: committedPresentationAngle,
+        shotCount: committedHitCount,
+        heavy: true
+      });
     }
 
     return true;
