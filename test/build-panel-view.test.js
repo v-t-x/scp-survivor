@@ -345,6 +345,8 @@ test("build panel uses one screen-fixed terminal controller and TAB changes visi
   assert.equal(scene.buildPanelController.mode, "terminal");
   assert.equal(scene.buildPanel, scene.buildPanelController.container);
   assert.equal(scene.buildPanel.visible, false);
+  assert.equal(scene.buildPanel.depth, 59);
+  assert.equal(scene.buildPanel.depth > 58 && scene.buildPanel.depth < 60, true);
   assert.deepEqual(new Set(scene.buildPanelController.objects), new Set(liveObjects(scene)));
   assert.equal(scene.buildPanelController.objects.every(({ scrollFactor }) => scrollFactor === 0), true);
   assert.ok(scene.buildPanelController.objects.some(
@@ -430,6 +432,7 @@ test("terminal construction failure rolls back partial objects before extracted 
   assert.equal(scene.buildPanelController.mode, "legacy");
   assert.equal(scene.buildPanel, scene.buildPanelController.container);
   assert.equal(scene.buildPanel.visible, false);
+  assert.equal(scene.buildPanel.depth, 59);
   assert.deepEqual(new Set(scene.buildPanelController.objects), new Set(liveObjects(scene)));
   const partialObjects = scene.created.filter(
     (object) => !scene.buildPanelController.objects.includes(object)

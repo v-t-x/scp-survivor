@@ -688,7 +688,7 @@ export const hudMixin = {
         y: 0,
         width: 900,
         height: 470,
-        depth: 56,
+        depth: FACILITY_HUD_DEPTH + 1,
         scrollFactor: 0,
         eyebrow: "SITE-19 // OPERATOR LOADOUT",
         title: "当前构筑",
@@ -699,7 +699,7 @@ export const hudMixin = {
 
       const own = (object, parent = terminal.content) => {
         ownedObjects.push(object);
-        object.setDepth(57);
+        object.setDepth(FACILITY_HUD_DEPTH + 1);
         object.setScrollFactor(0);
         parent?.add(object);
         return object;
@@ -834,7 +834,7 @@ export const hudMixin = {
 
     try {
       const container = own(this.add.container(0, 0));
-      container.setDepth(56);
+      container.setDepth(FACILITY_HUD_DEPTH + 1);
       container.setScrollFactor(0);
       container.setVisible(false);
 

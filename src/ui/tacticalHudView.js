@@ -6,6 +6,7 @@ import { selectTimelineHudContainers } from "./hudPresentation.js";
 
 const HUD_DEPTH = 45;
 const FACILITY_DEPTH = 58;
+const OUTAGE_DEPTH = 40;
 const WEAPON_ICON_SIZE = 48;
 const PICKUP_RADIUS_CUE_DURATION_MS = 650;
 
@@ -86,6 +87,7 @@ export function createTacticalHudView(scene, {
   let gameplayVisible = true;
   let facilityCollapsed = false;
   let facilityExpanded = false;
+  let outageWarningVisible = false;
   let pickupCueUntilMs = -1;
   let previousPickupRadius;
 
@@ -223,14 +225,12 @@ export function createTacticalHudView(scene, {
       tracker,
       scene.add.renderTexture(0, 0, 960, 540)
     );
-    setHudDisplay(outageDarknessRt, FACILITY_DEPTH).setVisible(false);
-    facility.container.add([outageDarknessRt]);
+    setHudDisplay(outageDarknessRt, OUTAGE_DEPTH).setOrigin(0, 0).setVisible(false);
     const outageLightSprite = trackCreatedObject(
       tracker,
-      scene.add.image(292, 24, TEXTURES.powerOutageLight)
+      scene.add.image(0, 0, TEXTURES.powerOutageLight)
     );
-    setHudDisplay(outageLightSprite, FACILITY_DEPTH).setVisible(false);
-    facility.container.add([outageLightSprite]);
+    setHudDisplay(outageLightSprite, OUTAGE_DEPTH).setOrigin(0.5).setVisible(false);
 
     const refs = {
       statsText: statsVitals,
@@ -266,6 +266,9 @@ export function createTacticalHudView(scene, {
       eventBannerContainer.setVisible(showExpanded);
       eventBannerBg.setVisible(showExpanded);
       eventBannerDetail.setVisible(showExpanded);
+      const showOutage = gameplayVisible && outageWarningVisible;
+      outageDarknessRt.setVisible(showOutage);
+      outageLightSprite.setVisible(showOutage);
     }
 
     function update(presentation = {}) {
@@ -288,6 +291,7 @@ export function createTacticalHudView(scene, {
 
       facilityLamp.setState(facilityData.tone === "danger" ? "danger" : facilityData.tone === "warning" ? "warning" : "contained");
       facilityExpanded = facilityData.expanded === true;
+      outageWarningVisible = facilityData.tone === "warning";
       const facilityTitle = facilityData.title ?? "";
       const facilityDetail = facilityData.detail ?? "";
       eventBannerTitle
@@ -295,8 +299,6 @@ export function createTacticalHudView(scene, {
         .setColor(toneColor(facilityData.tone));
       eventBannerDetail.setText(facilityData.detail ?? "");
       syncFacilityVisibility();
-      outageDarknessRt.setVisible(facilityData.tone === "warning");
-      outageLightSprite.setVisible(facilityData.tone === "warning");
 
       pauseButtonLabel.setText(systemData.pauseLabel ?? "").setColor(toneColor(systemData.tone));
       muteText.setText(systemData.muteLabel ?? "").setColor(toneColor(systemData.tone));

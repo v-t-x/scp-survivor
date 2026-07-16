@@ -415,6 +415,36 @@ test("tactical HUD exposes five stable HUD regions, compatibility refs, and the 
   assert.equal(view.pickupWorldGraphic.visible, false);
 });
 
+test("outage mask stays viewport-fixed outside the offset facility container", () => {
+  const scene = createScene();
+  const view = createView(scene);
+  const darkness = view.refs.outageDarknessRt;
+  const light = view.refs.outageLightSprite;
+
+  assert.equal(darkness.parentContainer ?? null, null);
+  assert.deepEqual(
+    [darkness.x, darkness.y, darkness.width, darkness.height],
+    [0, 0, 960, 540]
+  );
+  assert.deepEqual(darkness.origin, [0, 0]);
+  assert.equal(darkness.scrollFactor, 0);
+  assert.equal(darkness.depth, 40);
+  assert.equal(light.parentContainer ?? null, null);
+  assert.deepEqual(light.origin, [0.5]);
+  assert.equal(light.scrollFactor, 0);
+  assert.equal(light.depth, 40);
+
+  view.update(presentation({
+    activeFacilityEvent: { type: "powerOutage", warning: "power unstable" }
+  }));
+  assert.equal(darkness.visible, true);
+  assert.equal(light.visible, true);
+
+  view.setGameplayVisible(false);
+  assert.equal(darkness.visible, false);
+  assert.equal(light.visible, false);
+});
+
 test("pickup radius remains a single world-space graphic around the live player position", () => {
   const scene = createScene();
   const view = createView(scene);
@@ -825,7 +855,7 @@ for (const { label, failure } of [
     failure: {
       label: "late",
       childType: "image",
-      textureKey: TEXTURES.powerOutageLight
+      textureKey: TEXTURES.weaponPistolIcon
     }
   }
 ]) {

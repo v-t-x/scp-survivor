@@ -284,8 +284,14 @@ function createScene(options = {}) {
     getRequiredXpForLevel() { return 10; },
     time: {
       delayedCall(delay, callback) {
-        scene.delayedCalls.push({ delay, callback });
-        return { remove() {} };
+        const timer = {
+          delay,
+          callback,
+          removed: false,
+          remove() { this.removed = true; }
+        };
+        scene.delayedCalls.push(timer);
+        return timer;
       }
     },
     tweens: {
@@ -583,8 +589,9 @@ for (const failure of ["overlay", "card"]) {
   });
 }
 
-test("double presentation failure locks retries for ten frames without losing pending or pause balance", () => {
-  const scene = createScene({ failTerminal: "overlay", failLegacy: true, pendingLevelUps: 2 });
+test("double presentation failure retries pending choices after a bounded gameplay-safe delay", () => {
+  const failure = { failTerminal: "overlay", failLegacy: true, pendingLevelUps: 2 };
+  const scene = createScene(failure);
 
   scene.showLevelUpOverlay();
 
@@ -598,13 +605,54 @@ test("double presentation failure locks retries for ten frames without losing pe
   assert.equal(scene.levelUpOverlay, null);
   assert.equal(scene.levelUpOverlayController, null);
   const tileAttempts = scene.addCounts.get("tileSprite");
+  assert.equal(scene.delayedCalls.length, 1);
+  assert.equal(scene.delayedCalls[0].delay, 1000);
 
-  for (let frame = 0; frame < 10; frame += 1) scene.addExperience(0);
+  for (let event = 0; event < 10; event += 1) scene.addExperience(0);
 
   assert.equal(scene.addCounts.get("tileSprite"), tileAttempts);
   assert.equal(scene.pauseCount, 1);
   assert.equal(scene.resumeCount, 1);
   assert.equal(scene.pendingLevelUps, 2);
+
+  runNextDelay(scene, 1000);
+
+  assert.equal(scene._levelUpPresentationUnavailable, true);
+  assert.equal(scene.pendingLevelUps, 2);
+  assert.equal(scene.isLevelUpActive, false);
+  assert.equal(scene.physicsPaused, false);
+  assert.equal(scene.pauseCount, 2);
+  assert.equal(scene.resumeCount, 2);
+  assert.equal(scene.delayedCalls.length, 1);
+  assert.equal(scene.delayedCalls[0].delay, 1000);
+  assert.equal(scene.levelUpPresentationRetryTimer, scene.delayedCalls[0]);
+
+  failure.failTerminal = null;
+  failure.failLegacy = false;
+  runNextDelay(scene, 1000);
+
+  assert.equal(scene._levelUpPresentationUnavailable, false);
+  assert.equal(scene.pendingLevelUps, 2);
+  assert.equal(scene.isLevelUpActive, true);
+  assert.equal(scene.physicsPaused, true);
+  assert.equal(scene.pauseCount, 3);
+  assert.equal(scene.resumeCount, 2);
+  assert.ok(scene.levelUpOverlayController);
+  assert.equal(scene.levelUpCards.length, 3);
+});
+
+test("level-up timer teardown cancels a pending presentation retry", () => {
+  const scene = createScene({ failTerminal: "overlay", failLegacy: true });
+
+  scene.showLevelUpOverlay();
+  const retryTimer = scene.levelUpPresentationRetryTimer;
+  assert.ok(retryTimer);
+
+  scene.cancelLevelUpResolutionTimer();
+
+  assert.equal(retryTimer.removed, true);
+  assert.equal(scene.levelUpPresentationRetryTimer, null);
+  assert.equal(scene.levelUpResolutionTimer, null);
 });
 
 test("PrototypeScene.create resets the presentation failure lock on a reused scene instance", async () => {
@@ -688,6 +736,7 @@ test("PrototypeScene.create resets the presentation failure lock on a reused sce
   scene.create();
 
   assert.equal(scene._levelUpPresentationUnavailable, false);
+  assert.equal(scene.levelUpPresentationRetryTimer, null);
 });
 
 test("menus teardown and return-to-title destroy terminal and legacy level-up ownership safely", () => {

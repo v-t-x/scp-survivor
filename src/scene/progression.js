@@ -19,6 +19,8 @@ import {
 } from "../ui/terminalOverlay.js";
 import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
 
+const LEVEL_UP_PRESENTATION_RETRY_MS = 1000;
+
 // Domain mixin: progression. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const progressionMixin = {
 
@@ -174,6 +176,32 @@ export const progressionMixin = {
     this.isResolvingLevelUp = false;
     this.resumeGameplaySystems();
     this.updateUI();
+
+    if (this.levelUpPresentationRetryTimer) {
+      return;
+    }
+    try {
+      const retryTimer = this.time?.delayedCall?.(LEVEL_UP_PRESENTATION_RETRY_MS, () => {
+        this.levelUpPresentationRetryTimer = null;
+        this._levelUpPresentationUnavailable = false;
+        if (
+          this.pendingLevelUps > 0
+          && !this.isLevelUpActive
+          && !this.isGameOver
+        ) {
+          this.showLevelUpOverlay();
+        }
+      });
+      if (!retryTimer) {
+        throw new Error("Level-up presentation retry timer unavailable.");
+      }
+      this.levelUpPresentationRetryTimer = retryTimer;
+    } catch {
+      // If even the Scene clock is unavailable, allow the next XP event to
+      // retry instead of permanently discarding access to pending upgrades.
+      this._levelUpPresentationUnavailable = false;
+      this.levelUpPresentationRetryTimer = null;
+    }
   },
 
 
@@ -710,6 +738,12 @@ export const progressionMixin = {
       // Scene shutdown must continue even if Phaser already released the timer.
     }
     this.levelUpResolutionTimer = null;
+    try {
+      this.levelUpPresentationRetryTimer?.remove?.(false);
+    } catch {
+      // Scene shutdown must continue if Phaser already released the retry timer.
+    }
+    this.levelUpPresentationRetryTimer = null;
   },
 
 
