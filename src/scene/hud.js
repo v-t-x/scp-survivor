@@ -605,6 +605,24 @@ export const hudMixin = {
   },
 
 
+  releaseBuildPanelObjects(objects) {
+    for (const object of [...(objects ?? [])].reverse()) {
+      for (const release of [
+        () => object?.disableInteractive?.(),
+        () => object?.removeInteractive?.(),
+        () => object?.destroy?.(),
+        () => object?.removeAllListeners?.()
+      ]) {
+        try {
+          release();
+        } catch {
+          // Continue releasing all reachable presentation objects.
+        }
+      }
+    }
+  },
+
+
   createBuildPanel() {
     this.destroyBuildPanel();
 
@@ -652,18 +670,16 @@ export const hudMixin = {
     let destroyed = false;
 
     const releaseOwned = () => {
-      for (const object of [...ownedObjects].reverse()) {
-        try {
-          object.disableInteractive?.();
-          object.removeInteractive?.();
-          object.destroy?.();
-        } catch {
-          // Continue releasing the remainder of the build transaction.
-        } finally {
-          object.removeAllListeners?.();
-        }
-      }
+      this.releaseBuildPanelObjects(ownedObjects);
       ownedObjects.length = 0;
+    };
+    const releaseTerminal = () => {
+      try {
+        terminal?.destroy?.();
+      } catch {
+        // Reachable terminal objects are released below.
+      }
+      this.releaseBuildPanelObjects(terminal?.objects);
     };
 
     try {
@@ -789,7 +805,7 @@ export const hudMixin = {
           if (destroyed) return;
           destroyed = true;
           releaseOwned();
-          terminal.destroy();
+          releaseTerminal();
         }
       };
       controller.update();
@@ -797,7 +813,7 @@ export const hudMixin = {
     } catch (error) {
       destroyed = true;
       releaseOwned();
-      terminal?.destroy?.();
+      releaseTerminal();
       throw error;
     }
   },
@@ -813,17 +829,7 @@ export const hudMixin = {
     const destroy = () => {
       if (destroyed) return;
       destroyed = true;
-      for (const object of [...objects].reverse()) {
-        try {
-          object.disableInteractive?.();
-          object.removeInteractive?.();
-          object.destroy?.();
-        } catch {
-          // Continue rolling back the complete legacy transaction.
-        } finally {
-          object.removeAllListeners?.();
-        }
-      }
+      this.releaseBuildPanelObjects(objects);
     };
 
     try {
@@ -983,8 +989,9 @@ export const hudMixin = {
       try {
         controller.destroy?.();
       } catch {
-        // References are already cleared; Scene teardown can continue.
+        // Reachable controller objects are released below.
       }
+      this.releaseBuildPanelObjects(controller.objects);
       return;
     }
     try {

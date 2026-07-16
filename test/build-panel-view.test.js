@@ -460,3 +460,77 @@ test("terminal and legacy construction failure install a safe inert build panel"
   assert.equal(scene.buildPanel.visible, false);
   assert.deepEqual(gameplaySnapshot(scene), before);
 });
+
+test("terminal row listener failure releases every other owned build object", () => {
+  const scene = createScene();
+  scene.createBuildPanel();
+  const controller = scene.buildPanelController;
+  const faultedRow = controller.rowRefs.get("weapon:pistol");
+  const remainingOwnedObjects = [
+    ...controller.objects
+  ].filter((object) => object !== faultedRow);
+
+  const removeAllListeners = faultedRow.removeAllListeners.bind(faultedRow);
+  let listenerCleanupCalls = 0;
+  faultedRow.removeAllListeners = (...args) => {
+    listenerCleanupCalls += 1;
+    if (listenerCleanupCalls === 2) {
+      throw new Error("forced terminal row listener cleanup failure");
+    }
+    return removeAllListeners(...args);
+  };
+
+  assert.doesNotThrow(() => scene.destroyBuildPanel());
+  assert.equal(scene.buildPanelController, null);
+  assertReleased(remainingOwnedObjects);
+});
+
+test("terminal controller destroy failure salvages reachable objects and preserves legacy fallback", () => {
+  const scene = createScene();
+  scene.createBuildPanel();
+  const controller = scene.buildPanelController;
+  const terminalObjects = [...controller.objects];
+  controller.destroy = () => {
+    throw new Error("forced terminal controller destroy failure");
+  };
+
+  assert.doesNotThrow(() => scene.destroyBuildPanel());
+  assert.equal(scene.buildPanelController, null);
+  assertReleased(terminalObjects);
+
+  scene.createTerminalBuildPanel = () => {
+    throw new Error("forced terminal fallback failure");
+  };
+  assert.doesNotThrow(() => scene.createBuildPanel());
+  assert.equal(scene.buildPanelController.mode, "legacy");
+  assert.doesNotThrow(() => {
+    scene.toggleBuildPanel();
+    scene.hideBuildPanel();
+    scene.updateBuildPanelText();
+  });
+});
+
+test("legacy cleanup continues after a listener removal failure", () => {
+  const scene = createScene();
+  scene.createTerminalBuildPanel = () => {
+    throw new Error("forced terminal fallback failure");
+  };
+  scene.createBuildPanel();
+  const controller = scene.buildPanelController;
+  const faultedObject = controller.objects.find(({ type }) => type === "text");
+  const remainingObjects = controller.objects.filter((object) => object !== faultedObject);
+
+  const removeAllListeners = faultedObject.removeAllListeners.bind(faultedObject);
+  let listenerCleanupCalls = 0;
+  faultedObject.removeAllListeners = (...args) => {
+    listenerCleanupCalls += 1;
+    if (listenerCleanupCalls === 2) {
+      throw new Error("forced legacy listener cleanup failure");
+    }
+    return removeAllListeners(...args);
+  };
+
+  assert.doesNotThrow(() => scene.destroyBuildPanel());
+  assert.equal(scene.buildPanelController, null);
+  assertReleased(remainingObjects);
+});
