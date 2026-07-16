@@ -370,6 +370,12 @@ function createRealCombatFeedbackController(scene, options) {
 export function createCombatFeedbackController(scene, options = {}) {
   if (!scene?.add?.image) return createNoopController();
   try {
+    if (
+      typeof scene.textures?.exists === "function"
+      && !scene.textures.exists(TEXTURES.contactShadow)
+    ) {
+      return createNoopController();
+    }
     return createRealCombatFeedbackController(scene, options);
   } catch {
     return createNoopController();

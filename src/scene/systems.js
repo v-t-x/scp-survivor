@@ -145,6 +145,11 @@ export const systemsMixin = {
     if (this.spawnEvent) {
       this.spawnEvent.paused = true;
     }
+    try {
+      this.combatFeedback?.setPaused?.(true);
+    } catch {
+      // Presentation pause state cannot block committed gameplay pause state.
+    }
   },
 
 
@@ -166,10 +171,16 @@ export const systemsMixin = {
     } else if (this.regularSpawningActive && !this.spawnEvent && !this.isGameOver) {
       this.scheduleNextSpawn();
     }
+    try {
+      this.combatFeedback?.setPaused?.(false);
+    } catch {
+      // Presentation resume state cannot block committed gameplay resume state.
+    }
   },
 
 
   clearCombatEntities() {
+    const trackedEnemies = [...(this.enemies.getChildren?.() ?? [])];
     this.enemies.clear(true, true);
     this.enemyProjectiles.clear(true, true);
     this.bullets.clear(true, true);
@@ -177,6 +188,13 @@ export const systemsMixin = {
     this.supplyPickups.clear(true, true);
     this.instabilityDecoys.clear(true, true);
     this.clearTransientEffects();
+    for (const enemy of trackedEnemies) {
+      try {
+        this.combatFeedback?.untrackActor?.(enemy);
+      } catch {
+        // One stale shadow cannot block cleanup of the remaining actors.
+      }
+    }
   },
 
 
