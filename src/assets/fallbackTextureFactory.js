@@ -467,6 +467,15 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.upgradeTeslaCooldown, 32, 32);
   });
 
+  ensureTexture(scene, TEXTURES.contactShadow, () => {
+    graphics.clear();
+    graphics.fillStyle(0x15171b, 0.7);
+    graphics.fillEllipse(16, 8, 28, 10);
+    graphics.fillStyle(0x090a0c, 0.9);
+    graphics.fillEllipse(16, 8, 16, 6);
+    graphics.generateTexture(TEXTURES.contactShadow, 32, 16);
+  });
+
   ensureTexture(scene, TEXTURES.upgradePistolBoomerang, () => {
     graphics.clear();
     graphics.fillStyle(0xa66cff, 1);

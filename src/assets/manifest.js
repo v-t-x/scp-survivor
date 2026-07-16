@@ -69,6 +69,7 @@ export const TEXTURES = {
   terminalSurfaceGrid: "terminal-surface-grid",
   incidentStampFrame: "incident-stamp-frame",
   recontainmentStampFrame: "recontainment-stamp-frame",
+  contactShadow: "contact-shadow",
   bullet: "bullet-circle",
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
@@ -121,7 +122,8 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.upgradeTeslaField, path: "assets/art/upgrades/tesla-field.png" },
   { key: TEXTURES.terminalSurfaceGrid, path: "assets/art/ui/terminal-surface-grid.png" },
   { key: TEXTURES.incidentStampFrame, path: "assets/art/ui/incident-stamp-frame.png" },
-  { key: TEXTURES.recontainmentStampFrame, path: "assets/art/ui/recontainment-stamp-frame.png" }
+  { key: TEXTURES.recontainmentStampFrame, path: "assets/art/ui/recontainment-stamp-frame.png" },
+  { key: TEXTURES.contactShadow, path: "assets/art/effects/contact-shadow.png" }
 ];
 
 // Opening character sheets keep the original static textures above as fallback.

@@ -49,7 +49,8 @@ const approvedImageAssets = [
   { key: "upgrade-tesla-field", path: "assets/art/upgrades/tesla-field.png", size: [32, 32] },
   { key: "terminal-surface-grid", path: "assets/art/ui/terminal-surface-grid.png", size: [128, 128] },
   { key: "incident-stamp-frame", path: "assets/art/ui/incident-stamp-frame.png", size: [96, 32] },
-  { key: "recontainment-stamp-frame", path: "assets/art/ui/recontainment-stamp-frame.png", size: [96, 32] }
+  { key: "recontainment-stamp-frame", path: "assets/art/ui/recontainment-stamp-frame.png", size: [96, 32] },
+  { key: "contact-shadow", path: "assets/art/effects/contact-shadow.png", size: [32, 16] }
 ];
 
 const upgradeIconAssets = approvedImageAssets.filter(({ key }) => key.startsWith("upgrade-"));
@@ -549,6 +550,37 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
     }
   }
+});
+
+test("contact-shadow is a transparent hard-edged grayscale 32 by 16 oval with an exact fallback key", async () => {
+  assert.equal(TEXTURES.contactShadow, "contact-shadow");
+  const asset = IMAGE_ASSETS.find(({ key }) => key === TEXTURES.contactShadow);
+  assert.deepEqual(asset, { key: "contact-shadow", path: "assets/art/effects/contact-shadow.png" });
+  const fallbackSource = await readFile(new URL("../src/assets/fallbackTextureFactory.js", import.meta.url), "utf8");
+  assert.match(fallbackSource, /ensureTexture\(scene, TEXTURES\.contactShadow/);
+  assert.match(fallbackSource, /generateTexture\(TEXTURES\.contactShadow, 32, 16\)/);
+
+  const absolute = fileURLToPath(new URL("../public/assets/art/effects/contact-shadow.png", import.meta.url));
+  const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
+  assert.deepEqual([width, height], [32, 16]);
+  const alpha = new Set();
+  const opaqueRows = [];
+  for (let y = 0; y < height; y += 1) {
+    let minX = width;
+    let maxX = -1;
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      alpha.add(pixels[offset + 3]);
+      if (pixels[offset + 3] === 0) continue;
+      assert.ok(Math.max(pixels[offset], pixels[offset + 1], pixels[offset + 2]) - Math.min(pixels[offset], pixels[offset + 1], pixels[offset + 2]) <= 8, "shadow must stay grayscale");
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+    }
+    if (maxX >= minX) opaqueRows.push({ y, width: maxX - minX + 1 });
+  }
+  assert.deepEqual(alpha, new Set([0, 255]), "contact shadow must use binary alpha");
+  assert.ok(opaqueRows.length >= 4, "contact shadow must have a visible hard-edged oval");
+  assert.ok(Math.max(...opaqueRows.map(({ width }) => width)) >= 2 * opaqueRows.length, "contact shadow must remain horizontally elongated");
 });
 
 test("upgrade icons and terminal surfaces preserve their frozen transparent pixel contracts", async () => {
