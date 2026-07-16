@@ -288,13 +288,14 @@ export const weaponsMixin = {
       BALANCE.combat.maxProjectiles
     );
 
+    const committedBullets = [];
     for (let index = 0; index < projectileTotal; index += 1) {
       const spreadStepRadians = Phaser.Math.DegToRad(
         BALANCE.upgrades.projectileSpreadDeg
       );
       const spreadOffset = (index - (projectileTotal - 1) / 2) * spreadStepRadians;
       const bulletAngle = baseAngle + spreadOffset;
-      this.spawnPlayerProjectile({
+      const bullet = this.spawnPlayerProjectile({
         x: this.player.x,
         y: this.player.y,
         angle: bulletAngle,
@@ -304,6 +305,16 @@ export const weaponsMixin = {
         penetration: this.bulletPenetration,
         weaponId: "pistol"
       });
+      if (bullet) {
+        committedBullets.push(bullet);
+      }
+    }
+    const committedPresentationAngle = getClosestPresentationAngle(
+      baseAngle,
+      committedBullets
+    );
+    if (committedPresentationAngle !== null) {
+      this.playerFacingAngle = committedPresentationAngle;
     }
     return true;
   },
@@ -333,7 +344,6 @@ export const weaponsMixin = {
       nearest.x,
       nearest.y
     );
-    this.playerFacingAngle = baseAngle;
     this.spawnMuzzleFlash(baseAngle);
     this.playSound("shoot");
 
@@ -346,9 +356,10 @@ export const weaponsMixin = {
     );
     const spreadStart = -Phaser.Math.DegToRad(weapon.spreadDeg / 2);
 
+    const committedBullets = [];
     for (let index = 0; index < pelletTotal; index += 1) {
       const angle = baseAngle + spreadStart + spreadStepRadians * index;
-      this.spawnPlayerProjectile({
+      const bullet = this.spawnPlayerProjectile({
         x: this.player.x,
         y: this.player.y,
         angle,
@@ -359,6 +370,16 @@ export const weaponsMixin = {
         weaponId: "shotgun",
         shotId
       });
+      if (bullet) {
+        committedBullets.push(bullet);
+      }
+    }
+    const committedPresentationAngle = getClosestPresentationAngle(
+      baseAngle,
+      committedBullets
+    );
+    if (committedPresentationAngle !== null) {
+      this.playerFacingAngle = committedPresentationAngle;
     }
 
     if (weapon.currentShells <= 0) {
@@ -387,6 +408,7 @@ export const weaponsMixin = {
     if (firstTarget.isBoss) {
       let currentOrigin = { x: this.player.x, y: this.player.y };
       let currentDamage = weapon.damage;
+      let committedPresentationAngle = null;
       for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
         this.spawnLightningSegment(
           currentOrigin.x,
@@ -411,8 +433,19 @@ export const weaponsMixin = {
             )
           }
         );
+        if (chainIndex === 0) {
+          committedPresentationAngle = Phaser.Math.Angle.Between(
+            this.player.x,
+            this.player.y,
+            firstTarget.x,
+            firstTarget.y
+          );
+        }
         currentOrigin = { x: firstTarget.x, y: firstTarget.y };
         currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
+      }
+      if (committedPresentationAngle !== null) {
+        this.playerFacingAngle = committedPresentationAngle;
       }
       return true;
     }
@@ -421,6 +454,7 @@ export const weaponsMixin = {
     let currentOrigin = { x: this.player.x, y: this.player.y };
     let currentTarget = firstTarget;
     let currentDamage = weapon.damage;
+    let committedPresentationAngle = null;
 
     for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
       if (!currentTarget || hitEnemies.has(currentTarget) || !currentTarget.active) {
@@ -451,6 +485,14 @@ export const weaponsMixin = {
           )
         }
       );
+      if (chainIndex === 0) {
+        committedPresentationAngle = Phaser.Math.Angle.Between(
+          this.player.x,
+          this.player.y,
+          currentTarget.x,
+          currentTarget.y
+        );
+      }
 
       currentOrigin = { x: currentTarget.x, y: currentTarget.y };
       currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
@@ -460,6 +502,10 @@ export const weaponsMixin = {
         currentOrigin.y,
         hitEnemies
       );
+    }
+
+    if (committedPresentationAngle !== null) {
+      this.playerFacingAngle = committedPresentationAngle;
     }
 
     return true;
@@ -499,6 +545,10 @@ export const weaponsMixin = {
     bullet.setCircle(4);
 
     bullet.body.setVelocity(Math.cos(finalAngle) * speed, Math.sin(finalAngle) * speed);
+    Object.defineProperty(bullet, "presentationAngle", {
+      value: finalAngle,
+      enumerable: true
+    });
     return bullet;
   },
 
@@ -569,3 +619,25 @@ export const weaponsMixin = {
     this.endSurvivalPhase(true);
   }
 };
+
+function getClosestPresentationAngle(baseAngle, bullets) {
+  let closestAngle = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const bullet of bullets) {
+    const presentationAngle = bullet?.presentationAngle;
+    if (!Number.isFinite(presentationAngle)) {
+      continue;
+    }
+    const distance = Math.abs(
+      Math.atan2(
+        Math.sin(presentationAngle - baseAngle),
+        Math.cos(presentationAngle - baseAngle)
+      )
+    );
+    if (distance < closestDistance) {
+      closestAngle = presentationAngle;
+      closestDistance = distance;
+    }
+  }
+  return closestAngle;
+}

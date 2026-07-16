@@ -90,7 +90,7 @@ export const systemsMixin = {
     const direction = new Phaser.Math.Vector2(velocityX, velocityY).normalize();
     const effectiveSpeed = this.playerMoveSpeed * this.moveSpeedBuffMultiplier;
     if (direction.lengthSq() > 0) {
-      this.playerFacingAngle = Math.atan2(direction.y, direction.x);
+      this.playerMovementFallbackAngle = Math.atan2(direction.y, direction.x);
     }
     body.setVelocity(
       direction.x * effectiveSpeed,
@@ -107,7 +107,7 @@ export const systemsMixin = {
       return;
     }
 
-    // Dash toward the current movement input; fall back to last facing.
+    // Dash toward the current movement input; fall back to the last movement direction.
     let dashX = 0;
     let dashY = 0;
     if (this.keys.left.isDown) dashX -= 1;
@@ -117,7 +117,7 @@ export const systemsMixin = {
     if (dashX !== 0 || dashY !== 0) {
       this.dashAngle = Math.atan2(dashY, dashX);
     } else {
-      this.dashAngle = this.playerFacingAngle;
+      this.dashAngle = this.playerMovementFallbackAngle;
     }
 
     this.dashUntilMs = this.elapsedSurvivalMs + BALANCE.player.dashDurationMs;

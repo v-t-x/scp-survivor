@@ -102,6 +102,14 @@ export const worldMixin = {
     this.player.body.setSize(24, 24);
     applyDisplayScalePreservingBody(this.player, CHARACTER_DISPLAY_SCALE.player);
     this.player.setDepth(6);
+    this.combatFeedback.trackActor(this.player, {
+      kind: "player",
+      radius: 12,
+      offsetY: 3
+    });
+    this.player.once("destroy", () => {
+      this.combatFeedback?.untrackActor(this.player);
+    });
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
   },
 

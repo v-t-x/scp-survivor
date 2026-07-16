@@ -177,7 +177,8 @@ test("tinted player enters hit-facing and keeps it until hitUntil expires", () =
   });
   const scene = {
     elapsedSurvivalMs: 1_000,
-    player: player.sprite
+    player: player.sprite,
+    playerFacingAngle: -Math.PI / 2
   };
 
   syncCharacterPresentation(scene);
@@ -221,7 +222,8 @@ test("stationary player retains the latest firing-facing without changing scale"
 
   syncCharacterPresentation({
     elapsedSurvivalMs: 0,
-    player: player.sprite
+    player: player.sprite,
+    playerFacingAngle: 0
   });
 
   assert.equal(player.sprite.presentationFacing, "right");
@@ -242,6 +244,7 @@ test("horizontal facing mirrors right without changing character scale", () => {
   const scene = {
     elapsedSurvivalMs: 0,
     player: player.sprite,
+    playerFacingAngle: 0,
     enemies: { getChildren: () => [] }
   };
 
@@ -255,9 +258,34 @@ test("horizontal facing mirrors right without changing character scale", () => {
   player.sprite.body.velocity.x = -90;
   syncCharacterPresentation(scene);
 
-  assert.equal(player.sprite.presentationFacing, "left");
-  assert.equal(player.sprite.flipX, false);
+  assert.equal(player.sprite.presentationFacing, "right");
+  assert.equal(player.sprite.flipX, true);
   assert.equal(player.sprite.scaleX, 1.2);
+});
+
+test("player uses committed attack facing while velocity selects only idle or move", () => {
+  const player = createSprite({
+    kind: "player",
+    sheetKey: TEXTURES.playerOpeningSheet,
+    velocity: { x: 0, y: -90 },
+    presentationFacing: "down"
+  });
+  const scene = {
+    elapsedSurvivalMs: 0,
+    player: player.sprite,
+    playerFacingAngle: 0
+  };
+
+  syncCharacterPresentation(scene);
+
+  assert.equal(player.sprite.presentationFacing, "right");
+  assert.equal(player.sprite.flipX, true);
+  assert.deepEqual(player.played, ["player-move-right"]);
+
+  scene.playerFacingAngle = -Math.PI / 2;
+  syncCharacterPresentation(scene);
+  assert.equal(player.sprite.presentationFacing, "up");
+  assert.deepEqual(player.played, ["player-move-right", "player-move-up"]);
 });
 
 test("static fallbacks and later-wave textures are presentation-compatible", () => {

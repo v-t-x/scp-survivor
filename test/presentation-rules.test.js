@@ -544,3 +544,20 @@ test("opening character integration preserves body configuration contracts", asy
   assert.doesNotMatch(`${world}\n${enemies}`, /body\.setOffset/);
   assert.match(main, /syncCharacterPresentation\(this\)/);
 });
+
+test("player presentation receives attack-facing separately from movement fallback memory", async () => {
+  const [main, systems, presentation] = await Promise.all([
+    readFile(new URL("../src/main.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/art/characterPresentation.js", import.meta.url), "utf8")
+  ]);
+  const movement = systems.slice(
+    systems.indexOf("  handlePlayerMovement()"),
+    systems.indexOf("  tryStartDash()")
+  );
+
+  assert.match(main, /this\.playerMovementFallbackAngle\s*=\s*0/);
+  assert.match(movement, /this\.playerMovementFallbackAngle\s*=\s*Math\.atan2/);
+  assert.doesNotMatch(movement, /this\.playerFacingAngle\s*=/);
+  assert.match(presentation, /scene\.playerFacingAngle/);
+});

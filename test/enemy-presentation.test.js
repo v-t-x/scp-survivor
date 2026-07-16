@@ -820,7 +820,10 @@ test("the unified initializer reaches presentation after all legacy body scale a
       return enemy;
     }
   );
-  const scene = { elapsedSurvivalMs: 1_000 };
+  const scene = {
+    elapsedSurvivalMs: 1_000,
+    combatFeedback: { trackActor() {}, untrackActor() {} }
+  };
   const cases = [
     {
       type: "infectedStaff",
@@ -924,6 +927,31 @@ test("the unified initializer reaches presentation after all legacy body scale a
       assert.equal(enemy.canSplit, true);
     }
   }
+});
+
+test("actor tracking is attached after enemy and boss presentation setup", async () => {
+  const enemies = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const initializer = enemies.slice(
+    enemies.indexOf("  initializeEnemyFromConfig("),
+    enemies.indexOf("  updateEnemies()")
+  );
+  const bossCreation = enemies.slice(
+    enemies.indexOf("  spawnScp049Boss()"),
+    enemies.indexOf("  updateBoss()")
+  );
+
+  const enemyPresentation = initializer.indexOf("applyEnemyPresentation(this, enemy, config.type)");
+  const enemyTracking = initializer.indexOf("this.combatFeedback?.trackActor(enemy");
+  assert.ok(enemyPresentation >= 0 && enemyPresentation < enemyTracking);
+  assert.match(initializer, /enemy\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(enemy\)/);
+
+  const bossBody = bossCreation.indexOf("boss.body.setImmovable(true)");
+  const bossTracking = bossCreation.indexOf("this.combatFeedback.trackActor(boss");
+  assert.ok(bossBody >= 0 && bossBody < bossTracking);
+  assert.match(bossCreation, /boss\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(boss\)/);
 });
 
 test("unknown enemy types are inert even when production sheets exist", () => {

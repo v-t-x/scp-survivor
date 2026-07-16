@@ -328,8 +328,14 @@ export const enemiesMixin = {
     }
 
     applyEnemyPresentation(this, enemy, config.type);
+    this.combatFeedback?.trackActor(enemy, {
+      kind: config.type === "biomassChild" ? "biomassChild" : isElite ? "elite" : "enemy",
+      radius: Math.max(enemy.body.width, enemy.body.height) / 2,
+      offsetY: 3
+    });
 
     enemy.once("destroy", () => {
+      this.combatFeedback?.untrackActor(enemy);
       if (enemy.armorBrokenLabel?.active) {
         enemy.armorBrokenLabel.destroy();
       }
@@ -747,6 +753,11 @@ export const enemiesMixin = {
     boss.setCollideWorldBounds(true);
     // Immovable so its own summoned minions cannot shove it around.
     boss.body.setImmovable(true);
+    this.combatFeedback.trackActor(boss, {
+      kind: "boss",
+      radius: 18,
+      offsetY: 5
+    });
     boss.summonCooldownMs = config.summonCooldownMs;
     boss.nextSummonAtMs = this.elapsedSurvivalMs + config.summonInitialDelayMs;
     // Surgery Frenzy state machine. All timers use elapsedSurvivalMs so they are
@@ -767,6 +778,7 @@ export const enemiesMixin = {
       boss.bossLabel = null;
     });
     boss.once("destroy", () => {
+      this.combatFeedback?.untrackActor(boss);
       if (boss.bossLabel?.active) {
         boss.bossLabel.destroy();
       }

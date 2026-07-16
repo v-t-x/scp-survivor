@@ -13,6 +13,7 @@ import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
 import { syncCharacterPresentation } from "./art/characterPresentation.js";
+import { createCombatFeedbackController } from "./art/combatFeedback.js";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -104,6 +105,7 @@ class PrototypeScene extends Phaser.Scene {
 
     this.playerMoveSpeed = BALANCE.player.baseMoveSpeed;
     this.playerFacingAngle = 0;
+    this.playerMovementFallbackAngle = 0;
     this.dashUntilMs = 0;
     this.dashReadyAtMs = 0;
     this.dashAngle = 0;
@@ -118,6 +120,9 @@ class PrototypeScene extends Phaser.Scene {
     // this.updateUI() as before — those now delegate to these managers.
     this.audio = new AudioManager(this);
     this.ui = new UIManager(this);
+    this.combatFeedback = typeof createCombatFeedbackController === "function"
+      ? createCombatFeedbackController(this)
+      : createNoopCombatFeedbackController();
     // Release audio/UI resources when the scene shuts down or restarts, so a new
     // run does not leak a stale AudioContext or manager.
     //
@@ -184,6 +189,7 @@ class PrototypeScene extends Phaser.Scene {
       this.updateSupplyPickups();
       this.updatePickupRadiusIndicator();
       syncCharacterPresentation(this);
+      this.combatFeedback.update(this.elapsedSurvivalMs);
     }
 
     this.updatePlayerInvulnerabilityVisual();
@@ -200,6 +206,10 @@ class PrototypeScene extends Phaser.Scene {
   // create() rebuilds this.audio / this.ui, so this prevents a leaked (or
   // duplicate) AudioContext across runs.
   teardownManagers() {
+    if (this.combatFeedback) {
+      this.combatFeedback.destroy();
+      this.combatFeedback = null;
+    }
     if (this.audio) {
       this.audio.destroy();
       this.audio = null;
@@ -243,4 +253,17 @@ const config = {
 };
 
 new Phaser.Game(config);
+
+function createNoopCombatFeedbackController() {
+  return {
+    trackActor() { return false; },
+    untrackActor() {},
+    notifyAttack() { return false; },
+    notifyHit() { return false; },
+    notifyDeath() { return false; },
+    update() {},
+    setPaused() {},
+    destroy() {}
+  };
+}
 

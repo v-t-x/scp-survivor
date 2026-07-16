@@ -84,6 +84,13 @@ export function getFacingFromVector(x, y, previousFacing = "down") {
   return y < 0 ? "up" : "down";
 }
 
+function getFacingFromAngle(angle, previousFacing) {
+  if (!Number.isFinite(angle)) {
+    return previousFacing;
+  }
+  return getFacingFromVector(Math.cos(angle), Math.sin(angle), previousFacing);
+}
+
 export function getCharacterAnimationKey({ kind, motion, facing, hit }) {
   return `${kind}-${hit ? "hit" : motion}-${facing}`;
 }
@@ -108,11 +115,13 @@ function syncSprite(scene, sprite, kind) {
     sprite.presentationHitUntilMs = elapsedSurvivalMs + PRESENTATION_HIT_DURATION_MS;
   }
 
-  sprite.presentationFacing = getFacingFromVector(
-    sprite.body.velocity.x,
-    sprite.body.velocity.y,
-    sprite.presentationFacing
-  );
+  sprite.presentationFacing = kind === "player"
+    ? getFacingFromAngle(scene.playerFacingAngle, sprite.presentationFacing)
+    : getFacingFromVector(
+      sprite.body.velocity.x,
+      sprite.body.velocity.y,
+      sprite.presentationFacing
+    );
   sprite.setFlipX?.(sprite.presentationFacing === "right");
   const moving = sprite.body.velocity.lengthSq() > 1;
   const key = getCharacterAnimationKey({
