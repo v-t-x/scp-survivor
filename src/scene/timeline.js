@@ -282,7 +282,12 @@ export const timelineMixin = {
       this.player.x - cam.scrollX,
       this.player.y - cam.scrollY
     );
-    this.outageDarknessRt.erase(this.outageLightSprite);
+    this.outageLightSprite.setVisible(true);
+    try {
+      this.outageDarknessRt.erase(this.outageLightSprite);
+    } finally {
+      this.outageLightSprite.setVisible(false);
+    }
     this.refreshFacilityPresentation();
   },
 

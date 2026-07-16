@@ -438,7 +438,7 @@ test("outage mask stays viewport-fixed outside the offset facility container", (
     activeFacilityEvent: { type: "powerOutage", warning: "power unstable" }
   }));
   assert.equal(darkness.visible, true);
-  assert.equal(light.visible, true);
+  assert.equal(light.visible, false, "the erase-mask sprite must never render as a white orb");
 
   view.setGameplayVisible(false);
   assert.equal(darkness.visible, false);
@@ -790,6 +790,25 @@ test("destroy is idempotent and removes interactive listeners", () => {
     assert.equal(control.listenerCount, 0);
     assert.equal(control.interactive, false);
   }
+});
+
+test("destroy tolerates Phaser scene shutdown destroying HUD objects first", () => {
+  const scene = createScene();
+  const view = createView(scene);
+
+  for (const object of scene.objects) {
+    object.destroy();
+    object.disableInteractive = () => {
+      throw new Error("destroyed objects no longer have a Scene input system");
+    };
+    object.removeInteractive = () => {
+      throw new Error("destroyed objects no longer have a Scene input system");
+    };
+  }
+
+  assert.doesNotThrow(() => view.destroy());
+  assert.equal(scene.objects.every((object) => object.destroyed), true);
+  assert.equal(scene.objects.every((object) => object.listenerCount === 0), true);
 });
 
 test("constructor rollback destroys already-created objects and unregisters listeners after a mid-build failure", () => {

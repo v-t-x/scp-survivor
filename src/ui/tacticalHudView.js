@@ -19,8 +19,11 @@ function toneColor(tone) {
 }
 
 function cleanUpObject(object) {
-  object?.disableInteractive?.();
-  object?.removeInteractive?.();
+  const stillOwnedByScene = object?.scene != null || object?.active !== false;
+  if (stillOwnedByScene) {
+    object?.disableInteractive?.();
+    object?.removeInteractive?.();
+  }
   object?.destroy?.();
   object?.removeAllListeners?.();
 }
@@ -268,7 +271,9 @@ export function createTacticalHudView(scene, {
       eventBannerDetail.setVisible(showExpanded);
       const showOutage = gameplayVisible && outageWarningVisible;
       outageDarknessRt.setVisible(showOutage);
-      outageLightSprite.setVisible(showOutage);
+      // This sprite is an erase mask for the darkness render texture. Rendering
+      // it directly would place a large white gradient over the player.
+      outageLightSprite.setVisible(false);
     }
 
     function update(presentation = {}) {

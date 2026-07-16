@@ -350,6 +350,8 @@ function createTimelineScene(timelineMixin, facilityRoomController) {
       erase() { operations.push("darkness-erase"); return this; }
     },
     outageLightSprite: {
+      visible: false,
+      setVisible(value) { this.visible = value; operations.push(["light-visible", value]); return this; },
       setPosition(x, y) { operations.push(["light-position", x, y]); return this; }
     },
     showTopBanner(...args) { operations.push(["banner", ...args]); },
@@ -401,6 +403,38 @@ test("facility presentation wiring preserves timeline state and collider identit
   assert.deepEqual(snapshots[2], snapshots[0]);
   assert.ok(normalPresentations.length >= 3);
   assert.equal(snapshots[0].bossPhaseActive, true);
+});
+
+test("power outage uses the light sprite only while erasing the darkness texture", async () => {
+  const timelineMixin = await loadTimelineMixin();
+  const { scene, operations } = createTimelineScene(timelineMixin, null);
+  scene.activeFacilityEvent = { type: "powerOutage" };
+
+  scene.updatePowerOutageVisual();
+
+  assert.deepEqual(
+    operations.filter((operation) => operation === "darkness-erase" || operation[0] === "light-visible"),
+    [["light-visible", true], "darkness-erase", ["light-visible", false]]
+  );
+  assert.equal(scene.outageLightSprite.visible, false);
+});
+
+test("power outage hides the light sprite when render-texture erase throws", async () => {
+  const timelineMixin = await loadTimelineMixin();
+  const { scene, operations } = createTimelineScene(timelineMixin, null);
+  const eraseFailure = new Error("erase failed");
+  scene.activeFacilityEvent = { type: "powerOutage" };
+  scene.outageDarknessRt.erase = () => {
+    operations.push("darkness-erase-failed");
+    throw eraseFailure;
+  };
+
+  assert.throws(() => scene.updatePowerOutageVisual(), (error) => error === eraseFailure);
+  assert.deepEqual(
+    operations.filter((operation) => operation === "darkness-erase-failed" || operation[0] === "light-visible"),
+    [["light-visible", true], "darkness-erase-failed", ["light-visible", false]]
+  );
+  assert.equal(scene.outageLightSprite.visible, false);
 });
 
 function createSystemsScene(systemsMixin, facilityRoomController) {
