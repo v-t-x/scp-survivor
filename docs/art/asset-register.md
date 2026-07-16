@@ -916,7 +916,15 @@ Avoid: smooth vector curves, soft edges, 3D bevel rendering, painterly texture, 
 ### P57 contact-shadow
 
 ```text
-Use case stylized-concept; asset is a source artwork for a 2D top-down pixel-art contact-shadow sprite; exactly one isolated horizontal oval shadow centered on flat #00ff00 chroma-key; charcoal/black, darkest center, 3-4 discrete hard-edged pixel bands, 2:1 silhouette; no antialiasing, blur, object, text, glow, 3D, or extra marks.
+Use case: stylized-concept
+Asset type: source artwork for a 2D top-down pixel-art game contact-shadow sprite
+Primary request: Create exactly one isolated horizontal oval contact shadow centered in the canvas, intended to be normalized into a 32 by 16 pixel transparent sprite.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for removal; one uniform color only, no texture, gradient, floor, lighting variation, border, or frame.
+Subject: only a low-profile charcoal-to-black elliptical contact shadow viewed perfectly top-down. The darkest compact pixels are at the center. The edge falls off in 3 to 4 discrete hard-edged pixel-art bands with deliberate stair-step clusters. Wide 2:1 silhouette, symmetric enough for gameplay, clean and readable at tiny size.
+Style/medium: precise hand-authored high-detail pixel art, no antialiasing, no smooth blur, no painterly brushwork, no 3D rendering.
+Composition/framing: one shadow only, centered, generous flat green padding, horizontal 2:1 footprint.
+Color palette: grayscale charcoal and black only in the shadow; do not use green inside the subject.
+Constraints: no object, character, feet, weapon, ground tile, cast direction, glow, halo, radial blur, soft transparency, text, logo, watermark, extra marks, duplicate sprite, perspective, or 3D volume. The result must look like a utilitarian game contact-shadow sprite source, not a scene.
 ```
 
 ### P56 rejected penetration retry

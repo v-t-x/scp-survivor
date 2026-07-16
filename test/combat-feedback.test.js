@@ -10,7 +10,7 @@ function createSceneStub({ failOn = null } = {}) {
     const visual = {
       x, y, key, active: true, visible: true, alpha: 1, displayWidth: 0, displayHeight: 0,
       destroyed: false, destroyCalls: 0,
-      setPosition(nextX, nextY) { this.x = nextX; this.y = nextY; return this; },
+      setPosition(nextX, nextY) { if (failOn === "setPosition") throw new Error("effect position failed"); this.x = nextX; this.y = nextY; return this; },
       setDisplaySize(width, height) { this.displayWidth = width; this.displayHeight = height; return this; },
       setAlpha(value) { if (failOn === "setAlpha") throw new Error("display configuration failed"); this.alpha = value; return this; },
       setVisible(value) { this.visible = value; return this; },
@@ -168,4 +168,27 @@ test("allocation failure rolls back partial visuals and safe factory returns the
     noSceneController.setPaused(true);
     noSceneController.destroy();
   });
+});
+
+test("effect activation configuration failures roll back pooled records and all owned visuals", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const scene = createSceneStub({ failOn: "setPosition" });
+  const controller = createCombatFeedbackController(scene);
+  const actor = createActor();
+  assert.equal(controller.trackActor(actor, { kind: "enemy", radius: 10, offsetY: 0 }), true);
+
+  assert.equal(
+    controller.notifyAttack({ weaponId: "pistol", originX: 20, originY: 30, angle: 0, shotCount: 1, heavy: false }),
+    false,
+    "activation must absorb display configuration failures"
+  );
+  assert.equal(scene.created.length, 2);
+  assert.ok(scene.created.every((visual) => visual.destroyed && visual.destroyCalls === 1), "first allocation rollback must release the shadow and partial pooled visual");
+  assert.equal(controller.notifyAttack({}), false, "rolled-back controller cannot retain an active snapshot or pool record");
+  assert.doesNotThrow(() => {
+    controller.update(50);
+    controller.destroy();
+    controller.destroy();
+  });
+  assert.ok(scene.created.every((visual) => visual.destroyCalls === 1), "destroy remains idempotent after activation rollback");
 });

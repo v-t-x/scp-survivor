@@ -113,12 +113,20 @@ function createRealCombatFeedbackController(scene, options) {
     const record = allocateEffect(poolName);
     if (!record) return false;
     const snapshot = { ...payload };
-    record.active = true;
-    record.startedAt = nowMs;
-    record.snapshot = snapshot;
-    configure(record.visual, snapshot);
-    setVisual(record.visual, "setVisible", true);
-    return true;
+    try {
+      record.active = true;
+      record.startedAt = nowMs;
+      record.snapshot = snapshot;
+      configure(record.visual, snapshot);
+      setVisual(record.visual, "setVisible", true);
+      return true;
+    } catch {
+      record.active = false;
+      record.startedAt = -Infinity;
+      record.snapshot = null;
+      disableAfterAllocationFailure(record.visual);
+      return false;
+    }
   }
 
   function trackActor(actor, { kind = "actor", radius = 12, offsetY = 0 } = {}) {
