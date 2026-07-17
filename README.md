@@ -10,6 +10,8 @@
 
 > 2D 俯视角 Survivors-like 单局原型。基金会安保官在 6 分钟收容失效时间轴中战斗、升级、处理设施干扰，并在终局对抗 SCP-049。
 
+> **版本状态：** 最近正式版本为 `v1.3.0`；当前 `main` 包含尚未发布的 `v1.4.0` 候选改动。UI/美术升级和 Windows Electron 客户端仍位于独立开发分支，详见 [当前项目状态](./docs/project-status.md)。
+
 项目使用 Phaser 3、Vite 和原生 JavaScript。当前版本没有正式图片或音频素材：纹理由 Phaser 程序化生成，音效由 Web Audio API 实时合成；资源预加载、manifest 和 fallback 接口已经建立，供后续逐步接入正式素材。
 
 **在线试玩：[https://dist-chi-ten-47.vercel.app](https://dist-chi-ten-47.vercel.app)**
@@ -18,6 +20,7 @@
 
 ```bash
 npm install
+node --test
 npm run dev
 npm run build
 npm run preview
@@ -83,7 +86,7 @@ scp-survivor/
 │   └── ui/                  # UIManager 与 theme token
 ├── scripts/                 # 平衡模拟和维护脚本
 ├── docs/                    # 权威文档、Agent 手册、归档和过程记录
-├── .github/workflows/       # CI 构建检查
+├── .github/workflows/       # CI 测试与构建检查
 ├── CHANGELOG.md
 ├── LICENSE
 └── package.json
@@ -94,6 +97,7 @@ scp-survivor/
 ## 文档
 
 - [项目文档与仓库地图](./docs/README.md)
+- [当前项目状态](./docs/project-status.md)
 - [产品愿景](./docs/product-vision.md)
 - [当前游戏设计](./docs/design.md)
 - [开发策略与并行路线](./docs/development-strategy.md)

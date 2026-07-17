@@ -10,6 +10,8 @@
 
 > A top-down 2D Survivors-like single-run prototype. A Foundation security officer fights and upgrades through a six-minute containment-failure timeline before confronting SCP-049.
 
+> **Version status:** `v1.3.0` is the latest formal release. `main` contains unreleased `v1.4.0` candidate changes, while the UI/art overhaul and Windows Electron client remain on separate development branches. See [current project status](./docs/project-status.md).
+
 The project uses Phaser 3, Vite, and plain JavaScript. The current build has no production image or audio assets: textures are generated procedurally and sound effects are synthesized through the Web Audio API. Preloading, asset manifests, and fallback interfaces are already in place for gradual asset integration.
 
 **Play online: [https://dist-chi-ten-47.vercel.app](https://dist-chi-ten-47.vercel.app)**
@@ -18,6 +20,7 @@ The project uses Phaser 3, Vite, and plain JavaScript. The current build has no 
 
 ```bash
 npm install
+node --test
 npm run dev
 npm run build
 npm run preview
@@ -83,7 +86,7 @@ scp-survivor/
 │   └── ui/                  # UIManager and theme tokens
 ├── scripts/                 # balance simulation and maintenance scripts
 ├── docs/                    # authority docs, agent guides, archive, process records
-├── .github/workflows/       # CI build check
+├── .github/workflows/       # CI test and build checks
 ├── CHANGELOG.md
 ├── LICENSE
 └── package.json
@@ -94,6 +97,7 @@ See the [documentation and repository map](./docs/README.md) for the complete cl
 ## Documentation
 
 - [Documentation and repository map](./docs/README.md)
+- [Current project status](./docs/project-status.md)
 - [Product vision](./docs/product-vision.md)
 - [Current game design](./docs/design.md)
 - [Development strategy](./docs/development-strategy.md)
