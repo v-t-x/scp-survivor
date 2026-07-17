@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 import { registerAppProtocol, resolveAppPath } from "../src/app-protocol.mjs";
 
-const root = resolve("C:/virtual/web-root");
+const root = resolve("virtual", "web-root");
 
 test("maps only the approved app origin inside web root", () => {
   assert.equal(resolveAppPath("app://scp-survivor/", root), join(root, "index.html"));
@@ -40,5 +41,7 @@ test("serves only the resolved app file through Electron net", () => {
   registerAppProtocol({ protocol, net, webRoot: root });
 
   assert.equal(handler({ url: "app://scp-survivor/" }), "response");
-  assert.deepEqual(requested, ["file:///C:/virtual/web-root/index.html"]);
+  assert.deepEqual(requested, [
+    pathToFileURL(join(root, "index.html")).href
+  ]);
 });
