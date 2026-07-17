@@ -305,7 +305,8 @@ Expected: 唯一工作区项是 ?? .superpowers/；ancestry 通过。
 ~~~powershell
 Set-Location C:\scp-survivor-ui-art
 node --test
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' scripts/art/test_pixel_tools.py
+$python = if ($env:SCP_SURVIVOR_PYTHON) { $env:SCP_SURVIVOR_PYTHON } else { 'python' }
+& $python scripts/art/test_pixel_tools.py
 npm run build
 git diff --check
 git diff --check origin/main...HEAD

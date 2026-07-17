@@ -10,7 +10,7 @@
 - [开发策略](./development-strategy.md)：批准的开发路线、分支关系与授权边界。
 - [UI、美术、音频与资源方向](./art-and-asset-direction.md)：表现目标与混合资源策略。
 - [许可与商业化准备](./licensing-and-commercialization.md)：许可事实、素材门禁与发布风险。
-- [更新日志](../CHANGELOG.md)：已经发布的版本变化。
+- [更新日志](../CHANGELOG.md)：已发布版本与 `main` 尚未发布的候选变化。
 
 ## Agent 治理
 
