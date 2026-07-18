@@ -4,8 +4,8 @@
 
 ## 正式发布
 
-- 最近正式版本：`v1.5.0`（SCP-049 压力模型）。
-- 回溯里程碑：`v1.4.0`（UI Foundation，记录 `PreloadScene`、manifest、fallback、`AudioManager` 与 `UIManager` 的基础接口）。
+- 最近正式版本：`v1.5.0`（SCP-049：疫医狂潮），终局战已加入狂热阶段、暴露承伤窗口、混合增援和敌人递归复制。
+- 回溯里程碑：`v1.4.0`（收容行动整备），记录启动、资源 fallback、`AudioManager`、`UIManager` 与重复开局生命周期的稳定性基础。
 - 在线 Demo 仅代表其实际部署构建；当前尚未核对其是否与 `v1.5.0` 标签一致，继续按独立部署状态记录。
 
 ## main：v1.5.0 发布基线
