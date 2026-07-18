@@ -49,7 +49,7 @@ Title and permanent-upgrade store
   → move, auto-attack, and collect XP
   → level up, mutate the weapon, reroll, or skip
   → react to enemies, perception hazards, and a fixed power outage
-  → SCP-500 appears at 4:00
+  → Medkit appears at 4:00
   → clear the field and fight SCP-049 at 6:00
   → earn credits on victory or defeat, then restart
 ```
@@ -59,7 +59,7 @@ The current implementation includes:
 - three weapons, each with one single-acquisition mutation;
 - 16 upgrade definitions, three rerolls per run, and skip-to-heal;
 - three normal enemies, three elites, and the SCP-049 boss;
-- a six-minute timeline, power outage, perception hazards, combat stim, and SCP-500;
+- a six-minute timeline, power outage, perception hazards, combat stim, and Medkit;
 - localStorage credits and four permanent starting perks;
 - a Foundation-terminal title screen and armory, a tactical HUD, and consistent build, pause, level-up, and results interfaces;
 - entrance, combat, maintenance, and contamination facility zones that react to outages, events, and the boss phase;

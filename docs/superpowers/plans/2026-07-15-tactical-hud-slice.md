@@ -222,7 +222,7 @@ git commit -m "feat(ui): connect tactical hud facade"
 
 - [ ] **步骤 1：先测提示条件和玩法等价**
 
-拾取提示时序只由 `tacticalHudView` 内部拥有：`notifyPickupCue()` 更新内部 `cueUntilMs`，纯 presentation 不保存截止时间。默认游玩时圈隐藏；拾取半径数值发生变化或拾取 combat stim/SCP-500 后显示 650ms；`buildPanelVisible` 为 true 时持续显示，关闭后仅在 cue 尚未到期时继续显示。到期后隐藏并 clear Graphics。通知缺失、controller 抛错和 view 不存在时，拾取物销毁、buff、治疗、半径和 XP 结果与基线一致。
+拾取提示时序只由 `tacticalHudView` 内部拥有：`notifyPickupCue()` 更新内部 `cueUntilMs`，纯 presentation 不保存截止时间。默认游玩时圈隐藏；拾取半径数值发生变化或拾取 combat stim/急救包 后显示 650ms；`buildPanelVisible` 为 true 时持续显示，关闭后仅在 cue 尚未到期时继续显示。到期后隐藏并 clear Graphics。通知缺失、controller 抛错和 view 不存在时，拾取物销毁、buff、治疗、半径和 XP 结果与基线一致。
 
 - [ ] **步骤 2：运行 RED**
 
@@ -244,7 +244,7 @@ notifyPickupRadiusCue(reason, nowMs = this.elapsedSurvivalMs) {
 }
 ~~~
 
-`combat.js` 只能在 combat stim 或 SCP-500 效果已应用且拾取物已销毁后调用。半径变化由 view 比较上一次 presentation.radius 检测；`updateUI()` 每帧把 `buildPanel.visible` 作为 `buildPanelVisible` 传入，因此 `toggleBuildPanel()`/`hideBuildPanel()` 无需另造状态，但测试必须覆盖开、关和 cue 重叠。不在玩法配置里增加 cue 状态。
+`combat.js` 只能在 combat stim 或 急救包 效果已应用且拾取物已销毁后调用。半径变化由 view 比较上一次 presentation.radius 检测；`updateUI()` 每帧把 `buildPanel.visible` 作为 `buildPanelVisible` 传入，因此 `toggleBuildPanel()`/`hideBuildPanel()` 无需另造状态，但测试必须覆盖开、关和 cue 重叠。不在玩法配置里增加 cue 状态。
 
 - [ ] **步骤 4：阶段验证并提交**
 

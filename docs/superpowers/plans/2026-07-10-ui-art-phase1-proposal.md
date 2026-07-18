@@ -93,7 +93,7 @@
 | `enemyProjectile` | `enemy-projectile` | 敌方弹丸 | 10×10 |
 | `xpGem` | `xp-gem` | 经验宝石 | 10×10 |
 | `combatStim` | `combat-stim` | 战斗兴奋剂 | 16×16 |
-| `scp500` | `scp500` | SCP-500 | 18×18 |
+| `medkit` | `medkit` | 急救包 | 18×18 |
 | `powerOutageLight` | `power-outage-light` | 停电应急光锥 | 440×440 |
 
 **加载流程：**
