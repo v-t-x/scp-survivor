@@ -311,11 +311,11 @@ export const combatMixin = {
       this.activeStimUntilMs = this.elapsedSurvivalMs + BALANCE.pickups.combatStim.durationMs;
       this.updateUI();
       cueReason = "combatStim";
-    } else if (pickup.pickupType === "scp500") {
-      this.health = Math.min(this.maxHealth, this.health + BALANCE.pickups.scp500.healAmount);
+    } else if (pickup.pickupType === "medkit") {
+      this.health = Math.min(this.maxHealth, this.health + BALANCE.pickups.medkit.healAmount);
       this.playSound("pickupHeal");
       this.updateUI();
-      cueReason = "scp500";
+      cueReason = "medkit";
     }
     pickup.destroy();
     if (cueReason) {

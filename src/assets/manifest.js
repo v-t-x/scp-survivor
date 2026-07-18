@@ -74,7 +74,7 @@ export const TEXTURES = {
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
   combatStim: "combat-stim",
-  scp500: "scp500",
+  medkit: "medkit",
   powerOutageLight: "power-outage-light"
 };
 

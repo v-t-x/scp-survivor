@@ -67,7 +67,7 @@ class PrototypeScene extends Phaser.Scene {
     this.bossWarningShown = false;
     this.regularSpawningActive = false;
     this.survivalPhaseEnded = false;
-    this.scp500Spawned = false;
+    this.medkitSpawned = false;
     this.bossPhaseActive = false;
     this.bossEnemy = null;
     this.bossIntroTimer = null;
@@ -174,7 +174,7 @@ class PrototypeScene extends Phaser.Scene {
       this.updateTimelineEffects();
       this.updateTemporaryBuffs();
       this.updateFacilityEventDirector();
-      this.updateScp500Spawn();
+      this.updateMedkitSpawn();
       this.handlePlayerMovement();
       this.updateWeapons();
       this.updateEnemies();

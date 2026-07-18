@@ -39,14 +39,14 @@ function assertNotificationSeesCommittedGameplay(pickupType, gameplay) {
       1_250 + BALANCE.pickups.combatStim.durationMs,
       "combat stim deadline is committed before notification"
     );
-  } else if (pickupType === "scp500") {
+  } else if (pickupType === "medkit") {
     assert.equal(
       gameplay.health,
-      Math.min(100, 40 + BALANCE.pickups.scp500.healAmount),
-      "SCP-500 heal is committed before notification"
+      Math.min(100, 40 + BALANCE.pickups.medkit.healAmount),
+      "medkit heal is committed before notification"
     );
-    assert.equal(gameplay.moveSpeedBuffMultiplier, 1, "SCP-500 does not change the speed buff");
-    assert.equal(gameplay.activeStimUntilMs, 0, "SCP-500 does not change the stim deadline");
+    assert.equal(gameplay.moveSpeedBuffMultiplier, 1, "medkit does not change the speed buff");
+    assert.equal(gameplay.activeStimUntilMs, 0, "medkit does not change the stim deadline");
   }
   assert.equal(gameplay.currentXp, 17, "presentation notification preserves XP");
   assert.equal(gameplay.pickupRadius, 96, "presentation notification preserves pickup radius");
@@ -156,18 +156,18 @@ test("combat stim commits effect, destroys pickup, then emits a 650ms cue", () =
   assert.equal(result.gameplay.pickupRadius, 96);
 });
 
-test("SCP-500 commits heal, destroys pickup, then emits a 650ms cue", () => {
-  const result = runPickup("scp500");
+test("medkit commits heal, destroys pickup, then emits a 650ms cue", () => {
+  const result = runPickup("medkit");
 
   assert.deepEqual(result.events, ["sound:pickupHeal", "update", "destroy", "notify"]);
   assert.deepEqual(result.cues, [{
-    reason: "scp500",
+    reason: "medkit",
     nowMs: 1_250,
     durationMs: 650
   }]);
   assert.equal(
     result.gameplay.health,
-    Math.min(100, 40 + BALANCE.pickups.scp500.healAmount)
+    Math.min(100, 40 + BALANCE.pickups.medkit.healAmount)
   );
   assert.equal(result.gameplay.moveSpeedBuffMultiplier, 1);
   assert.equal(result.gameplay.activeStimUntilMs, 0);
@@ -176,7 +176,7 @@ test("SCP-500 commits heal, destroys pickup, then emits a 650ms cue", () => {
 });
 
 test("missing notification, missing view, and throwing view preserve pickup gameplay", async (t) => {
-  for (const pickupType of ["combatStim", "scp500"]) {
+  for (const pickupType of ["combatStim", "medkit"]) {
     await t.test(pickupType, () => {
       const baseline = runPickup(pickupType, "normal").gameplay;
       const missingNotification = runPickup(pickupType, "missing-notification").gameplay;
@@ -208,7 +208,7 @@ test("HUD pickup notification defaults to Scene time and isolates view failures"
   scene.tacticalHudView.notifyPickupCue = () => {
     throw new Error("view failed");
   };
-  assert.doesNotThrow(() => hudMixin.notifyPickupRadiusCue.call(scene, "scp500", 5_000));
+  assert.doesNotThrow(() => hudMixin.notifyPickupRadiusCue.call(scene, "medkit", 5_000));
   delete scene.tacticalHudView;
   assert.doesNotThrow(() => hudMixin.notifyPickupRadiusCue.call(scene, "combatStim", 5_100));
 });

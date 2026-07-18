@@ -629,13 +629,13 @@ export function generateFallbackTextures(scene) {
     graphics.generateTexture(TEXTURES.combatStim, 16, 16);
   });
 
-  ensureTexture(scene, TEXTURES.scp500, () => {
+  ensureTexture(scene, TEXTURES.medkit, () => {
     graphics.clear();
     graphics.fillStyle(0xff4040, 1);
     graphics.fillCircle(9, 9, 9);
     graphics.fillStyle(0xffffff, 1);
     graphics.fillCircle(9, 9, 4);
-    graphics.generateTexture(TEXTURES.scp500, 18, 18);
+    graphics.generateTexture(TEXTURES.medkit, 18, 18);
   });
 
   ensureTexture(scene, TEXTURES.enemyScp049, () => {

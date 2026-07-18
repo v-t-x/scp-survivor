@@ -535,7 +535,7 @@ test("build panel visibility and unexpired cues compose without leaving a perman
   view.update(presentation({ elapsedSurvivalMs: 200, buildPanelVisible: false }));
   assert.equal(view.pickupWorldGraphic.visible, false);
 
-  view.notifyPickupCue({ reason: "scp500", nowMs: 300, durationMs: 650 });
+  view.notifyPickupCue({ reason: "medkit", nowMs: 300, durationMs: 650 });
   view.update(presentation({ elapsedSurvivalMs: 400, buildPanelVisible: true }));
   assert.equal(view.pickupWorldGraphic.visible, true);
 
@@ -551,7 +551,7 @@ test("overlapping pickup cues never shorten the active deadline", () => {
   view.update(presentation({ elapsedSurvivalMs: 50 }));
 
   view.notifyPickupCue({ reason: "radius-change", nowMs: 100, durationMs: 650 });
-  view.notifyPickupCue({ reason: "scp500", nowMs: 200, durationMs: 100 });
+  view.notifyPickupCue({ reason: "medkit", nowMs: 200, durationMs: 100 });
   view.update(presentation({ elapsedSurvivalMs: 749 }));
   assert.equal(view.pickupWorldGraphic.visible, true);
 

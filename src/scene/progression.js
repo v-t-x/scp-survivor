@@ -825,19 +825,19 @@ export const progressionMixin = {
   },
 
 
-  updateScp500Spawn() {
-    if (this.scp500Spawned || !this.isMissionActive || this.isGameOver) {
+  updateMedkitSpawn() {
+    if (this.medkitSpawned || !this.isMissionActive || this.isGameOver) {
       return;
     }
-    if (this.elapsedSurvivalMs < BALANCE.match.scp500SpawnAtMs) {
+    if (this.elapsedSurvivalMs < BALANCE.match.medkitSpawnAtMs) {
       return;
     }
-    this.scp500Spawned = true;
-    this.spawnScp500();
+    this.medkitSpawned = true;
+    this.spawnMedkit();
   },
 
 
-  spawnScp500() {
+  spawnMedkit() {
     // Place it a short distance from the player so it is reachable in the
     // larger world but still requires deliberate movement to grab.
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
@@ -852,10 +852,10 @@ export const progressionMixin = {
       72,
       WORLD_HEIGHT - 72
     );
-    const pickup = this.supplyPickups.create(x, y, "scp500");
-    pickup.pickupType = "scp500";
+    const pickup = this.supplyPickups.create(x, y, "medkit");
+    pickup.pickupType = "medkit";
     pickup.setCircle(9);
     pickup.setDepth(14);
-    this.showTopBanner("异常物品", "SCP-500 已在设施内出现", 2400);
+    this.showTopBanner("医疗补给", "急救包已在设施内出现", 2400);
   }
 };
