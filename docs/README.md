@@ -17,7 +17,7 @@
 - [v1.4.0 — UI Foundation（回溯里程碑）](./releases/v1.4.0.md)
 - [v1.5.0 — SCP-049 压力模型](./releases/v1.5.0.md)
 
-上述文件是 GitHub Release 正文的仓库内审计副本；发布前仍需按当时最终 HEAD、标签和验证结果核对。
+上述文件是 GitHub Release 正文的仓库内审计副本；发布时及每次后续发布均应按最终 HEAD、标签和验证结果核对。
 
 ## Agent 治理
 
