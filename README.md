@@ -10,7 +10,7 @@
 
 > 2D 俯视角 Survivors-like 单局原型。基金会安保官在 6 分钟收容失效时间轴中战斗、升级、处理设施干扰，并在终局对抗 SCP-049。
 
-> **版本状态：** 最近正式版本为 `v1.3.0`；当前 `main` 包含尚未发布的 `v1.4.0` 候选改动。UI/美术升级和 Windows Electron 客户端仍位于独立开发分支，详见 [当前项目状态](./docs/project-status.md)。
+> **版本状态：** 最近正式版本为 `v1.5.0`（SCP-049 压力模型）；`v1.4.0` 是回溯整理的 UI Foundation 里程碑。在线 Demo 尚未核对是否与当前标签一致；UI/美术升级和 Windows Electron 客户端仍位于独立开发分支，未作为本版本发布内容。详见 [当前项目状态](./docs/project-status.md)。
 
 项目使用 Phaser 3、Vite 和原生 JavaScript。当前版本没有正式图片或音频素材：纹理由 Phaser 程序化生成，音效由 Web Audio API 实时合成；资源预加载、manifest 和 fallback 接口已经建立，供后续逐步接入正式素材。
 

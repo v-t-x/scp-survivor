@@ -10,7 +10,7 @@
 
 > A top-down 2D Survivors-like single-run prototype. A Foundation security officer fights and upgrades through a six-minute containment-failure timeline before confronting SCP-049.
 
-> **Version status:** `v1.3.0` is the latest formal release. `main` contains unreleased `v1.4.0` candidate changes, while the UI/art overhaul and Windows Electron client remain on separate development branches. See [current project status](./docs/project-status.md).
+> **Version status:** `v1.5.0` (the SCP-049 pressure model) is the latest formal release; `v1.4.0` is a retrospective UI Foundation milestone. The online demo has not been verified against the current tag. The UI/art overhaul and Windows Electron client remain on separate development branches and are not released as part of this version. See [current project status](./docs/project-status.md).
 
 The project uses Phaser 3, Vite, and plain JavaScript. The current build has no production image or audio assets: textures are generated procedurally and sound effects are synthesized through the Web Audio API. Preloading, asset manifests, and fallback interfaces are already in place for gradual asset integration.
 
