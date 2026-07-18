@@ -123,22 +123,25 @@ Boss 使用 `normal → frenzy → normal → dying` 状态机。首次狂乱约
 | 输入 | 功能 |
 |---|---|
 | `WASD` | 移动 |
-| `Space` | 向当前输入方向闪避；无方向输入时沿最后朝向闪避，并获得短暂无敌 |
+| `Space` | 有方向输入时沿当前输入方向闪避；无方向输入时沿成功提交的当前攻击朝向闪避，并获得短暂无敌 |
 | `Tab` | 按住查看当前构筑面板 |
 | `Esc` | 暂停或继续 |
 | `M` | 静音或恢复声音 |
 | `B` | 仅在 Debug 模式下直接跳至 Boss 阶段 |
 
-当前 `DEBUG_MODE=false`，因此正式构建不注册 `B` 跳转；需要 Boss 调试时只能在明确的开发改动中临时启用，并不得进入正式 Release。HUD 显示生命、时间、击杀、等级、经验、当前武器状态、时间轴阶段和事件横幅。暂停界面可以继续游戏或返回标题；返回标题和结算后的重新开始都通过 Scene restart 重建本局状态。
+当前 `DEBUG_MODE=false`，因此正式构建不注册 `B` 跳转；需要 Boss 调试时只能在明确的开发改动中临时启用，并不得进入正式 Release。战术 HUD 由 mission、facility、vitals、weapon 和 system 五个稳定区域组成，集中显示生命、时间、击杀、等级、经验、当前武器、时间轴、设施事件、暂停与静音状态。暂停界面可以继续游戏或返回标题；返回标题和结算后的重新开始都通过 Scene restart 重建本局状态。
 
 ## 当前资源与音频架构
 
 - `PreloadScene` 是默认启动 Scene，负责读取资源 manifest、加载正式资源并为缺失 key 生成程序化 fallback；完成后启动 `PrototypeScene`；
-- 当前 manifest 的图片、spritesheet、atlas 与音频清单为空，因此可玩表现仍主要来自程序化纹理与 Web Audio 合成；
+- 当前 manifest 加载 43 个静态图片条目和 8 个 spritesheet 条目，共 51 个运行时正式素材；它们覆盖 `player-opening-sheet`、七套 R-17 spritesheet、SCP-049 静态素材、设施、菜单、武器、升级、终端与战斗反馈；
+- 正式素材登记共 53 项；`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材；
+- 玩家使用四方向 idle、move 与 hit 动画，七类 R-17 敌人使用各自的循环动画；SCP-049 使用正式静态像素素材与展示缩放，不称为动画角色；
+- 标题终端、武器库、五区战术 HUD、entry/combat/maintenance/contamination 四个设施分区、暂停/升级/失败/胜利终端覆盖层和池化攻击/命中/死亡反馈已经接入运行时；
 - fallback factory 只为不存在的 texture key 生成纹理，不覆盖已经成功加载的真实资源；
-- `AudioManager` 管理程序化音效、首次交互恢复、暂停/恢复和销毁；现有玩法仍通过 `this.playSound()` 兼容入口调用；
+- 程序化纹理继续承担缺失素材 fallback 和动态几何效果，`AudioManager` 继续通过 Web Audio 管理程序化音效、首次交互恢复、暂停/恢复和销毁；现有玩法仍通过 `this.playSound()` 兼容入口调用；
 - `UIManager` 当前是 Phase 1 facade，把现有 HUD/UI 调用转发给 Scene；
-- `PrototypeScene` 在 shutdown、restart 或最终 destroy 时清理 AudioManager 与 UIManager，并在下一次 create 时重新建立。
+- `PrototypeScene` 在 shutdown、restart 或最终 destroy 时清理 AudioManager、UIManager 与表现控制器，并在下一次 create 时重新建立。
 
 ## 当前代码结构
 
@@ -146,10 +149,11 @@ Boss 使用 `normal → frenzy → normal → dying` 状态机。首次狂乱约
 - `src/scenes/PreloadScene.js`：资源加载与启动流程；
 - `src/config/`：常量、平衡、升级和元进度；
 - `src/scene/`：world、enemies、weapons、combat、progression、timeline、effects、hud、menus、systems 等 Gameplay mixin，以及可测试的 Boss 与复制纯规则；
-- `test/`：Boss 压力合同和递归复制的 Node 回归测试；
+- `src/art/`：角色、R-17、设施、标题与战斗反馈的表现适配器和纯展示规则；
+- `test/`：玩法合同、资源、表现等价、HUD、覆盖层和生命周期的 Node 回归测试；
 - `src/assets/`：资源 manifest、key 与 fallback texture factory；
 - `src/audio/AudioManager.js`：程序化音频；
-- `src/ui/`：UI facade 与主题 token。
+- `src/ui/`：UI facade、战术 HUD、终端覆盖层与主题 token。
 
 ## 当前版本明确不包含
 
@@ -157,7 +161,7 @@ Boss 使用 `normal → frenzy → normal → dying` 状态机。首次狂乱约
 - 稳定化终端、协议奖励或随机设施事件系统；
 - 多地图、多角色、剧情任务或完整探索结构；
 - 联机、排行榜、账号、云存档或跨设备同步；
-- 正式图片、spritesheet、atlas、背景音乐或外部音效资源；
+- 正式背景音乐或外部音效资源；
 - 完整中英文 i18n；当前游戏 UI 主要为中文。
 
 这些内容是否进入未来版本由 [产品愿景](./product-vision.md)、批准后的具体计划与项目所有者决定，不能根据旧 Roadmap 自动实施。
