@@ -1,6 +1,6 @@
 // Game-wide constants shared across modules.
 
-export const DEBUG_MODE = true;
+export const DEBUG_MODE = false;
 
 // Viewport (canvas) size — HUD and overlays are laid out in this space.
 export const GAME_WIDTH = 960;
