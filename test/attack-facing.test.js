@@ -77,15 +77,20 @@ function createWeaponScene(overrides = {}) {
   };
 }
 
-test("movement remembers its own direction without changing the committed attack facing", async () => {
+test("no-input dash follows the facing committed by a successful shotgun attack", async () => {
+  const { attackWithShotgun } = await loadMethods("attackWithShotgun");
   const { handlePlayerMovement, tryStartDash } = await loadSystemMethods(
     "handlePlayerMovement",
     "tryStartDash"
   );
   const velocity = [];
   const scene = {
-    player: { body: { setVelocity(x, y) { velocity.push([x, y]); } } },
-    playerFacingAngle: 0,
+    player: {
+      x: 100,
+      y: 100,
+      body: { setVelocity(x, y) { velocity.push([x, y]); } }
+    },
+    playerFacingAngle: Math.PI,
     playerMovementFallbackAngle: 0,
     playerMoveSpeed: 100,
     moveSpeedBuffMultiplier: 1,
@@ -100,18 +105,37 @@ test("movement remembers its own direction without changing the committed attack
     isGameOver: false,
     isLevelUpActive: false,
     playerInvulnerableUntilMs: 0,
+    bossPhaseActive: false,
+    findNearestEnemy: () => ({ x: 200, y: 100, active: true }),
+    spawnPlayerProjectile({ angle }) { return { presentationAngle: angle }; },
     spawnDashTrail() {},
     playSound() {}
+  };
+  const shotgun = {
+    isReloading: false,
+    currentShells: 2,
+    triggerRange: 120,
+    range: 300,
+    nextShotId: 1,
+    pelletCount: 3,
+    spreadDeg: 20,
+    damage: 8,
+    projectileSpeed: 220,
+    reloadDurationMs: 900
   };
 
   handlePlayerMovement.call(scene);
   assert.deepEqual(velocity, [[0, -100]]);
-  assert.equal(scene.playerFacingAngle, 0, "WASD must not overwrite attack-facing");
   assert.equal(scene.playerMovementFallbackAngle, -Math.PI / 2);
+  assert.equal(scene.playerFacingAngle, Math.PI, "movement must not overwrite committed attack-facing");
 
   scene.keys.up.isDown = false;
+  assert.equal(attackWithShotgun.call(scene, shotgun), true);
+  assert.equal(scene.playerFacingAngle, 0, "successful shotgun pellets commit the right-facing angle");
+  assert.equal(scene.playerMovementFallbackAngle, -Math.PI / 2, "attack must not overwrite movement memory");
+
   tryStartDash.call(scene);
-  assert.equal(scene.dashAngle, -Math.PI / 2, "no-input dash keeps the last movement direction");
+  assert.equal(scene.dashAngle, 0, "no-input dash must follow the committed attack-facing");
   assert.equal(scene.playerFacingAngle, 0);
 });
 

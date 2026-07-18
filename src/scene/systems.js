@@ -107,7 +107,7 @@ export const systemsMixin = {
       return;
     }
 
-    // Dash toward the current movement input; fall back to the last movement direction.
+    // Dash toward the current movement input; fall back to the current facing.
     let dashX = 0;
     let dashY = 0;
     if (this.keys.left.isDown) dashX -= 1;
@@ -117,7 +117,7 @@ export const systemsMixin = {
     if (dashX !== 0 || dashY !== 0) {
       this.dashAngle = Math.atan2(dashY, dashX);
     } else {
-      this.dashAngle = this.playerMovementFallbackAngle;
+      this.dashAngle = this.playerFacingAngle;
     }
 
     this.dashUntilMs = this.elapsedSurvivalMs + BALANCE.player.dashDurationMs;
