@@ -462,7 +462,7 @@ Avoid: duplicates, chibi, oversized head, 3D, isometric, side-view, smooth paint
 
 修复组装说明：built-in 输出先复制至 `.superpowers/sdd/opening-task-6-fix-sources/`。官方 `remove_chroma_key.py` 因当前 worktree 无可用 Python runtime 未能执行；未切换 CLI 或模型。实际使用项目临时 Node.js 组装脚本按四角绿幕色计算 RGB 距离（≤120）并要求绿色通道分别高于红、蓝 55，直接生成 alpha 0/255；随后按 alpha bbox 提取姿势、nearest 端点保持缩放、渲染后仅作脚底 y=44 对齐，并映射至对应旧 sheet 的 32 色 palette。该过程不绘制替代角色、不制造平移动作。独立审计脚本未导入生产测试函数；所有方向达到 idle 4/4、move 6/6、hit 2/2 normalized unique，最小循环相邻 changed-pixel ratio 为 0.8045。
 
-开局使用约束：`infected-opening-sheet` 在 `elapsedSurvivalMs < 60000` 时是唯一权重大于 0 的普通敌人。
+历史使用记录：在 R-17 roster 替换前，`infected-opening-sheet` 曾在 `elapsedSurvivalMs < 60000` 时作为唯一权重大于 0 的普通敌人；该素材现已停止 preload，仅作历史/溯源保留，不代表当前运行时约束。
 
 ### P10 weapon-pistol-icon
 
