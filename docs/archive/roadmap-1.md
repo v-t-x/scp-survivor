@@ -212,7 +212,7 @@ flowchart TB
 | 属性 | 建议值 |
 |------|--------|
 | 出现 | 固定 4:00，全图仅 **1 次** |
-| 效果 | 恢复 50–80 HP（`BALANCE.pickups.medkit.healAmount`） |
+| 效果 | 恢复 60 HP（`BALANCE.pickups.medkit.healAmount`） |
 | 拾取 | 玩家重叠即消耗，播放音效 |
 
 ### 8.3 6:00 阶段切换
