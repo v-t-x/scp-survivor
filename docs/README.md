@@ -12,6 +12,13 @@
 - [许可与商业化准备](./licensing-and-commercialization.md)：许可事实、素材门禁与发布风险。
 - [更新日志](../CHANGELOG.md)：已发布版本与 `main` 尚未发布的候选变化。
 
+## 版本发布资料
+
+- [v1.4.0 — UI Foundation（回溯里程碑）](./releases/v1.4.0.md)
+- [v1.5.0 — SCP-049 压力模型](./releases/v1.5.0.md)
+
+上述文件是 GitHub Release 正文的仓库内审计副本；发布前仍需按当时最终 HEAD、标签和验证结果核对。
+
 ## Agent 治理
 
 - [`AGENTS.md`](../AGENTS.md)：所有 Agent 的权威协作规则与分支路由。
