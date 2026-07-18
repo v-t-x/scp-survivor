@@ -12,6 +12,8 @@ import { hudMixin } from "./scene/hud.js";
 import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
+import { syncCharacterPresentation } from "./art/characterPresentation.js";
+import { createCombatFeedbackController } from "./art/combatFeedback.js";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -49,6 +51,8 @@ class PrototypeScene extends Phaser.Scene {
     this.isGameOver = false;
     this.isLevelUpActive = false;
     this.isResolvingLevelUp = false;
+    this._levelUpPresentationUnavailable = false;
+    this.levelUpPresentationRetryTimer = null;
     this.pendingLevelUps = 0;
     this.rerollsRemaining = BALANCE.upgrades.rerollsPerRun;
     this.levelUpOverlay = null;
@@ -102,6 +106,7 @@ class PrototypeScene extends Phaser.Scene {
 
     this.playerMoveSpeed = BALANCE.player.baseMoveSpeed;
     this.playerFacingAngle = 0;
+    this.playerMovementFallbackAngle = 0;
     this.dashUntilMs = 0;
     this.dashReadyAtMs = 0;
     this.dashAngle = 0;
@@ -116,6 +121,9 @@ class PrototypeScene extends Phaser.Scene {
     // this.updateUI() as before — those now delegate to these managers.
     this.audio = new AudioManager(this);
     this.ui = new UIManager(this);
+    this.combatFeedback = typeof createCombatFeedbackController === "function"
+      ? createCombatFeedbackController(this)
+      : createNoopCombatFeedbackController();
     // Release audio/UI resources when the scene shuts down or restarts, so a new
     // run does not leak a stale AudioContext or manager.
     //
@@ -127,10 +135,7 @@ class PrototypeScene extends Phaser.Scene {
     // registration before re-adding so each event carries at most one listener.
     // teardownManagers is idempotent, so firing on both SHUTDOWN and the final
     // DESTROY is safe.
-    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.teardownManagers, this);
-    this.events.off(Phaser.Scenes.Events.DESTROY, this.teardownManagers, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownManagers, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownManagers, this);
+    installManagerTeardown(this);
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -181,6 +186,8 @@ class PrototypeScene extends Phaser.Scene {
       this.handleExperienceCollection();
       this.updateSupplyPickups();
       this.updatePickupRadiusIndicator();
+      syncCharacterPresentation(this);
+      this.combatFeedback.update(this.elapsedSurvivalMs);
     }
 
     this.updatePlayerInvulnerabilityVisual();
@@ -197,15 +204,45 @@ class PrototypeScene extends Phaser.Scene {
   // create() rebuilds this.audio / this.ui, so this prevents a leaked (or
   // duplicate) AudioContext across runs.
   teardownManagers() {
-    if (this.audio) {
-      this.audio.destroy();
-      this.audio = null;
+    const combatFeedback = this.combatFeedback;
+    this.combatFeedback = null;
+    if (combatFeedback) {
+      try {
+        combatFeedback.setPaused?.(true);
+      } catch {
+        // Continue to release owned visuals even if freezing updates fails.
+      }
+      try {
+        combatFeedback.destroy?.();
+      } catch {
+        // One presentation teardown cannot strand the remaining managers.
+      }
     }
-    if (this.ui) {
-      this.ui.destroy();
-      this.ui = null;
+
+    const audio = this.audio;
+    this.audio = null;
+    try {
+      audio?.destroy?.();
+    } catch {
+      // UI teardown still needs to run after an audio cleanup failure.
+    }
+
+    const ui = this.ui;
+    this.ui = null;
+    try {
+      ui?.destroy?.();
+    } catch {
+      // References are already cleared, so repeated teardown remains inert.
     }
   }
+}
+
+function installManagerTeardown(scene) {
+  const { SHUTDOWN, DESTROY } = Phaser.Scenes.Events;
+  scene.events.off(SHUTDOWN, scene.teardownManagers, scene);
+  scene.events.off(DESTROY, scene.teardownManagers, scene);
+  scene.events.once(SHUTDOWN, scene.teardownManagers, scene);
+  scene.events.once(DESTROY, scene.teardownManagers, scene);
 }
 
 Object.assign(
@@ -240,4 +277,17 @@ const config = {
 };
 
 new Phaser.Game(config);
+
+function createNoopCombatFeedbackController() {
+  return {
+    trackActor() { return false; },
+    untrackActor() {},
+    notifyAttack() { return false; },
+    notifyHit() { return false; },
+    notifyDeath() { return false; },
+    update() {},
+    setPaused() {},
+    destroy() {}
+  };
+}
 

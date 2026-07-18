@@ -11,6 +11,10 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import {
+  getOutagePresentation
+} from "../art/presentationRules.js";
+import { getFacilityPresentation } from "../art/facilityPresentation.js";
 
 // Domain mixin: timeline. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const timelineMixin = {
@@ -213,6 +217,7 @@ export const timelineMixin = {
     this.showTopBanner(config.name, config.warning, 1900);
     this.triggerEventPulse();
     this.playSound("facilityWarning");
+    this.refreshFacilityPresentation();
   },
 
 
@@ -224,6 +229,20 @@ export const timelineMixin = {
     this.activeFacilityEvent = null;
     this.activeFacilityEventEndAtMs = 0;
     this.showTopBanner("事件结束", message, 1400);
+    this.refreshFacilityPresentation();
+  },
+
+
+  refreshFacilityPresentation() {
+    try {
+      this.facilityRoomController?.setPresentation?.(getFacilityPresentation({
+        outageStrength: this.outageVisualStrength,
+        activeEventType: this.activeFacilityEvent?.type ?? null,
+        bossPhaseActive: this.bossPhaseActive === true
+      }));
+    } catch {
+      // Facility presentation is best-effort and must not alter timeline state.
+    }
   },
 
 
@@ -241,19 +260,21 @@ export const timelineMixin = {
       this.outageVisualStrength = Math.max(0, this.outageVisualStrength - 0.07);
     }
 
+    const presentation = getOutagePresentation(
+      this.outageVisualStrength,
+      this.elapsedSurvivalMs
+    );
+
     if (this.outageVisualStrength <= 0) {
       this.outageDarknessRt.setVisible(false);
       this.outageDarknessRt.clear();
-      if (this.arenaGrid) {
-        this.arenaGrid.setAlpha(1);
-      }
+      this.refreshFacilityPresentation();
       return;
     }
 
     this.outageDarknessRt.setVisible(true);
     this.outageDarknessRt.clear();
-    const outsideAlpha = 0.96 * this.outageVisualStrength;
-    this.outageDarknessRt.fill(0x000000, outsideAlpha);
+    this.outageDarknessRt.fill(0x000000, presentation.darknessAlpha);
     // Render texture is screen-space (scrollFactor 0); convert the player's
     // world position into screen space so the light stays on the player.
     const cam = this.cameras.main;
@@ -261,14 +282,13 @@ export const timelineMixin = {
       this.player.x - cam.scrollX,
       this.player.y - cam.scrollY
     );
-    this.outageDarknessRt.erase(this.outageLightSprite);
-
-    if (this.arenaGrid) {
-      const flickerAlpha = 0.45 + Math.sin(this.elapsedSurvivalMs * 0.08) * 0.22;
-      this.arenaGrid.setAlpha(
-        Phaser.Math.Clamp(flickerAlpha, 0.2, 0.75) * this.outageVisualStrength
-      );
+    this.outageLightSprite.setVisible(true);
+    try {
+      this.outageDarknessRt.erase(this.outageLightSprite);
+    } finally {
+      this.outageLightSprite.setVisible(false);
     }
+    this.refreshFacilityPresentation();
   },
 
 
@@ -309,32 +329,41 @@ export const timelineMixin = {
   },
 
 
-  updatePhaseHud() {
-    if (!this.phaseText || !this.isMissionActive) {
-      return;
+  getPhaseHudState() {
+    if (!this.isMissionActive) {
+      return {
+        phaseLabel: "",
+        nextNodeSeconds: 0,
+        missionDetail: null
+      };
     }
 
     const phase = this.getTimelinePhase();
     const countdownSeconds = Math.ceil(phase.countdownMs / 1000);
-
-    if (this.survivalPhaseEnded) {
-      if (this.bossPhaseActive && this.bossEnemy?.active) {
-        const hpPercent = Math.ceil(
-          (this.bossEnemy.health / this.bossEnemy.maxHealth) * 100
-        );
-        this.phaseText.setText(`终局：SCP-049  |  Boss 生命 ${hpPercent}%`);
-      } else {
-        this.phaseText.setText(`${phase.name}  |  等待 Boss 登场`);
-      }
-      return;
+    if (this.survivalPhaseEnded && !this.bossEnemy?.active) {
+      return {
+        phaseLabel: phase.name,
+        nextNodeSeconds: 0,
+        missionDetail: "等待 Boss 登场"
+      };
     }
-
-    if (phase.id >= 7) {
-      this.phaseText.setText(`${phase.name}  |  Boss 战即将开始`);
-      return;
+    if (!this.survivalPhaseEnded && phase.id >= 7) {
+      return {
+        phaseLabel: phase.name,
+        nextNodeSeconds: 0,
+        missionDetail: "Boss 战即将开始"
+      };
     }
+    return {
+      phaseLabel: phase.name,
+      nextNodeSeconds: countdownSeconds,
+      missionDetail: null
+    };
+  },
 
-    this.phaseText.setText(`${phase.name}  |  下一节点 ${countdownSeconds}秒`);
+
+  updatePhaseHud() {
+    this.updateUI();
   },
 
 

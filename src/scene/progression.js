@@ -11,6 +11,15 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { TEXTURES } from "../assets/manifest.js";
+import { createTerminalButton } from "../ui/tacticalUi.js";
+import {
+  createTerminalCard,
+  createTerminalOverlay
+} from "../ui/terminalOverlay.js";
+import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
+
+const LEVEL_UP_PRESENTATION_RETRY_MS = 1000;
 
 // Domain mixin: progression. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const progressionMixin = {
@@ -92,7 +101,8 @@ export const progressionMixin = {
 
     if (
       this.pendingLevelUps > 0 &&
-      !this.isLevelUpActive
+      !this.isLevelUpActive &&
+      !this._levelUpPresentationUnavailable
     ) {
       this.showLevelUpOverlay();
     }
@@ -108,7 +118,7 @@ export const progressionMixin = {
 
 
   showLevelUpOverlay() {
-    if (this.isGameOver) {
+    if (this.isGameOver || this._levelUpPresentationUnavailable) {
       return;
     }
 
@@ -117,54 +127,147 @@ export const progressionMixin = {
     this.hideBuildPanel();
     this.pauseGameplaySystems();
 
-    if (this.levelUpOverlay) {
-      this.levelUpOverlay.destroy(true);
+    this.destroyLevelUpOverlay();
+
+    let choices;
+    try {
+      this.levelUpOverlayController = createTerminalOverlay(this, {
+        x: 0,
+        y: 0,
+        width: 760,
+        height: 420,
+        depth: 60,
+        scrollFactor: 1,
+        eyebrow: "SITE-19 / FIELD AUTHORIZATION",
+        title: "升级授权",
+        subtitle: "选择一项现场强化协议",
+        tone: "standard",
+        surfaceTextureKey: TEXTURES.terminalSurfaceGrid
+      });
+      this.levelUpOverlay = this.levelUpOverlayController.container;
+      // Keep this overlay in world space so visuals and Phaser hit areas share
+      // the same camera transform.
+      this.syncScreenOverlayPosition(this.levelUpOverlay);
+      choices = this.getLevelUpChoices();
+      this.renderLevelUpCards(choices);
+      this.createLevelUpButtons();
+    } catch {
+      this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices);
     }
+  },
 
-    this.levelUpOverlay = this.add.container(0, 0);
-    this.levelUpOverlay.setDepth(60);
-    // Pin to the current viewport in WORLD space (not scrollFactor 0), so the
-    // interactive cards' hit areas line up with where they are drawn.
-    this.syncScreenOverlayPosition(this.levelUpOverlay);
 
-    const backdrop = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      760,
-      420,
-      0x000000,
-      0.84
-    );
-    backdrop.setStrokeStyle(2, 0x5a6b95);
+  replaceFailedTerminalWithLegacyLevelUpOverlay(choices) {
+    this.destroyLevelUpOverlay();
+    try {
+      this.createLegacyLevelUpOverlay(choices);
+      return true;
+    } catch {
+      this.handleLevelUpPresentationFailure();
+      return false;
+    }
+  },
 
-    const title = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 175,
-      "升级",
-      {
-        fontSize: "50px",
-        color: "#fff4c2"
+
+  handleLevelUpPresentationFailure() {
+    this.destroyLevelUpOverlay();
+    this._levelUpPresentationUnavailable = true;
+    this.isLevelUpActive = false;
+    this.isResolvingLevelUp = false;
+    this.resumeGameplaySystems();
+    this.updateUI();
+
+    if (this.levelUpPresentationRetryTimer) {
+      return;
+    }
+    try {
+      const retryTimer = this.time?.delayedCall?.(LEVEL_UP_PRESENTATION_RETRY_MS, () => {
+        this.levelUpPresentationRetryTimer = null;
+        this._levelUpPresentationUnavailable = false;
+        if (
+          this.pendingLevelUps > 0
+          && !this.isLevelUpActive
+          && !this.isGameOver
+        ) {
+          this.showLevelUpOverlay();
+        }
+      });
+      if (!retryTimer) {
+        throw new Error("Level-up presentation retry timer unavailable.");
       }
-    );
-    title.setOrigin(0.5);
+      this.levelUpPresentationRetryTimer = retryTimer;
+    } catch {
+      // If even the Scene clock is unavailable, allow the next XP event to
+      // retry instead of permanently discarding access to pending upgrades.
+      this._levelUpPresentationUnavailable = false;
+      this.levelUpPresentationRetryTimer = null;
+    }
+  },
 
-    const subtitle = this.add.text(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2 - 132,
-      "选择一个升级",
-      {
-        fontSize: "22px",
-        color: "#ffffff"
+
+  createLegacyLevelUpOverlay(choices) {
+    const created = [];
+    let container = null;
+    try {
+      container = this.add.container(0, 0);
+      created.push(container);
+      container.setDepth(60);
+      this.syncScreenOverlayPosition(container);
+      this.levelUpOverlayController = null;
+      this.levelUpOverlay = container;
+
+      const backdrop = this.add.rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        760,
+        420,
+        0x000000,
+        0.84
+      );
+      created.push(backdrop);
+      backdrop.setStrokeStyle(2, 0x5a6b95);
+
+      const title = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 175,
+        "升级",
+        {
+          fontSize: "50px",
+          color: "#fff4c2"
+        }
+      );
+      created.push(title);
+      title.setOrigin(0.5);
+
+      const subtitle = this.add.text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 132,
+        "选择一个升级",
+        {
+          fontSize: "22px",
+          color: "#ffffff"
+        }
+      );
+      created.push(subtitle);
+      subtitle.setOrigin(0.5);
+      container.add([backdrop, title, subtitle]);
+
+      this.renderLegacyLevelUpCards(choices);
+      this.createLegacyLevelUpButtons();
+      return container;
+    } catch (error) {
+      this.destroyLevelUpCards();
+      this.destroyLevelUpButtons();
+      if (container?.active) {
+        container.destroy(true);
       }
-    );
-    subtitle.setOrigin(0.5);
-
-    this.levelUpOverlay.add([backdrop, title, subtitle]);
-
-    this.levelUpCardObjects = [];
-    this.levelUpCards = [];
-    this.renderLevelUpCards();
-    this.createLevelUpButtons();
+      for (const object of created) {
+        if (object?.active) object.destroy();
+      }
+      this.levelUpOverlay = null;
+      this.levelUpOverlayController = null;
+      throw error;
+    }
   },
 
 
@@ -177,150 +280,265 @@ export const progressionMixin = {
   },
 
 
-  renderLevelUpCards() {
-    if (this.levelUpCardObjects) {
-      for (const object of this.levelUpCardObjects) {
-        if (object?.active) {
-          object.destroy();
-        }
-      }
-    }
-    this.levelUpCardObjects = [];
-    this.levelUpCards = [];
+  renderLevelUpCards(choices = this.getLevelUpChoices()) {
+    this.destroyLevelUpCards();
 
-    const options = this.getLevelUpChoices();
+    if (!this.levelUpOverlayController) {
+      this.renderLegacyLevelUpCards(choices);
+      return;
+    }
+
+    const startX = GAME_WIDTH / 2 - 240;
+    const controllers = [];
+    try {
+      choices.forEach((upgrade, index) => {
+        const presentation = UPGRADE_PRESENTATION[upgrade.key];
+        const currentLevel = this.getUpgradeCurrentLevel(upgrade);
+        let cardController = null;
+        cardController = createTerminalCard(this, {
+          x: startX + index * 240,
+          y: GAME_HEIGHT / 2 - 15,
+          width: 220,
+          height: 230,
+          depth: 60,
+          scrollFactor: 1,
+          parent: this.levelUpOverlayController.content,
+          iconKey: presentation.textureKey,
+          eyebrow: upgrade.isMutation
+            ? "ANOMALOUS MUTATION"
+            : upgrade.kind === "weapon"
+              ? "WEAPON PROTOCOL"
+              : "FIELD PROTOCOL",
+          title: upgrade.name,
+          description: upgrade.description,
+          footer: `当前：Lv ${currentLevel}`,
+          riskLabel: presentation.riskLabel,
+          tone: presentation.tone,
+          onActivate: () => this.applyUpgrade(upgrade, cardController)
+        });
+        controllers.push(cardController);
+      });
+      this.levelUpCards = controllers;
+      this.levelUpCardObjects = controllers.flatMap(({ objects }) => objects);
+    } catch (error) {
+      for (const controller of controllers) controller.destroy();
+      this.levelUpCards = [];
+      this.levelUpCardObjects = [];
+      throw error;
+    }
+  },
+
+
+  renderLegacyLevelUpCards(choices = this.getLevelUpChoices()) {
+    this.destroyLevelUpCards();
+    const objects = [];
+    const cards = [];
     const startX = GAME_WIDTH / 2 - 240;
 
-    options.forEach((upgrade, index) => {
-      const optionX = startX + index * 240;
-      const optionY = GAME_HEIGHT / 2 - 15;
-      const currentLevel = this.getUpgradeCurrentLevel(upgrade);
+    try {
+      choices.forEach((upgrade, index) => {
+        const optionX = startX + index * 240;
+        const optionY = GAME_HEIGHT / 2 - 15;
+        const currentLevel = this.getUpgradeCurrentLevel(upgrade);
+        const isMutation = !!upgrade.isMutation;
+        const cardFill = isMutation ? 0x2a2140 : 0x1c2333;
+        const cardHoverFill = isMutation ? 0x392c58 : 0x27314a;
+        const card = this.add.rectangle(optionX, optionY, 220, 230, cardFill, 1);
+        objects.push(card);
+        card.setStrokeStyle(isMutation ? 3 : 2, isMutation ? 0xc79bff : 0x4b5d88);
+        card.setInteractive({ useHandCursor: true });
+        card.on("pointerover", () => card.setFillStyle(cardHoverFill, 1));
+        card.on("pointerout", () => card.setFillStyle(cardFill, 1));
+        card.on("pointerdown", () => this.applyUpgrade(upgrade, card));
+        cards.push(card);
 
-      const isMutation = !!upgrade.isMutation;
-      const cardFill = isMutation ? 0x2a2140 : 0x1c2333;
-      const cardHoverFill = isMutation ? 0x392c58 : 0x27314a;
-      const card = this.add.rectangle(optionX, optionY, 220, 230, cardFill, 1);
-      card.setStrokeStyle(isMutation ? 3 : 2, isMutation ? 0xc79bff : 0x4b5d88);
-      card.setInteractive({ useHandCursor: true });
-      card.on("pointerover", () => card.setFillStyle(cardHoverFill, 1));
-      card.on("pointerout", () => card.setFillStyle(cardFill, 1));
-      card.on("pointerdown", () => {
-        this.applyUpgrade(upgrade, card);
-      });
-      this.levelUpCards.push(card);
+        if (isMutation) {
+          const badge = this.add.text(optionX, optionY - 96, "★ 质变", {
+            fontSize: "15px",
+            fontStyle: "bold",
+            color: "#e2c6ff",
+            align: "center"
+          });
+          objects.push(badge);
+          badge.setOrigin(0.5);
+        }
 
-      if (isMutation) {
-        const badge = this.add.text(optionX, optionY - 96, "★ 质变", {
-          fontSize: "15px",
-          fontStyle: "bold",
-          color: "#e2c6ff",
-          align: "center"
+        const nameText = this.add.text(optionX, optionY - 62, upgrade.name, {
+          fontSize: "22px",
+          color: isMutation ? "#e0b6ff" : "#8cd5ff",
+          align: "center",
+          wordWrap: { width: 190 }
         });
-        badge.setOrigin(0.5);
-        this.levelUpCardObjects.push(badge);
-        this.levelUpOverlay.add(badge);
-      }
+        objects.push(nameText);
+        nameText.setOrigin(0.5);
 
-      const nameText = this.add.text(optionX, optionY - 62, upgrade.name, {
-        fontSize: "22px",
-        color: isMutation ? "#e0b6ff" : "#8cd5ff",
-        align: "center",
-        wordWrap: { width: 190 }
-      });
-      nameText.setOrigin(0.5);
-
-      const descriptionText = this.add.text(
-        optionX,
-        optionY + 5,
-        upgrade.description,
-        {
+        const descriptionText = this.add.text(optionX, optionY + 5, upgrade.description, {
           fontSize: "16px",
           color: "#dde7ff",
           align: "center",
           wordWrap: { width: 185 }
-        }
-      );
-      descriptionText.setOrigin(0.5);
+        });
+        objects.push(descriptionText);
+        descriptionText.setOrigin(0.5);
 
-      const currentLevelText = this.add.text(
-        optionX,
-        optionY + 82,
-        `当前：Lv ${currentLevel}`,
-        {
-          fontSize: "15px",
-          color: "#ffd990",
-          align: "center",
-          wordWrap: { width: 195 }
-        }
-      );
-      currentLevelText.setOrigin(0.5);
-
-      this.levelUpCardObjects.push(card, nameText, descriptionText, currentLevelText);
-      this.levelUpOverlay.add([card, nameText, descriptionText, currentLevelText]);
-    });
+        const currentLevelText = this.add.text(
+          optionX,
+          optionY + 82,
+          `当前：Lv ${currentLevel}`,
+          {
+            fontSize: "15px",
+            color: "#ffd990",
+            align: "center",
+            wordWrap: { width: 195 }
+          }
+        );
+        objects.push(currentLevelText);
+        currentLevelText.setOrigin(0.5);
+      });
+      this.levelUpOverlay.add(objects);
+      this.levelUpCards = cards;
+      this.levelUpCardObjects = objects;
+    } catch (error) {
+      for (const object of objects) {
+        if (object?.active) object.destroy();
+      }
+      this.levelUpCards = [];
+      this.levelUpCardObjects = [];
+      throw error;
+    }
   },
 
 
   createLevelUpButtons() {
+    this.destroyLevelUpButtons();
+    if (!this.levelUpOverlayController) {
+      this.createLegacyLevelUpButtons();
+      return;
+    }
+
+    const controllers = [];
+    try {
+      const reroll = createTerminalButton(this, {
+        x: GAME_WIDTH / 2 - 215,
+        y: GAME_HEIGHT / 2 + 137,
+        width: 200,
+        height: 46,
+        text: "",
+        state: "idle",
+        variant: "standard",
+        activateOn: "pointerdown",
+        depth: 60,
+        scrollFactor: 1,
+        onActivate: () => this.rerollLevelUpChoices()
+      });
+      controllers.push(reroll);
+      this.levelUpOverlayController.content.add(reroll.objects);
+
+      const skip = createTerminalButton(this, {
+        x: GAME_WIDTH / 2 + 15,
+        y: GAME_HEIGHT / 2 + 137,
+        width: 200,
+        height: 46,
+        text: `跳过（+${BALANCE.upgrades.skipHealAmount} 生命）`,
+        state: "idle",
+        variant: "primary",
+        activateOn: "pointerdown",
+        depth: 60,
+        scrollFactor: 1,
+        onActivate: () => this.skipLevelUpChoice()
+      });
+      controllers.push(skip);
+      this.levelUpOverlayController.content.add(skip.objects);
+
+      this.levelUpButtonControllers = controllers;
+      this.levelUpButtonObjects = controllers.flatMap(({ objects }) => objects);
+      this.levelUpRerollButtonController = reroll;
+      this.levelUpRerollButton = reroll.hitArea;
+      this.levelUpRerollLabel = reroll.label;
+      this.levelUpSkipButtonController = skip;
+      this.levelUpSkipButton = skip.hitArea;
+      this.updateRerollButtonState();
+    } catch (error) {
+      for (const controller of controllers) controller.destroy();
+      this.destroyLevelUpButtons();
+      throw error;
+    }
+  },
+
+
+  createLegacyLevelUpButtons() {
+    const objects = [];
     const buttonY = GAME_HEIGHT / 2 + 160;
+    try {
+      const rerollButton = this.add.rectangle(
+        GAME_WIDTH / 2 - 115,
+        buttonY,
+        200,
+        46,
+        0x2d3a55,
+        1
+      );
+      objects.push(rerollButton);
+      rerollButton.setStrokeStyle(2, 0x5f78b0);
+      rerollButton.setInteractive({ useHandCursor: true });
 
-    const rerollButton = this.add.rectangle(
-      GAME_WIDTH / 2 - 115,
-      buttonY,
-      200,
-      46,
-      0x2d3a55,
-      1
-    );
-    rerollButton.setStrokeStyle(2, 0x5f78b0);
-    rerollButton.setInteractive({ useHandCursor: true });
-
-    const rerollLabel = this.add.text(GAME_WIDTH / 2 - 115, buttonY, "", {
-      fontSize: "18px",
-      color: "#dfe8ff",
-      align: "center"
-    });
-    rerollLabel.setOrigin(0.5);
-
-    rerollButton.on("pointerover", () => {
-      if (this.rerollsRemaining > 0) {
-        rerollButton.setFillStyle(0x3a4b6e, 1);
-      }
-    });
-    rerollButton.on("pointerout", () => rerollButton.setFillStyle(0x2d3a55, 1));
-    rerollButton.on("pointerdown", () => this.rerollLevelUpChoices());
-
-    const skipButton = this.add.rectangle(
-      GAME_WIDTH / 2 + 115,
-      buttonY,
-      200,
-      46,
-      0x2d3a55,
-      1
-    );
-    skipButton.setStrokeStyle(2, 0x5f78b0);
-    skipButton.setInteractive({ useHandCursor: true });
-
-    const skipLabel = this.add.text(
-      GAME_WIDTH / 2 + 115,
-      buttonY,
-      `跳过（+${BALANCE.upgrades.skipHealAmount} 生命）`,
-      {
+      const rerollLabel = this.add.text(GAME_WIDTH / 2 - 115, buttonY, "", {
         fontSize: "18px",
         color: "#dfe8ff",
         align: "center"
+      });
+      objects.push(rerollLabel);
+      rerollLabel.setOrigin(0.5);
+      rerollButton.on("pointerover", () => {
+        if (this.rerollsRemaining > 0) rerollButton.setFillStyle(0x3a4b6e, 1);
+      });
+      rerollButton.on("pointerout", () => rerollButton.setFillStyle(0x2d3a55, 1));
+      rerollButton.on("pointerdown", () => this.rerollLevelUpChoices());
+
+      const skipButton = this.add.rectangle(
+        GAME_WIDTH / 2 + 115,
+        buttonY,
+        200,
+        46,
+        0x2d3a55,
+        1
+      );
+      objects.push(skipButton);
+      skipButton.setStrokeStyle(2, 0x5f78b0);
+      skipButton.setInteractive({ useHandCursor: true });
+
+      const skipLabel = this.add.text(
+        GAME_WIDTH / 2 + 115,
+        buttonY,
+        `跳过（+${BALANCE.upgrades.skipHealAmount} 生命）`,
+        {
+          fontSize: "18px",
+          color: "#dfe8ff",
+          align: "center"
+        }
+      );
+      objects.push(skipLabel);
+      skipLabel.setOrigin(0.5);
+      skipButton.on("pointerover", () => skipButton.setFillStyle(0x3a4b6e, 1));
+      skipButton.on("pointerout", () => skipButton.setFillStyle(0x2d3a55, 1));
+      skipButton.on("pointerdown", () => this.skipLevelUpChoice());
+
+      this.levelUpOverlay.add(objects);
+      this.levelUpButtonControllers = [];
+      this.levelUpButtonObjects = objects;
+      this.levelUpRerollButtonController = null;
+      this.levelUpRerollButton = rerollButton;
+      this.levelUpRerollLabel = rerollLabel;
+      this.levelUpSkipButtonController = null;
+      this.levelUpSkipButton = skipButton;
+      this.updateRerollButtonState();
+    } catch (error) {
+      for (const object of objects) {
+        if (object?.active) object.destroy();
       }
-    );
-    skipLabel.setOrigin(0.5);
-
-    skipButton.on("pointerover", () => skipButton.setFillStyle(0x3a4b6e, 1));
-    skipButton.on("pointerout", () => skipButton.setFillStyle(0x2d3a55, 1));
-    skipButton.on("pointerdown", () => this.skipLevelUpChoice());
-
-    this.levelUpRerollButton = rerollButton;
-    this.levelUpRerollLabel = rerollLabel;
-    this.levelUpOverlay.add([rerollButton, rerollLabel, skipButton, skipLabel]);
-    this.updateRerollButtonState();
+      this.destroyLevelUpButtons();
+      throw error;
+    }
   },
 
 
@@ -330,6 +548,10 @@ export const progressionMixin = {
     }
     this.levelUpRerollLabel.setText(`重抽（剩 ${this.rerollsRemaining}）`);
     const enabled = this.rerollsRemaining > 0;
+    if (this.levelUpRerollButtonController) {
+      this.levelUpRerollButtonController.setState(enabled ? "idle" : "disabled");
+      return;
+    }
     this.levelUpRerollLabel.setColor(enabled ? "#dfe8ff" : "#6b7590");
     this.levelUpRerollButton.setStrokeStyle(2, enabled ? 0x5f78b0 : 0x3a4256);
   },
@@ -340,7 +562,18 @@ export const progressionMixin = {
       return;
     }
     this.rerollsRemaining -= 1;
-    this.renderLevelUpCards();
+    let choices;
+    try {
+      choices = this.getLevelUpChoices();
+      this.renderLevelUpCards(choices);
+    } catch {
+      if (this.levelUpOverlayController) {
+        if (!this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices)) return;
+      } else {
+        this.handleLevelUpPresentationFailure();
+        return;
+      }
+    }
     this.updateRerollButtonState();
     this.playSound("levelUp");
   },
@@ -366,17 +599,13 @@ export const progressionMixin = {
     }
     this.updateUI();
 
-    this.time.delayedCall(120, () => {
+    this.levelUpResolutionTimer = this.time.delayedCall(120, () => {
+      this.levelUpResolutionTimer = null;
       if (this.pendingLevelUps > 0) {
         this.showLevelUpOverlay();
         return;
       }
-      if (this.levelUpOverlay) {
-        this.levelUpOverlay.destroy(true);
-        this.levelUpOverlay = null;
-      }
-      this.levelUpCards = [];
-      this.levelUpCardObjects = [];
+      this.destroyLevelUpOverlay();
       this.isLevelUpActive = false;
       this.isResolvingLevelUp = false;
       this.resumeGameplaySystems();
@@ -394,8 +623,13 @@ export const progressionMixin = {
     for (const card of this.levelUpCards) {
       card.disableInteractive();
     }
-    selectedCard.setStrokeStyle(4, 0xffdd66);
-    selectedCard.setFillStyle(0x35527a, 1);
+    if (this.levelUpOverlayController) {
+      selectedCard.setState("selected");
+      selectedCard.hitArea.disableInteractive();
+    } else {
+      selectedCard.setStrokeStyle(4, 0xffdd66);
+      selectedCard.setFillStyle(0x35527a, 1);
+    }
 
     upgrade.apply(this);
     this.upgradeLevels[upgrade.key] += 1;
@@ -412,23 +646,104 @@ export const progressionMixin = {
     this.updateUI();
     this.playSound("levelUp");
 
-    this.time.delayedCall(160, () => {
+    this.levelUpResolutionTimer = this.time.delayedCall(160, () => {
+      this.levelUpResolutionTimer = null;
       if (this.pendingLevelUps > 0) {
         this.showLevelUpOverlay();
         return;
       }
 
-      if (this.levelUpOverlay) {
-        this.levelUpOverlay.destroy(true);
-        this.levelUpOverlay = null;
-      }
-      this.levelUpCards = [];
-      this.levelUpCardObjects = [];
+      this.destroyLevelUpOverlay();
       this.isLevelUpActive = false;
       this.isResolvingLevelUp = false;
       this.resumeGameplaySystems();
       this.updateUI();
     });
+  },
+
+
+  destroyLevelUpCards() {
+    const cards = this.levelUpCards ?? [];
+    const objects = this.levelUpCardObjects ?? [];
+    this.levelUpCards = [];
+    this.levelUpCardObjects = [];
+    for (const card of cards) {
+      try {
+        card?.disableInteractive?.();
+        card?.destroy?.();
+      } catch {
+        // Continue releasing the complete card transaction.
+      }
+    }
+    for (const object of objects) {
+      try {
+        if (object?.active) object.destroy();
+      } catch {
+        // A Scene shutdown must not retain the remaining card references.
+      }
+    }
+  },
+
+
+  destroyLevelUpButtons() {
+    const controllers = this.levelUpButtonControllers ?? [];
+    const objects = this.levelUpButtonObjects ?? [];
+    this.levelUpButtonControllers = [];
+    this.levelUpButtonObjects = [];
+    this.levelUpRerollButtonController = null;
+    this.levelUpRerollButton = null;
+    this.levelUpRerollLabel = null;
+    this.levelUpSkipButtonController = null;
+    this.levelUpSkipButton = null;
+    for (const controller of controllers) {
+      try {
+        controller?.destroy?.();
+      } catch {
+        // Continue releasing the complete button transaction.
+      }
+    }
+    for (const object of objects) {
+      try {
+        if (object?.active) object.destroy();
+      } catch {
+        // A Scene shutdown must not retain the remaining button references.
+      }
+    }
+  },
+
+
+  destroyLevelUpOverlay() {
+    const controller = this.levelUpOverlayController;
+    const overlay = this.levelUpOverlay;
+    this.levelUpOverlayController = null;
+    this.levelUpOverlay = null;
+    this.destroyLevelUpCards();
+    this.destroyLevelUpButtons();
+    try {
+      if (controller) {
+        controller.destroy();
+      } else if (overlay?.active) {
+        overlay.destroy(true);
+      }
+    } catch {
+      // References are already cleared; unified teardown can continue safely.
+    }
+  },
+
+
+  cancelLevelUpResolutionTimer() {
+    try {
+      this.levelUpResolutionTimer?.remove?.(false);
+    } catch {
+      // Scene shutdown must continue even if Phaser already released the timer.
+    }
+    this.levelUpResolutionTimer = null;
+    try {
+      this.levelUpPresentationRetryTimer?.remove?.(false);
+    } catch {
+      // Scene shutdown must continue if Phaser already released the retry timer.
+    }
+    this.levelUpPresentationRetryTimer = null;
   },
 
 

@@ -11,11 +11,22 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
+import { TEXTURES } from "../assets/manifest.js";
+import {
+  applyEnemyPresentation,
+  getRiotArmorArcPresentation
+} from "../art/enemyPresentation.js";
 import {
   cloneEnemyAt as cloneEnemyForScene,
   tryReplicateEnemy as tryReplicateEnemyForScene
 } from "./enemyReplication.js";
 import { getBossUpdateActions, getBossWavePlan } from "./bossRules.js";
+import {
+  applyDisplayScalePreservingBody,
+  centerCircularBody,
+  CHARACTER_DISPLAY_SCALE
+} from "../art/presentationRules.js";
+import { COMBAT_PRESENTATION_DEPTH } from "../art/combatFeedback.js";
 
 // Domain mixin: enemies. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const enemiesMixin = {
@@ -195,10 +206,10 @@ export const enemiesMixin = {
     const { x, y } = forcedPosition ?? this.getSpawnPositionAtEdge();
     const textureKey =
       type === "riotUnit"
-        ? "elite-riot"
+        ? TEXTURES.eliteRiot
         : type === "blinkStalker"
-          ? "elite-blink"
-          : "elite-biomass";
+          ? TEXTURES.eliteBlink
+          : TEXTURES.eliteBiomass;
     const enemy = this.enemies.create(x, y, textureKey);
     this.initializeEnemyFromConfig(enemy, config, scaling, true);
     enemy.eliteType = type;
@@ -212,7 +223,7 @@ export const enemiesMixin = {
       return;
     }
     const config = BALANCE.enemy.elite.types.biomassChild;
-    const child = this.enemies.create(x, y, "biomass-child");
+    const child = this.enemies.create(x, y, TEXTURES.biomassChild);
     this.initializeEnemyFromConfig(
       child,
       config,
@@ -253,14 +264,27 @@ export const enemiesMixin = {
       Phaser.Math.Between(
         BALANCE.enemy.replication.intervalMinMs,
         BALANCE.enemy.replication.intervalMaxMs
-      );
+    );
 
     if (config.bodyShape === "circle") {
-      enemy.setCircle(config.bodyRadius);
+      if (config.type === "infectedStaff") {
+        centerCircularBody(enemy, config.bodyRadius);
+      } else {
+        enemy.setCircle(config.bodyRadius);
+      }
     } else if (config.bodyShape === "box") {
       enemy.body.setSize(config.bodySize, config.bodySize);
     } else {
       enemy.body.setSize(enemy.width, enemy.height);
+    }
+
+    if (config.type === "biomass") {
+      enemy.biomassFallbackBodySourceWidth = enemy.body.sourceWidth;
+      enemy.biomassFallbackBodySourceHeight = enemy.body.sourceHeight;
+    }
+
+    if (config.type === "infectedStaff") {
+      applyDisplayScalePreservingBody(enemy, CHARACTER_DISPLAY_SCALE.infectedStaff);
     }
 
     if (config.type === "drone") {
@@ -304,7 +328,15 @@ export const enemiesMixin = {
       }
     }
 
+    applyEnemyPresentation(this, enemy, config.type);
+    this.combatFeedback?.trackActor(enemy, {
+      kind: config.type === "biomassChild" ? "biomassChild" : isElite ? "elite" : "enemy",
+      radius: Math.max(enemy.body.width, enemy.body.height) / 2,
+      offsetY: 3
+    });
+
     enemy.once("destroy", () => {
+      this.combatFeedback?.untrackActor(enemy);
       if (enemy.armorBrokenLabel?.active) {
         enemy.armorBrokenLabel.destroy();
       }
@@ -404,7 +436,7 @@ export const enemiesMixin = {
       WORLD_HEIGHT - 16
     );
     const blink = this.add.circle(enemy.x, enemy.y, 6, 0xd8b0ff, 0.5);
-    blink.setDepth(16);
+    blink.setDepth(COMBAT_PRESENTATION_DEPTH.decorationMin);
     this.registerTransientEffect(blink);
     this.tweens.add({
       targets: blink,
@@ -518,7 +550,12 @@ export const enemiesMixin = {
   updateBiomassElite(enemy) {
     this.physics.moveToObject(enemy, this.player, enemy.moveSpeed);
     const pulse = 1.16 + Math.sin(this.elapsedSurvivalMs * 0.008) * 0.07;
-    enemy.setScale(pulse);
+    const scaleX = Math.abs(enemy.scaleX) || 1;
+    const scaleY = Math.abs(enemy.scaleY) || 1;
+    enemy.body.setSize(
+      (enemy.biomassFallbackBodySourceWidth * pulse) / scaleX,
+      (enemy.biomassFallbackBodySourceHeight * pulse) / scaleY
+    );
   },
 
 
@@ -578,22 +615,8 @@ export const enemiesMixin = {
 
 
   attachEliteVisuals(enemy) {
-    const marker = this.add.text(enemy.x, enemy.y - 32, "精英", {
-      fontSize: "12px",
-      color: "#ffd4d4"
-    });
-    marker.setOrigin(0.5);
-    marker.setDepth(22);
-    this.registerTransientEffect(marker);
-    enemy.eliteMarker = marker;
-
-    const outline = this.add.graphics();
-    outline.setDepth(9);
-    this.registerTransientEffect(outline);
-    enemy.eliteOutline = outline;
-
     if (enemy.eliteType === "riotUnit") {
-      const shield = this.add.triangle(enemy.x, enemy.y, 0, 0, 14, 6, 0, 12, 0x87bcff, 0.95);
+      const shield = this.add.graphics();
       shield.setDepth(11);
       this.registerTransientEffect(shield);
       enemy.shieldIndicator = shield;
@@ -601,12 +624,6 @@ export const enemiesMixin = {
 
     enemy.once("destroy", () => {
       this.clearEliteWarning(enemy);
-      if (enemy.eliteMarker?.active) {
-        enemy.eliteMarker.destroy();
-      }
-      if (enemy.eliteOutline?.active) {
-        enemy.eliteOutline.destroy();
-      }
       if (enemy.shieldIndicator?.active) {
         enemy.shieldIndicator.destroy();
       }
@@ -615,39 +632,34 @@ export const enemiesMixin = {
 
 
   updateEliteVisuals(enemy) {
-    if (!enemy.eliteOutline) {
+    if (!enemy.shieldIndicator) {
       return;
     }
 
-    enemy.eliteOutline.clear();
-    enemy.eliteOutline.lineStyle(2, 0xfff08e, 0.95);
-    if (enemy.eliteType === "riotUnit") {
-      enemy.eliteOutline.strokeRect(enemy.x - 22, enemy.y - 22, 44, 44);
-    } else if (enemy.eliteType === "blinkStalker") {
-      enemy.eliteOutline.strokeCircle(enemy.x, enemy.y, 20);
-    } else {
-      enemy.eliteOutline.strokeCircle(enemy.x, enemy.y, 22);
-    }
-
-    if (enemy.eliteMarker) {
-      enemy.eliteMarker.setPosition(enemy.x, enemy.y - 34);
-    }
-
-    if (enemy.shieldIndicator) {
-      const shieldDistance = 22;
-      enemy.shieldIndicator.setPosition(
-        enemy.x + Math.cos(enemy.facingAngle) * shieldDistance,
-        enemy.y + Math.sin(enemy.facingAngle) * shieldDistance
-      );
-      enemy.shieldIndicator.setRotation(enemy.facingAngle);
-    }
+    const arc = getRiotArmorArcPresentation(enemy.frontArcDegrees);
+    enemy.shieldIndicator.clear();
+    enemy.shieldIndicator.lineStyle(3, 0x9fc7da, 0.95);
+    enemy.shieldIndicator.beginPath();
+    enemy.shieldIndicator.arc(
+      0,
+      0,
+      arc.radius,
+      arc.startAngle,
+      arc.endAngle,
+      false
+    );
+    enemy.shieldIndicator.strokePath();
+    enemy.shieldIndicator.lineStyle(1, 0x5f8294, 0.8);
+    enemy.shieldIndicator.lineBetween(22, -11, 22, 11);
+    enemy.shieldIndicator.setPosition(enemy.x, enemy.y);
+    enemy.shieldIndicator.setRotation(enemy.facingAngle);
   },
 
 
   createChargeWarning(enemy) {
     this.clearEliteWarning(enemy);
     const warning = this.add.graphics();
-    warning.setDepth(15);
+    warning.setDepth(COMBAT_PRESENTATION_DEPTH.warning);
     warning.lineStyle(3, 0xffa773, 0.95);
     warning.lineBetween(
       enemy.x,
@@ -663,7 +675,7 @@ export const enemiesMixin = {
   createTeleportWarning(enemy, x, y) {
     this.clearEliteWarning(enemy);
     const warning = this.add.graphics();
-    warning.setDepth(15);
+    warning.setDepth(COMBAT_PRESENTATION_DEPTH.warning);
     warning.lineStyle(2, 0x9df7ff, 0.95);
     warning.strokeCircle(x, y, 24);
     warning.lineBetween(x - 10, y, x + 10, y);
@@ -736,11 +748,17 @@ export const enemiesMixin = {
     boss.maxHealth = config.health;
     boss.health = config.health;
     boss.xpReward = 0;
-    boss.setCircle(18);
+    centerCircularBody(boss, 18);
+    applyDisplayScalePreservingBody(boss, CHARACTER_DISPLAY_SCALE.scp049);
     boss.setDepth(12);
     boss.setCollideWorldBounds(true);
     // Immovable so its own summoned minions cannot shove it around.
     boss.body.setImmovable(true);
+    this.combatFeedback.trackActor(boss, {
+      kind: "boss",
+      radius: 18,
+      offsetY: 5
+    });
     boss.summonCooldownMs = config.summonCooldownMs;
     boss.nextSummonAtMs = this.elapsedSurvivalMs + config.summonInitialDelayMs;
     // Surgery Frenzy state machine. All timers use elapsedSurvivalMs so they are
@@ -761,6 +779,7 @@ export const enemiesMixin = {
       boss.bossLabel = null;
     });
     boss.once("destroy", () => {
+      this.combatFeedback?.untrackActor(boss);
       if (boss.bossLabel?.active) {
         boss.bossLabel.destroy();
       }
@@ -954,7 +973,7 @@ export const enemiesMixin = {
     this.killCount += 1;
     this.bossPhaseActive = false;
     this.showTopBanner("收容完成", "SCP-049 已被击败", 2200);
-    this.playEnemyDeathEffect(boss);
+    this.playEnemyDeathEffect(boss, { spawnParticles: false });
     this.time.delayedCall(BALANCE.feedback.deathShrinkMs + 120, () => {
       if (!this.isGameOver) {
         this.triggerVictory();
