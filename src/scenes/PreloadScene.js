@@ -16,8 +16,9 @@ import { runPreloadCreatePipeline } from "./preloadOrchestration.js";
 //     PreloadScene  ->  PrototypeScene (the existing main game scene)
 //
 // This is NOT a conversion to a full multi-scene architecture. PreloadScene only
-// loads any declared real assets (none yet) and generates the procedural fallback
-// textures, then hands off to the existing game scene. The main scene's own
+// loads the real assets declared by the manifest and generates procedural
+// fallback textures for any missing keys, then hands off to the existing game
+// scene. The main scene's own
 // startup behavior (start screen, run flow) is untouched.
 //
 // Owned by the UI/art Agent.
@@ -27,7 +28,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load real assets when the manifest declares them. All empty for now.
+    // Load the real assets declared by the manifest; create() handles missing fallbacks.
     for (const asset of IMAGE_ASSETS) {
       this.load.image(asset.key, asset.path);
     }

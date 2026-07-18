@@ -180,16 +180,20 @@ Avoid: 3D, isometric, side view, smooth illustration, frame-to-frame identity dr
 - [ ] 先验证本机已确认存在的 bundled Python 和官方 helper；使用精确命令，不调用 Windows Store stub：
 
 ```powershell
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' `
-  'C:\Users\24037\.codex\skills\.system\imagegen\scripts\remove_chroma_key.py' `
+$userProfile = [Environment]::GetFolderPath('UserProfile')
+$python = Join-Path $userProfile '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+$removeChromaKey = Join-Path $userProfile '.codex\skills\.system\imagegen\scripts\remove_chroma_key.py'
+& $python $removeChromaKey `
   --help
 ```
 
 - [ ] 每个源文件使用同一 helper 去绿幕，输入/输出都用绝对路径：
 
 ```powershell
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' `
-  'C:\Users\24037\.codex\skills\.system\imagegen\scripts\remove_chroma_key.py' `
+$userProfile = [Environment]::GetFolderPath('UserProfile')
+$python = Join-Path $userProfile '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+$removeChromaKey = Join-Path $userProfile '.codex\skills\.system\imagegen\scripts\remove_chroma_key.py'
+& $python $removeChromaKey `
   --input '<absolute-source.png>' `
   --out 'C:\scp-survivor-ui-art\.superpowers\sdd\r17-assets\keyed\<name>.png' `
   --key-color '#00ff00' `

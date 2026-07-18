@@ -60,7 +60,8 @@
 
 ~~~powershell
 node --test test/opening-visual-contract.test.js test/art-assets.test.js test/facility-room.test.js
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' scripts/art/test_pixel_tools.py
+$python = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python scripts/art/test_pixel_tools.py
 ~~~
 
 - [ ] **步骤 3：先实现确定性像素处理工具**
@@ -68,7 +69,8 @@ node --test test/opening-visual-contract.test.js test/art-assets.test.js test/fa
 `normalize_pixel_asset.py` 必须提供 `--input --output --width --height --fit contain|cover --alpha opaque|binary --colors --seam-wrap`，使用 Pillow nearest、无抖动量化和 alpha 0/255 门禁；`build_contact_sheet.py` 提供 `--inputs --scale --columns --output`，只允许整数 nearest 放大。Python 单元测试用临时 fixture 证明相同输入字节得到相同 SHA-256、尺寸/alpha/色数正确、`--seam-wrap` 首末行列逐像素一致。先让测试因脚本缺失失败，再最小实现至通过。
 
 ~~~powershell
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' scripts/art/test_pixel_tools.py
+$python = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python scripts/art/test_pixel_tools.py
 ~~~
 
 - [ ] **步骤 4：使用 imagegen skill 生成候选素材并用脚本处理**
@@ -89,7 +91,8 @@ node --test test/opening-visual-contract.test.js test/art-assets.test.js test/fa
 
 ~~~powershell
 node --test test/opening-visual-contract.test.js test/art-assets.test.js test/facility-room.test.js
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' scripts/art/test_pixel_tools.py
+$python = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python scripts/art/test_pixel_tools.py
 npm run build
 git diff --check
 git add -- src/art/openingVisualContract.js src/assets/manifest.js src/assets/fallbackTextureFactory.js docs/art/asset-register.md public/assets/art/facility scripts/art/normalize_pixel_asset.py scripts/art/build_contact_sheet.py scripts/art/test_pixel_tools.py test/opening-visual-contract.test.js test/art-assets.test.js test/facility-room.test.js

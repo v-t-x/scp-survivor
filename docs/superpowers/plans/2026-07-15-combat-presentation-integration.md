@@ -152,7 +152,8 @@ node --test
 - [ ] **步骤 2：生产构建**
 
 ~~~powershell
-& 'C:\Users\24037\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' scripts/art/test_pixel_tools.py
+$python = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python scripts/art/test_pixel_tools.py
 npm run build
 ~~~
 
