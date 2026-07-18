@@ -1,21 +1,15 @@
-MIT License
+# SCP Survivor Licensing Overview / 许可总览
 
-Copyright (c) 2026 v-t-x
+This repository contains materials under more than one license. 本仓库包含适用不同许可证的材料。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Independently authored software code / 独立软件代码
+   Unless otherwise noted, independently authored software code remains available under the MIT License. The complete text is in `LICENSES/MIT.txt`.
+   除非另有说明，独立创作的软件代码继续按 MIT License 提供；完整文本见 `LICENSES/MIT.txt`。
+2. SCP-derived content / SCP 衍生内容
+   Content relating to the SCP Foundation, SCP-049, and other SCP-derived creative expression is provided under CC BY-SA 3.0, subject to the final project licensing review. The complete text is in `LICENSES/CC-BY-SA-3.0.txt`; attribution is in `ATTRIBUTION.md`.
+   与 SCP Foundation、SCP-049 及其他 SCP 衍生创意表达有关的内容，在项目最终许可复核通过的前提下按 CC BY-SA 3.0 提供；完整文本见 `LICENSES/CC-BY-SA-3.0.txt`，署名见 `ATTRIBUTION.md`。
+3. Project-generated assets / 项目生成素材
+   Source and modification records are listed in `docs/art/asset-register.md`. Inclusion here is not a warranty of uniqueness, non-infringement, or commercial-release clearance.
+   来源与修改记录见 `docs/art/asset-register.md`。纳入本仓库不构成对唯一性、不侵权或商业发布许可已经完备的保证。
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This overview preserves rights already granted for earlier MIT-licensed code copies and is not legal advice. 该总览不撤回既有 MIT 代码副本已经获得的权利，也不构成法律意见。
