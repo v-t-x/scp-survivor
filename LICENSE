@@ -1,15 +1,17 @@
 # SCP Survivor Licensing Overview / 许可总览
 
-This repository contains materials under more than one license. 本仓库包含适用不同许可证的材料。
+This repository contains materials under more than one license. See `LICENSE-MAP.md` for the path-level scope. 本仓库包含适用不同许可证的材料；路径级范围见 `LICENSE-MAP.md`。
 
-1. Independently authored software code / 独立软件代码
-   Unless otherwise noted, independently authored software code remains available under the MIT License. The complete text is in `LICENSES/MIT.txt`.
-   除非另有说明，独立创作的软件代码继续按 MIT License 提供；完整文本见 `LICENSES/MIT.txt`。
-2. SCP-derived content / SCP 衍生内容
-   Under this local proposal, content relating to the SCP Foundation, SCP-049, and other SCP-derived creative expression—including project-generated assets that are SCP-derived—falls within the proposed CC BY-SA 3.0 candidate category. This remains subject to Level 2 and project-owner review before public distribution. The complete text is in `LICENSES/CC-BY-SA-3.0.txt`; attribution is in `ATTRIBUTION.md`.
-   按本地候选方案，与 SCP Foundation、SCP-049 及其他 SCP 衍生创意表达有关的内容，包括具有 SCP 衍生性质的项目生成素材，归入拟议的 CC BY-SA 3.0 候选类别；首次公开分发前仍须 Level 2 与项目所有者复核。完整文本见 `LICENSES/CC-BY-SA-3.0.txt`，署名见 `ATTRIBUTION.md`。
-3. Project-generated assets / 项目生成素材
-   Source and modification records are listed in `docs/art/asset-register.md`. The final license for project-generated visual assets that are not SCP-derived remains unresolved and requires Level 2 and project-owner review before public distribution. Inclusion here is not a warranty of uniqueness, non-infringement, or commercial-release clearance.
-   来源与修改记录见 `docs/art/asset-register.md`。不具有 SCP 衍生性质的项目生成视觉素材，其最终许可仍未确定，首次公开分发前须经 Level 2 与项目所有者复核。纳入本仓库不构成对唯一性、不侵权或商业发布许可已经完备的保证。
+1. Independently authored software / 独立创作的软件
+   Unless otherwise noted in `LICENSE-MAP.md`, source code, tests, scripts, configuration, and build tooling are licensed under the MIT License. The complete text is in `LICENSES/MIT.txt`.
+   除 `LICENSE-MAP.md` 另有说明外，源代码、测试、脚本、配置和构建工具按 MIT License 提供；完整文本见 `LICENSES/MIT.txt`。
+2. Creative content and SCP-derived material / 创意内容与 SCP 衍生材料
+   Project-generated visual and audiovisual assets, game copy, narrative/design expression, and SCP-derived content are licensed under Creative Commons Attribution-ShareAlike 3.0. The complete text is in `LICENSES/CC-BY-SA-3.0.txt`; required attribution is in `ATTRIBUTION.md`.
+   项目生成的视觉与视听素材、游戏文案、叙事/设计表达和 SCP 衍生内容按 Creative Commons Attribution-ShareAlike 3.0 提供；完整文本见 `LICENSES/CC-BY-SA-3.0.txt`，必要署名见 `ATTRIBUTION.md`。
+3. Third-party material / 第三方材料
+   Third-party dependencies and any separately identified material remain under their own licenses. Their inclusion does not change those terms.
+   第三方依赖和任何单独标明的材料继续适用其各自许可证，纳入本仓库不会改变这些条款。
 
-This overview preserves rights already granted for earlier MIT-licensed code copies and is not legal advice. 该总览不撤回既有 MIT 代码副本已经获得的权利，也不构成法律意见。
+Source and modification records for project-generated assets are listed in `docs/art/asset-register.md`. This selection does not warrant uniqueness, non-infringement, or clearance for a future commercial release. It preserves rights already granted for earlier MIT-licensed copies and is not legal advice.
+
+项目生成素材的来源与修改记录见 `docs/art/asset-register.md`。本次许可选择不构成对唯一性、不侵权或未来商业发行权利完备的保证；也不撤回既有 MIT 许可副本已经获得的权利，且不构成法律意见。

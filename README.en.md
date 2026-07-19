@@ -6,7 +6,7 @@
 [![CI](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml)
 [![Phaser](https://img.shields.io/badge/Phaser-3.90-8a2be2)](https://phaser.io/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
-[![License candidate: MIT + CC BY-SA 3.0](https://img.shields.io/badge/License_candidate-MIT%20%2B%20CC%20BY--SA%203.0-yellow)](./LICENSE)
+[![License: MIT + CC BY-SA 3.0](https://img.shields.io/badge/License-MIT%20%2B%20CC%20BY--SA%203.0-blue)](./LICENSE)
 
 > A top-down 2D Survivors-like single-run prototype. A Foundation security officer fights and upgrades through a six-minute containment-failure timeline before confronting SCP-049.
 
@@ -115,9 +115,9 @@ Different stages of the project have used AI coding assistants including Cursor,
 
 ## License and Attribution
 
-- The [licensing overview](./LICENSE) records a local candidate structure, not a final legal conclusion.
-- Unless otherwise noted, independently authored software code remains available under the MIT License. SCP-derived content is proposed for the CC BY-SA 3.0 candidate category and must satisfy applicable attribution and share-alike requirements.
-- Candidate public attribution for SCP and SCP-049 is recorded in [ATTRIBUTION.md](./ATTRIBUTION.md). The final license for project-generated visual assets that are not SCP-derived remains unresolved.
+- Independently authored software is licensed under MIT. Project-generated visual/audiovisual assets, creative expression, and SCP-derived content are licensed under CC BY-SA 3.0.
+- See [LICENSE-MAP.md](./LICENSE-MAP.md) for path-level scope and [ATTRIBUTION.md](./ATTRIBUTION.md) for SCP and SCP-049 attribution.
+- The project has not announced a commercial release. This source-license selection does not complete future commercial-release review.
 - No commercial release has been announced. Level 2 and project-owner review remain required before first public distribution.
 
 See [licensing and commercialization readiness](./docs/licensing-and-commercialization.md) for policy, official sources, and the legal disclaimer.

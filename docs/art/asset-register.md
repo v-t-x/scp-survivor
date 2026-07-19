@@ -1,6 +1,6 @@
 # 正式素材准入登记表
 
-本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。登记现共计 53 项，其中 51 项由运行时 manifest 加载；`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
+本表记录正式素材的真实生产信息。v1.6.0 源码发布中，本表列出的项目生成视觉素材统一按 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 所述 CC BY-SA 3.0 提供；各行的“候选/商业复核”描述生产准入历史与未来商业尽调状态，不改变本次源码发布许可证。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。登记现共计 53 项，其中 51 项由运行时 manifest 加载；`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
 
 登记中的 `.superpowers/...` 仅是**不随 Release 分发**的本地审计归档标识；运行时加载、公开署名和许可合规均不得依赖该目录。`local-generation-archive:<generation-id>/<filename>` 同样仅标识本地生成归档位置，并保留 generation id 与文件名，不是公开分发路径。
 

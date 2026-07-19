@@ -6,7 +6,7 @@
 [![CI](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml)
 [![Phaser](https://img.shields.io/badge/Phaser-3.90-8a2be2)](https://phaser.io/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
-[![许可候选：MIT + CC BY-SA 3.0](https://img.shields.io/badge/许可候选-MIT%20%2B%20CC%20BY--SA%203.0-yellow)](./LICENSE)
+[![许可：MIT + CC BY-SA 3.0](https://img.shields.io/badge/许可-MIT%20%2B%20CC%20BY--SA%203.0-blue)](./LICENSE)
 
 > 2D 俯视角 Survivors-like 单局原型。基金会安保官在 6 分钟收容失效时间轴中战斗、升级、处理设施干扰，并在终局对抗 SCP-049。
 
@@ -115,9 +115,8 @@ scp-survivor/
 
 ## 许可证与署名
 
-- [许可总览](./LICENSE) 当前记录本地候选结构，不是最终法律结论；
-- 除非另有说明，独立创作的软件代码继续按 MIT License 提供；SCP 衍生内容拟归入 CC BY-SA 3.0 候选类别，并遵守适用的署名与相同方式共享条件；
-- SCP 与 SCP-049 的候选公开署名见 [ATTRIBUTION.md](./ATTRIBUTION.md)；非 SCP 衍生的项目生成视觉素材最终许可仍未确定；
-- 项目尚未宣布商业发行，首次公开分发前仍须完成 Level 2 与项目所有者复核。
+- 独立创作的软件代码按 MIT License 提供；项目生成的视觉/视听素材、创意表达和 SCP 衍生内容按 CC BY-SA 3.0 提供；
+- 路径级范围见 [LICENSE-MAP.md](./LICENSE-MAP.md)，SCP 与 SCP-049 的公开署名见 [ATTRIBUTION.md](./ATTRIBUTION.md)；
+- 项目尚未宣布商业发行。本次源码许可选择不代表未来商业发行审查已经完成。
 
 详细政策、官方来源和免责声明见 [许可与商业化准备](./docs/licensing-and-commercialization.md)。
