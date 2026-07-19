@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import {
+  cloneEnemyAt,
   resolveEnemyCloneSpec,
   tryReplicateEnemy
 } from "../src/scene/enemyReplication.js";
@@ -74,6 +75,86 @@ test("rejects unknown clone sources", () => {
     resolveEnemyCloneSpec({ enemyType: "unknown" }, balance),
     null
   );
+});
+
+test("ordinary elite and biomass child clones keep fallback keys and unified initialization", () => {
+  const created = [];
+  const initialized = [];
+  const eliteSpawns = [];
+  const eliteClone = { kind: "elite-clone" };
+  const scene = {
+    enemies: {
+      create(x, y, textureKey) {
+        const enemy = { x, y, textureKey };
+        created.push(enemy);
+        return enemy;
+      }
+    },
+    initializeEnemyFromConfig(enemy, config, scaling, isElite) {
+      initialized.push({ enemy, config, scaling, isElite });
+    },
+    spawnEliteAtEdge(eliteType, scaling, position) {
+      eliteSpawns.push({ eliteType, scaling, position });
+      return eliteClone;
+    }
+  };
+
+  const ordinary = cloneEnemyAt(
+    scene,
+    { enemyType: "infectedStaff" },
+    11,
+    12,
+    balance
+  );
+  const child = cloneEnemyAt(
+    scene,
+    { enemyType: "biomassChild", isBiomassChild: true },
+    21,
+    22,
+    balance
+  );
+  const elite = cloneEnemyAt(
+    scene,
+    { isElite: true, eliteType: "biomass" },
+    31,
+    32,
+    balance
+  );
+
+  assert.equal(ordinary.textureKey, "enemy-infected");
+  assert.equal(child.textureKey, "biomass-child");
+  assert.equal(child.isBiomassChild, true);
+  assert.equal(child.canSplit, false);
+  assert.equal(elite, eliteClone);
+  assert.deepEqual(
+    created.map(({ x, y, textureKey }) => ({ x, y, textureKey })),
+    [
+      { x: 11, y: 12, textureKey: "enemy-infected" },
+      { x: 21, y: 22, textureKey: "biomass-child" }
+    ]
+  );
+  assert.deepEqual(
+    initialized.map(({ config, scaling, isElite }) => ({ config, scaling, isElite })),
+    [
+      {
+        config: balance.enemy.types.infectedStaff,
+        scaling: { healthMultiplier: 1, damageMultiplier: 1 },
+        isElite: false
+      },
+      {
+        config: balance.enemy.elite.types.biomassChild,
+        scaling: { healthMultiplier: 1, damageMultiplier: 1 },
+        isElite: false
+      }
+    ]
+  );
+  assert.deepEqual(eliteSpawns, [
+    {
+      eliteType: "biomass",
+      scaling: { healthMultiplier: 1, damageMultiplier: 1 },
+      position: { x: 31, y: 32 }
+    }
+  ]);
 });
 
 function createReplicationScene() {
@@ -195,4 +276,93 @@ test("schedules replication before knockback and stagger skip movement", async (
   assert.ok(replicationIndex >= 0, "updateEnemies must schedule replication");
   assert.ok(replicationIndex < knockbackIndex, "knockback must not delay replication");
   assert.ok(replicationIndex < staggerIndex, "stagger must not delay replication");
+});
+
+test("spawn boss-minion and frenzy routes begin on fallback keys before unified initialization", async () => {
+  const enemies = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const spawnEnemy = enemies.slice(
+    enemies.indexOf("  spawnEnemyAtEdge("),
+    enemies.indexOf("  spawnEliteAtEdge(")
+  );
+  const spawnElite = enemies.slice(
+    enemies.indexOf("  spawnEliteAtEdge("),
+    enemies.indexOf("  spawnBiomassChild(")
+  );
+  const spawnChild = enemies.slice(
+    enemies.indexOf("  spawnBiomassChild("),
+    enemies.indexOf("  initializeEnemyFromConfig(")
+  );
+  const normalBossWave = enemies.slice(
+    enemies.indexOf("  summonBossMinions("),
+    enemies.indexOf("  summonBossFrenzyWave(")
+  );
+  const frenzyWave = enemies.slice(
+    enemies.indexOf("  summonBossFrenzyWave("),
+    enemies.indexOf("  handleBossDefeat(")
+  );
+
+  assert.match(
+    spawnEnemy,
+    /this\.enemies\.create\(x, y, config\.textureKey\)/
+  );
+  assert.doesNotMatch(spawnEnemy, /resolveCharacterTexture|r17-/);
+  assert.ok(
+    spawnEnemy.indexOf("this.enemies.create")
+      < spawnEnemy.indexOf("this.initializeEnemyFromConfig")
+  );
+
+  assert.match(spawnElite, /TEXTURES\.eliteRiot/);
+  assert.match(spawnElite, /TEXTURES\.eliteBlink/);
+  assert.match(spawnElite, /TEXTURES\.eliteBiomass/);
+  assert.match(spawnElite, /this\.enemies\.create\(x, y, textureKey\)/);
+  assert.ok(
+    spawnElite.indexOf("this.enemies.create")
+      < spawnElite.indexOf("this.initializeEnemyFromConfig")
+  );
+
+  assert.match(spawnChild, /TEXTURES\.biomassChild/);
+  assert.ok(
+    spawnChild.indexOf("this.enemies.create")
+      < spawnChild.indexOf("this.initializeEnemyFromConfig")
+  );
+
+  assert.match(
+    normalBossWave,
+    /this\.enemies\.create\(spawnX, spawnY, baseConfig\.textureKey\)/
+  );
+  assert.doesNotMatch(normalBossWave, /resolveCharacterTexture|r17-/);
+  assert.ok(
+    normalBossWave.indexOf("this.enemies.create")
+      < normalBossWave.indexOf("this.initializeEnemyFromConfig")
+  );
+
+  assert.match(
+    frenzyWave,
+    /this\.enemies\.create\(spawnX, spawnY, droneConfig\.textureKey\)/
+  );
+  assert.match(
+    frenzyWave,
+    /this\.spawnEliteAtEdge\(type, scaling, \{ x: spawnX, y: spawnY \}\)/
+  );
+  assert.ok(
+    frenzyWave.indexOf("this.enemies.create")
+      < frenzyWave.indexOf("this.initializeEnemyFromConfig")
+  );
+});
+
+test("replication delegates presentation to initializer without duplicate production switching", async () => {
+  const source = await readFile(
+    new URL("../src/scene/enemyReplication.js", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(source, /scene\.initializeEnemyFromConfig\(clone, cloneSpec\.config, scaling, false\)/);
+  assert.match(source, /scene\.spawnEliteAtEdge\(cloneSpec\.eliteType, scaling, \{ x, y \}\)/);
+  assert.doesNotMatch(
+    source,
+    /applyEnemyPresentation|ENEMY_PRESENTATION|resolveCharacterTexture|r17-|\.setTexture\(|\.setScale\(|\.play\(/
+  );
 });

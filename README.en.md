@@ -6,13 +6,13 @@
 [![CI](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/v-t-x/scp-survivor/actions/workflows/ci.yml)
 [![Phaser](https://img.shields.io/badge/Phaser-3.90-8a2be2)](https://phaser.io/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff)](https://vitejs.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](./LICENSE)
+[![License: MIT + CC BY-SA 3.0](https://img.shields.io/badge/License-MIT%20%2B%20CC%20BY--SA%203.0-blue)](./LICENSE)
 
 > A top-down 2D Survivors-like single-run prototype. A Foundation security officer fights and upgrades through a six-minute containment-failure timeline before confronting SCP-049.
 
-> **Version status:** `v1.5.0` (SCP-049: Surgical Frenzy) is the latest formal release, adding a frenzy phase, a brief weakness window, mixed reinforcements, and self-replicating enemy pressure to the final encounter. `v1.4.0` (Containment Readiness) is a retrospective stability update for startup, resource fallback, and repeated restarts. The online demo has not been verified against the current tag; the UI/art overhaul and Windows Electron client remain unreleased on separate development branches. See [current project status](./docs/project-status.md).
+> **Version status:** The latest version is [v1.6.0 — Containment Zone Reforged](./docs/releases/v1.6.0.md). Building on v1.5's six-minute run and SCP-049 finale, it gives the title screen, armory, tactical HUD, facility, characters, enemies, and terminal overlays one coherent visual identity. The online demo has not been verified against v1.6.0 and is not evidence that this version is deployed; Electron and Windows installers are not part of this release. See [current project status](./docs/project-status.md).
 
-The project uses Phaser 3, Vite, and plain JavaScript. The current build has no production image or audio assets: textures are generated procedurally and sound effects are synthesized through the Web Audio API. Preloading, asset manifests, and fallback interfaces are already in place for gradual asset integration.
+The project uses Phaser 3, Vite, and plain JavaScript. Production pixel art now runs in-game across the facility, interfaces, player, R-17 enemies, and SCP-049. Procedural textures and Web Audio synthesis remain available for missing-asset fallbacks and dynamic effects.
 
 **Play online: [https://dist-chi-ten-47.vercel.app](https://dist-chi-ten-47.vercel.app)**
 
@@ -20,7 +20,7 @@ The project uses Phaser 3, Vite, and plain JavaScript. The current build has no 
 
 ```bash
 npm install
-node --test
+npm test
 npm run dev
 npm run build
 npm run preview
@@ -49,7 +49,7 @@ Title and permanent-upgrade store
   → move, auto-attack, and collect XP
   → level up, mutate the weapon, reroll, or skip
   → react to enemies, perception hazards, and a fixed power outage
-  → SCP-500 appears at 4:00
+  → Medkit appears at 4:00
   → clear the field and fight SCP-049 at 6:00
   → earn credits on victory or defeat, then restart
 ```
@@ -59,9 +59,11 @@ The current implementation includes:
 - three weapons, each with one single-acquisition mutation;
 - 16 upgrade definitions, three rerolls per run, and skip-to-heal;
 - three normal enemies, three elites, and the SCP-049 boss;
-- a six-minute timeline, power outage, perception hazards, combat stim, and SCP-500;
+- a six-minute timeline, power outage, perception hazards, combat stim, and Medkit;
 - localStorage credits and four permanent starting perks;
-- title, weapon-select, HUD, build, pause, level-up, and results flows.
+- a Foundation-terminal title screen and armory, a tactical HUD, and consistent build, pause, level-up, and results interfaces;
+- entrance, combat, maintenance, and contamination facility zones that react to outages, events, and the boss phase;
+- production pixel animation for the player and seven R-17 enemy classes, production pixel art for SCP-049, and pooled combat feedback.
 
 See the [current game design](./docs/design.md) for implementation facts. The product goal is to develop SCP-specific rules and decisions rather than only reskinning a generic horde-survival game; see the [product vision](./docs/product-vision.md).
 
@@ -113,8 +115,9 @@ Different stages of the project have used AI coding assistants including Cursor,
 
 ## License and Attribution
 
-- Repository code is currently released under the [MIT License](./LICENSE).
-- SCP-derived content must satisfy the applicable attribution and share-alike requirements.
-- Every SCP article, image, font, audio file, and other external asset must be reviewed before a formal release.
+- Independently authored software is licensed under MIT. Project-generated visual/audiovisual assets, creative expression, and SCP-derived content are licensed under CC BY-SA 3.0.
+- See [LICENSE-MAP.md](./LICENSE-MAP.md) for path-level scope and [ATTRIBUTION.md](./ATTRIBUTION.md) for SCP and SCP-049 attribution.
+- The project has not announced a commercial release. This source-license selection does not complete future commercial-release review.
+- No commercial release has been announced. Level 2 and project-owner review remain required before first public distribution.
 
 See [licensing and commercialization readiness](./docs/licensing-and-commercialization.md) for policy, official sources, and the legal disclaimer.

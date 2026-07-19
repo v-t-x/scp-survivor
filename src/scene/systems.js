@@ -11,7 +11,6 @@ import {
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
-
 // Domain mixin: systems. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const systemsMixin = {
 
@@ -91,7 +90,7 @@ export const systemsMixin = {
     const direction = new Phaser.Math.Vector2(velocityX, velocityY).normalize();
     const effectiveSpeed = this.playerMoveSpeed * this.moveSpeedBuffMultiplier;
     if (direction.lengthSq() > 0) {
-      this.playerFacingAngle = Math.atan2(direction.y, direction.x);
+      this.playerMovementFallbackAngle = Math.atan2(direction.y, direction.x);
     }
     body.setVelocity(
       direction.x * effectiveSpeed,
@@ -108,7 +107,7 @@ export const systemsMixin = {
       return;
     }
 
-    // Dash toward the current movement input; fall back to last facing.
+    // Dash toward the current movement input; fall back to the current facing.
     let dashX = 0;
     let dashY = 0;
     if (this.keys.left.isDown) dashX -= 1;
@@ -146,6 +145,11 @@ export const systemsMixin = {
     if (this.spawnEvent) {
       this.spawnEvent.paused = true;
     }
+    try {
+      this.combatFeedback?.setPaused?.(true);
+    } catch {
+      // Presentation pause state cannot block committed gameplay pause state.
+    }
   },
 
 
@@ -167,10 +171,16 @@ export const systemsMixin = {
     } else if (this.regularSpawningActive && !this.spawnEvent && !this.isGameOver) {
       this.scheduleNextSpawn();
     }
+    try {
+      this.combatFeedback?.setPaused?.(false);
+    } catch {
+      // Presentation resume state cannot block committed gameplay resume state.
+    }
   },
 
 
   clearCombatEntities() {
+    const trackedEnemies = [...(this.enemies.getChildren?.() ?? [])];
     this.enemies.clear(true, true);
     this.enemyProjectiles.clear(true, true);
     this.bullets.clear(true, true);
@@ -178,6 +188,13 @@ export const systemsMixin = {
     this.supplyPickups.clear(true, true);
     this.instabilityDecoys.clear(true, true);
     this.clearTransientEffects();
+    for (const enemy of trackedEnemies) {
+      try {
+        this.combatFeedback?.untrackActor?.(enemy);
+      } catch {
+        // One stale shadow cannot block cleanup of the remaining actors.
+      }
+    }
   },
 
 
@@ -191,7 +208,16 @@ export const systemsMixin = {
     }
     if (this.eventBannerContainer) {
       this.eventBannerContainer.setVisible(false);
+      this.eventBannerContainer.setAlpha(1);
     }
+    this.eventBannerTitle?.setText("");
+    this.eventBannerDetail?.setText("");
     this.topBannerState = null;
+    this.collapseFacilityHud();
+    try {
+      this.facilityRoomController?.reset?.();
+    } catch {
+      // Facility presentation reset must not block gameplay cleanup.
+    }
   }
 };

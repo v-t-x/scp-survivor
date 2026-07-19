@@ -6,6 +6,9 @@ import {
   AUDIO_ASSETS
 } from "../assets/manifest.js";
 import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
+import { registerOpeningCharacterAnimations } from "../art/characterPresentation.js";
+import { registerEnemyAnimations } from "../art/enemyPresentation.js";
+import { runPreloadCreatePipeline } from "./preloadOrchestration.js";
 
 // PreloadScene — the normal startup entry for asset loading.
 //
@@ -13,8 +16,9 @@ import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 //     PreloadScene  ->  PrototypeScene (the existing main game scene)
 //
 // This is NOT a conversion to a full multi-scene architecture. PreloadScene only
-// loads any declared real assets (none yet) and generates the procedural fallback
-// textures, then hands off to the existing game scene. The main scene's own
+// loads the real assets declared by the manifest and generates procedural
+// fallback textures for any missing keys, then hands off to the existing game
+// scene. The main scene's own
 // startup behavior (start screen, run flow) is untouched.
 //
 // Owned by the UI/art Agent.
@@ -24,7 +28,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load real assets when the manifest declares them. All empty for now.
+    // Load the real assets declared by the manifest; create() handles missing fallbacks.
     for (const asset of IMAGE_ASSETS) {
       this.load.image(asset.key, asset.path);
     }
@@ -42,8 +46,10 @@ export class PreloadScene extends Phaser.Scene {
   create() {
     // Generate procedural fallbacks for any texture key not provided by a real
     // asset above. Existence-checked per key, so real art is never overwritten.
-    generateFallbackTextures(this);
-
-    this.scene.start("PrototypeScene");
+    runPreloadCreatePipeline(this, {
+      generateFallbackTextures,
+      registerOpeningCharacterAnimations,
+      registerEnemyAnimations
+    });
   }
 }

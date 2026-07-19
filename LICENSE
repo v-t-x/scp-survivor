@@ -1,21 +1,17 @@
-MIT License
+# SCP Survivor Licensing Overview / 许可总览
 
-Copyright (c) 2026 v-t-x
+This repository contains materials under more than one license. See `LICENSE-MAP.md` for the path-level scope. 本仓库包含适用不同许可证的材料；路径级范围见 `LICENSE-MAP.md`。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Independently authored software / 独立创作的软件
+   Unless otherwise noted in `LICENSE-MAP.md`, source code, tests, scripts, configuration, and build tooling are licensed under the MIT License. The complete text is in `LICENSES/MIT.txt`.
+   除 `LICENSE-MAP.md` 另有说明外，源代码、测试、脚本、配置和构建工具按 MIT License 提供；完整文本见 `LICENSES/MIT.txt`。
+2. Creative content and SCP-derived material / 创意内容与 SCP 衍生材料
+   Project-generated visual and audiovisual assets, game copy, narrative/design expression, and SCP-derived content are licensed under Creative Commons Attribution-ShareAlike 3.0. The complete text is in `LICENSES/CC-BY-SA-3.0.txt`; required attribution is in `ATTRIBUTION.md`.
+   项目生成的视觉与视听素材、游戏文案、叙事/设计表达和 SCP 衍生内容按 Creative Commons Attribution-ShareAlike 3.0 提供；完整文本见 `LICENSES/CC-BY-SA-3.0.txt`，必要署名见 `ATTRIBUTION.md`。
+3. Third-party material / 第三方材料
+   Third-party dependencies and any separately identified material remain under their own licenses. Their inclusion does not change those terms.
+   第三方依赖和任何单独标明的材料继续适用其各自许可证，纳入本仓库不会改变这些条款。
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Source and modification records for project-generated assets are listed in `docs/art/asset-register.md`. This selection does not warrant uniqueness, non-infringement, or clearance for a future commercial release. It preserves rights already granted for earlier MIT-licensed copies and is not legal advice.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+项目生成素材的来源与修改记录见 `docs/art/asset-register.md`。本次许可选择不构成对唯一性、不侵权或未来商业发行权利完备的保证；也不撤回既有 MIT 许可副本已经获得的权利，且不构成法律意见。

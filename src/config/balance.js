@@ -5,7 +5,7 @@ export const BALANCE = {
     survivalDurationMs: 360000,
     bossSpawnAtMs: 360000,
     powerOutageAtMs: 180000,
-    scp500SpawnAtMs: 240000
+    medkitSpawnAtMs: 240000
   },
   player: {
     // Core survivability values.
@@ -267,7 +267,7 @@ export const BALANCE = {
       speedMultiplier: 1.2,
       durationMs: 6000
     },
-    scp500: {
+    medkit: {
       healAmount: 60
     }
   },
