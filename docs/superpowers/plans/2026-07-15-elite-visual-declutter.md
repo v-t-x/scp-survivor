@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Work only in `C:\scp-survivor-ui-art` on `feature/ui-art-overhaul`.
+- Work only in `C:\scp-survivor-workspaces\active\ui-art` on `feature/ui-art-overhaul`.
 - Preserve the existing untracked `.superpowers/` directory and never stage it.
 - Do not change damage, mitigation, AI, state machines, collision bodies, spawning, win/loss, timeline, persistence, player behavior, or SCP-049.
 - Keep `shieldIndicator`, charge warnings, teleport warnings, hit/death effects, danger states, and Boss presentation.

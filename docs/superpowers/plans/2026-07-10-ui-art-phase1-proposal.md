@@ -31,7 +31,7 @@
 | 项 | 值 |
 |---|---|
 | 分支 | `feature/ui-art-overhaul` |
-| worktree | `c:\scp-survivor-ui-art` |
+| worktree | `C:\scp-survivor-workspaces\active\ui-art` |
 | HEAD | `7ba082c52abad7f12d5bbcc55056c0c08119fada` |
 | 工作区 | 干净（提案提交前无未授权改动） |
 

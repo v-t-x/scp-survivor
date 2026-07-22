@@ -149,7 +149,7 @@ git commit -m "feat(art): add facility menus and weapon icons"
 ### Task 3: 重跑真实静态成品感门禁
 
 **Files:**
-- External evidence only: `C:\scp-survivor-ui-art-evidence\static-gate-v2\*.png`
+- External evidence only: `C:\scp-survivor-workspaces\evidence\ui-art\static-gate-v2\*.png`
 
 - [ ] **Step 1: 自动验证**
 

@@ -10,7 +10,7 @@
 
 ## 全局约束
 
-- 只在 `C:\scp-survivor-ui-art` 的 `feature/ui-art-overhaul` 工作。
+- 只在 `C:\scp-survivor-workspaces\active\ui-art` 的 `feature/ui-art-overhaul` 工作。
 - 保留 `.superpowers/`，永不暂存。
 - 不增加碰撞体、阻挡、可交互对象、伤害区或路径语义。
 - 战斗中心保持低噪声；地面图形不得伪装成障碍或拾取物。

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 只在 `feature/ui-art-overhaul` 的 `C:\scp-survivor-ui-art` worktree 工作。
+- 只在 `feature/ui-art-overhaul` 的 `C:\scp-survivor-workspaces\active\ui-art` worktree 工作。
 - 保留 `title-facility-backdrop`，不新增图片、Logo、字体、依赖或第三方素材。
 - 固定设计分辨率为 960×540、DPR 1；不增加响应式布局范围。
 - 唯一主行动入口仍调用 `beginFromStartScreen()`，随后进入现有军械库。
@@ -774,7 +774,7 @@ git commit -m "feat(ui): rebuild the commercial title screen"
 
 **Files:**
 - Modify only if review finds a real defect: `src/art/titleScreenView.js`, `src/art/titleBackdrop.js`, `src/scene/menus.js`, their matching tests.
-- Evidence output outside Git: `C:\scp-survivor-ui-art-evidence\title-screen-commercial-v1\`
+- Evidence output outside Git: `C:\scp-survivor-workspaces\evidence\ui-art\title-screen-commercial-v1\`
 
 **Interfaces:**
 - Consumes: Tasks 1–4 的最终标题页。

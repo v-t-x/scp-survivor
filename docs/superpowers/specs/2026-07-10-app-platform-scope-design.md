@@ -16,7 +16,7 @@ the lowest-risk point to correct the branch identity and governance language.
 ## 2. Chosen Migration
 
 - Rename local branch `release/desktop-app` to `dev/app-platform`.
-- Keep the existing worktree path `C:\scp-survivor-app`.
+- Keep the existing worktree path `C:\scp-survivor-workspaces\active\app-platform`.
 - Push `dev/app-platform` and configure it to track
   `origin/dev/app-platform`.
 - Verify the new local and remote branch point at the expected commit.
@@ -97,7 +97,7 @@ The implementation updates:
 
 ## 8. Acceptance Criteria
 
-- `C:\scp-survivor-app` is on `dev/app-platform`.
+- `C:\scp-survivor-workspaces\active\app-platform` is on `dev/app-platform`.
 - Local and remote `dev/app-platform` point at the approved governance commit.
 - No local or remote `release/desktop-app` branch remains after successful
   verification.

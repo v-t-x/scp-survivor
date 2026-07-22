@@ -4,7 +4,7 @@
 >
 > **确认日期：**2026-07-11
 >
-> **分支 / worktree：**`dev/v2` / `C:\scp-survivor-v2`
+> **分支 / worktree：**`dev/v2` / `C:\scp-survivor-workspaces\active\gameplay-v2`
 >
 > **初始审计基线：**`12e13d3`
 >

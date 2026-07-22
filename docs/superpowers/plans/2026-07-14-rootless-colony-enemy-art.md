@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 工作目录固定为 `C:\scp-survivor-ui-art`，分支固定为 `feature/ui-art-overhaul`。
+- 工作目录固定为 `C:\scp-survivor-workspaces\active\ui-art`，分支固定为 `feature/ui-art-overhaul`。
 - 用户已在 2026-07-14 批准 R-17 设计；这是 Level 2 视觉重定，但不得声称已经调用外部 GPT。
 - 只修改 UI/Art 表现层。不得修改血量、速度、伤害、生成权重、AI、攻击间隔、掉落、胜负、时间线或存档。
 - 玩家角色和 SCP-049 的素材、动画、朝向与碰撞保持不变。
@@ -195,7 +195,7 @@ $python = Join-Path $userProfile '.cache\codex-runtimes\codex-primary-runtime\de
 $removeChromaKey = Join-Path $userProfile '.codex\skills\.system\imagegen\scripts\remove_chroma_key.py'
 & $python $removeChromaKey `
   --input '<absolute-source.png>' `
-  --out 'C:\scp-survivor-ui-art\.superpowers\sdd\r17-assets\keyed\<name>.png' `
+  --out 'C:\scp-survivor-workspaces\active\ui-art\.superpowers\sdd\r17-assets\keyed\<name>.png' `
   --key-color '#00ff00' `
   --tolerance 36 `
   --spill-cleanup `
@@ -220,11 +220,11 @@ export async function normalizeR17Sheet({
 
 ```js
 const { normalizeR17Sheet } = await import(
-  "file:///C:/scp-survivor-ui-art/.superpowers/sdd/r17-assets/normalize-r17.mjs?run=1"
+  "file:///C:/scp-survivor-workspaces/active/ui-art/.superpowers/sdd/r17-assets/normalize-r17.mjs?run=1"
 );
 nodeRepl.write(await normalizeR17Sheet({
-  inputPath: "C:/scp-survivor-ui-art/.superpowers/sdd/r17-assets/keyed/r17-drifter.png",
-  outputPath: "C:/scp-survivor-ui-art/public/assets/art/enemies/r17-drifter.png",
+  inputPath: "C:/scp-survivor-workspaces/active/ui-art/.superpowers/sdd/r17-assets/keyed/r17-drifter.png",
+  outputPath: "C:/scp-survivor-workspaces/active/ui-art/public/assets/art/enemies/r17-drifter.png",
   frameWidth: 48,
   frameHeight: 48,
   targetVisibleExtent: 36
