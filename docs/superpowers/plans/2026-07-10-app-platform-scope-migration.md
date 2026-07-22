@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - The App role covers SCP Survivor desktop, mobile, PWA/installable web, launchers, and future client containers.
-- Keep the App worktree at `C:\scp-survivor-app`.
+- Keep the App worktree at `C:\scp-survivor-workspaces\active\app-platform`.
 - Rename `release/desktop-app` to `dev/app-platform`.
 - Do not modify game or App implementation code.
 - Stop if the old App branch is dirty or contains commits not reachable from `main`.
@@ -236,7 +236,7 @@ Expected: `origin/main` advances to the corrected governance commit.
 ### Task 3: Rename and publish the App branch
 
 **Files:**
-- Worktree: `C:\scp-survivor-app`
+- Worktree: `C:\scp-survivor-workspaces\active\app-platform`
 - Branches: `release/desktop-app`, `dev/app-platform`
 
 **Interfaces:**
@@ -245,7 +245,7 @@ Expected: `origin/main` advances to the corrected governance commit.
 
 - [ ] **Step 1: Verify the old App branch is safe to migrate**
 
-Run in `C:\scp-survivor-app`:
+Run in `C:\scp-survivor-workspaces\active\app-platform`:
 
 ```powershell
 git branch --show-current
@@ -269,7 +269,7 @@ git merge --ff-only main
 git branch --unset-upstream
 ```
 
-Expected: `C:\scp-survivor-app` is on `dev/app-platform` at the same HEAD as
+Expected: `C:\scp-survivor-workspaces\active\app-platform` is on `dev/app-platform` at the same HEAD as
 `main`, with no upstream until the new branch is pushed.
 
 - [ ] **Step 3: Read the newly active branch guide and build**
@@ -307,9 +307,9 @@ Expected: delete succeeds and neither command lists the obsolete branch.
 ### Task 4: Synchronize corrected governance to remaining worktrees
 
 **Files:**
-- Worktree: `C:\scp-survivor-v2`
-- Worktree: `C:\scp-survivor-ui-art`
-- Worktree: `C:\scp-survivor-ui-foundation`
+- Worktree: `C:\scp-survivor-workspaces\active\gameplay-v2`
+- Worktree: `C:\scp-survivor-workspaces\active\ui-art`
+- Worktree: `C:\scp-survivor-workspaces\frozen\ui-foundation`
 
 **Interfaces:**
 - Consumes: corrected `main`.
@@ -318,10 +318,10 @@ Expected: delete succeeds and neither command lists the obsolete branch.
 - [ ] **Step 1: Fast-forward and push `dev/v2`**
 
 ```powershell
-git -C C:\scp-survivor-v2 status --short --branch
-git -C C:\scp-survivor-v2 merge --ff-only main
-npm.cmd --prefix C:\scp-survivor-v2 run build
-git -C C:\scp-survivor-v2 push origin dev/v2
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 status --short --branch
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 merge --ff-only main
+npm.cmd --prefix C:\scp-survivor-workspaces\active\gameplay-v2 run build
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 push origin dev/v2
 ```
 
 Expected: clean fast-forward, successful build, successful push.
@@ -329,10 +329,10 @@ Expected: clean fast-forward, successful build, successful push.
 - [ ] **Step 2: Fast-forward and push `feature/ui-art-overhaul`**
 
 ```powershell
-git -C C:\scp-survivor-ui-art status --short --branch
-git -C C:\scp-survivor-ui-art merge --ff-only main
-npm.cmd --prefix C:\scp-survivor-ui-art run build
-git -C C:\scp-survivor-ui-art push origin feature/ui-art-overhaul
+git -C C:\scp-survivor-workspaces\active\ui-art status --short --branch
+git -C C:\scp-survivor-workspaces\active\ui-art merge --ff-only main
+npm.cmd --prefix C:\scp-survivor-workspaces\active\ui-art run build
+git -C C:\scp-survivor-workspaces\active\ui-art push origin feature/ui-art-overhaul
 ```
 
 Expected: clean fast-forward, successful build, successful push.
@@ -340,8 +340,8 @@ Expected: clean fast-forward, successful build, successful push.
 - [ ] **Step 3: Fast-forward frozen UI Foundation locally**
 
 ```powershell
-git -C C:\scp-survivor-ui-foundation status --short --branch
-git -C C:\scp-survivor-ui-foundation merge --ff-only main
+git -C C:\scp-survivor-workspaces\frozen\ui-foundation status --short --branch
+git -C C:\scp-survivor-workspaces\frozen\ui-foundation merge --ff-only main
 ```
 
 Expected: clean fast-forward; no remote branch is created.
@@ -367,7 +367,7 @@ git branch --all --verbose --no-abbrev
 
 Expected:
 
-- `C:\scp-survivor-app` is on `dev/app-platform`;
+- `C:\scp-survivor-workspaces\active\app-platform` is on `dev/app-platform`;
 - no local or remote `release/desktop-app` remains;
 - `origin/dev/app-platform` exists;
 - main, App, gameplay, and UI/art remote branches point at the corrected governance commit.
@@ -376,10 +376,10 @@ Expected:
 
 ```powershell
 git status --short --branch
-git -C C:\scp-survivor-app status --short --branch
-git -C C:\scp-survivor-v2 status --short --branch
-git -C C:\scp-survivor-ui-art status --short --branch
-git -C C:\scp-survivor-ui-foundation status --short --branch
+git -C C:\scp-survivor-workspaces\active\app-platform status --short --branch
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 status --short --branch
+git -C C:\scp-survivor-workspaces\active\ui-art status --short --branch
+git -C C:\scp-survivor-workspaces\frozen\ui-foundation status --short --branch
 ```
 
 Expected: every worktree is clean; all remote-tracking branches are synchronized.

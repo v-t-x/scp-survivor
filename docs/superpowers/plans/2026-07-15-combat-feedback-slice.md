@@ -11,7 +11,7 @@
 ## 全局约束
 
 - 在设施、HUD 和终端覆盖层计划之后执行。
-- 只在 `C:\scp-survivor-ui-art` 的 `feature/ui-art-overhaul` 工作。
+- 只在 `C:\scp-survivor-workspaces\active\ui-art` 的 `feature/ui-art-overhaul` 工作。
 - 保留 `.superpowers/`，永不暂存。
 - 不修改目标选择、攻击间隔、弹丸数量/速度/范围、伤害、穿透、击退、AI、碰撞体、刷怪和胜负条件。
 - 玩家移动不改变面朝；只有已提交的自动攻击更新 `playerFacingAngle`。

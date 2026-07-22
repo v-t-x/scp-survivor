@@ -525,13 +525,13 @@ git push origin main
 
 - [ ] **Step 2: Fast-forward and push active development branches**
 
-For `C:\scp-survivor-v2`, `C:\scp-survivor-app`, and
-`C:\scp-survivor-ui-art`: verify clean status, run `git merge --ff-only main`,
+For `C:\scp-survivor-workspaces\active\gameplay-v2`, `C:\scp-survivor-workspaces\active\app-platform`, and
+`C:\scp-survivor-workspaces\active\ui-art`: verify clean status, run `git merge --ff-only main`,
 run `npm.cmd run build`, and push the current branch.
 
 - [ ] **Step 3: Fast-forward frozen UI Foundation locally**
 
-In `C:\scp-survivor-ui-foundation`, verify clean status and run
+In `C:\scp-survivor-workspaces\frozen\ui-foundation`, verify clean status and run
 `git merge --ff-only main`. Do not create or push a remote foundation branch.
 
 - [ ] **Step 4: Final topology and status audit**
@@ -541,10 +541,10 @@ git fetch origin --prune
 git worktree list --porcelain
 git branch --all --verbose --no-abbrev
 git status --short --branch
-git -C C:\scp-survivor-v2 status --short --branch
-git -C C:\scp-survivor-app status --short --branch
-git -C C:\scp-survivor-ui-art status --short --branch
-git -C C:\scp-survivor-ui-foundation status --short --branch
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 status --short --branch
+git -C C:\scp-survivor-workspaces\active\app-platform status --short --branch
+git -C C:\scp-survivor-workspaces\active\ui-art status --short --branch
+git -C C:\scp-survivor-workspaces\frozen\ui-foundation status --short --branch
 ```
 
 Expected: all worktrees are clean and all active remote-tracking branches point

@@ -11,7 +11,7 @@
 ## 全局约束
 
 - 在设施环境和战术 HUD 计划之后执行。
-- 只在 `C:\scp-survivor-ui-art` 的 `feature/ui-art-overhaul` 工作。
+- 只在 `C:\scp-survivor-workspaces\active\ui-art` 的 `feature/ui-art-overhaul` 工作。
 - 保留 `.superpowers/`，永不暂存。
 - 不修改 `src/config/upgrades.js` 中升级效果、概率、等级或文本语义。
 - 保留升级卡 220×230、重抽/跳过 200×46、结果重启按钮 170×52 的有效点击区。

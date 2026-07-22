@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 只在 `C:\scp-survivor-app` 的 `dev/app-platform` worktree 执行。
+- 只在 `C:\scp-survivor-workspaces\active\app-platform` 的 `dev/app-platform` worktree 执行。
 - 保留未跟踪的旧 App proposal，同步前后核对其 SHA256。
 - 先 fast-forward 到批准的 `main`，不得改写历史。
 - 只制作 unpacked Windows x64 内部 PoC；不做 installer、签名或发布。
@@ -48,7 +48,7 @@
 - [ ] **Step 1: Verify current state**
 
 ```powershell
-Set-Location C:\scp-survivor-app
+Set-Location C:\scp-survivor-workspaces\active\app-platform
 git branch --show-current
 git status --short --branch
 Get-FileHash docs/superpowers/plans/2026-07-10-app-platform-client-proposal.md -Algorithm SHA256

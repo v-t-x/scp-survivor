@@ -282,8 +282,8 @@ Expected: push 成功；ahead/behind 为 0 0。
 ### Task 4: 同步 UI/美术分支并创建 Draft PR
 
 **Files:**
-- Inspect only: C:\scp-survivor-ui-art
-- Never stage: C:\scp-survivor-ui-art\.superpowers\
+- Inspect only: C:\scp-survivor-workspaces\active\ui-art
+- Never stage: C:\scp-survivor-workspaces\active\ui-art\.superpowers\
 
 **Interfaces:**
 - Consumes: feature/ui-art-overhaul 的原提交历史与 main 的最新文档/CI基线。
@@ -292,9 +292,9 @@ Expected: push 成功；ahead/behind 为 0 0。
 - [ ] **Step 1: 检查状态和远端 ancestry**
 
 ~~~powershell
-git -C C:\scp-survivor-ui-art status --short --branch
-git -C C:\scp-survivor-ui-art fetch --all --prune
-git -C C:\scp-survivor-ui-art merge-base --is-ancestor origin/feature/ui-art-overhaul feature/ui-art-overhaul
+git -C C:\scp-survivor-workspaces\active\ui-art status --short --branch
+git -C C:\scp-survivor-workspaces\active\ui-art fetch --all --prune
+git -C C:\scp-survivor-workspaces\active\ui-art merge-base --is-ancestor origin/feature/ui-art-overhaul feature/ui-art-overhaul
 if ($LASTEXITCODE -ne 0) { throw 'remote UI branch is not an ancestor of local UI branch' }
 ~~~
 
@@ -303,7 +303,7 @@ Expected: 唯一工作区项是 ?? .superpowers/；ancestry 通过。
 - [ ] **Step 2: 运行完整 UI 自动门禁**
 
 ~~~powershell
-Set-Location C:\scp-survivor-ui-art
+Set-Location C:\scp-survivor-workspaces\active\ui-art
 node --test
 $python = if ($env:SCP_SURVIVOR_PYTHON) { $env:SCP_SURVIVOR_PYTHON } else { 'python' }
 & $python scripts/art/test_pixel_tools.py
@@ -340,8 +340,8 @@ Expected: PR 为 Draft，未 merge。
 ### Task 5: 同步 App Platform 分支并创建 Draft PR
 
 **Files:**
-- Inspect only: C:\scp-survivor-app
-- Generated only: C:\scp-survivor-app\dist\、C:\scp-survivor-app\clients\desktop-electron\out\
+- Inspect only: C:\scp-survivor-workspaces\active\app-platform
+- Generated only: C:\scp-survivor-workspaces\active\app-platform\dist\、C:\scp-survivor-workspaces\active\app-platform\clients\desktop-electron\out\
 
 **Interfaces:**
 - Consumes: 根 Web artifact、Electron 43.1.0、Forge 7.11.2、安全 app://scp-survivor 协议。
@@ -350,9 +350,9 @@ Expected: PR 为 Draft，未 merge。
 - [ ] **Step 1: 检查状态和远端 ancestry**
 
 ~~~powershell
-git -C C:\scp-survivor-app status --short --branch
-git -C C:\scp-survivor-app fetch --all --prune
-git -C C:\scp-survivor-app merge-base --is-ancestor origin/dev/app-platform dev/app-platform
+git -C C:\scp-survivor-workspaces\active\app-platform status --short --branch
+git -C C:\scp-survivor-workspaces\active\app-platform fetch --all --prune
+git -C C:\scp-survivor-workspaces\active\app-platform merge-base --is-ancestor origin/dev/app-platform dev/app-platform
 if ($LASTEXITCODE -ne 0) { throw 'remote App branch is not an ancestor of local App branch' }
 ~~~
 
@@ -361,7 +361,7 @@ Expected: worktree 干净；ancestry 通过。
 - [ ] **Step 2: 运行 Web、Electron 和 packaging 门禁**
 
 ~~~powershell
-Set-Location C:\scp-survivor-app
+Set-Location C:\scp-survivor-workspaces\active\app-platform
 node --test
 npm run build
 npm --prefix clients/desktop-electron test
@@ -409,10 +409,10 @@ Expected: PR 为 Draft，未 merge。
 ~~~powershell
 git -C C:\scp-survivor worktree list
 git -C C:\scp-survivor status --short --branch
-git -C C:\scp-survivor-v2 status --short --branch
-git -C C:\scp-survivor-ui-art status --short --branch
-git -C C:\scp-survivor-app status --short --branch
-git -C C:\scp-survivor-ui-foundation status --short --branch
+git -C C:\scp-survivor-workspaces\active\gameplay-v2 status --short --branch
+git -C C:\scp-survivor-workspaces\active\ui-art status --short --branch
+git -C C:\scp-survivor-workspaces\active\app-platform status --short --branch
+git -C C:\scp-survivor-workspaces\frozen\ui-foundation status --short --branch
 git -C C:\scp-survivor tag --sort=version:refname
 ~~~
 

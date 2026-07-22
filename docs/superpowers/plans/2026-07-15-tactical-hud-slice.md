@@ -11,7 +11,7 @@
 ## 全局约束
 
 - 在设施环境计划之后执行。
-- 只在 `C:\scp-survivor-ui-art` 的 `feature/ui-art-overhaul` 工作。
+- 只在 `C:\scp-survivor-workspaces\active\ui-art` 的 `feature/ui-art-overhaul` 工作。
 - 保留 `.superpowers/`，永不暂存。
 - 不修改生命、XP、武器、dash、拾取、设施事件、Boss 或 timeline 数值。
 - 保留 `createUI`、`updateUI`、`updateWeaponHud`、`setGameplayHudVisible`、`collapseFacilityHud`、`updatePickupRadiusIndicator` 和 `teardownHud`。

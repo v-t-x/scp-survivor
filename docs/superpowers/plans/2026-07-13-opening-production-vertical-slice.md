@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 仅在 `feature/ui-art-overhaul` 与 `C:\scp-survivor-ui-art` 工作。
+- 仅在 `feature/ui-art-overhaul` 与 `C:\scp-survivor-workspaces\active\ui-art` 工作。
 - 世界表现采用精细像素 2D 俯视角；禁止 3D、等距 3D、Q 版和写实高清角色。
 - UI 使用高清战术界面；游戏世界保持 nearest-filtered 精细像素风。
 - 不改变伤害、AI、刷怪、碰撞、升级概率、六分钟时间线、胜负、存档和武器 ID。
@@ -977,7 +977,7 @@ git commit -m "feat(ui): compose the tactical combat HUD"
 
 **Files:**
 - Modify: `docs/art/asset-register.md` only if verification finds incomplete rows
-- Evidence outside repository: `C:\scp-survivor-ui-art-evidence\opening-production-v1\`
+- Evidence outside repository: `C:\scp-survivor-workspaces\evidence\ui-art\opening-production-v1\`
 
 **Interfaces:**
 - Consumes all previous tasks.

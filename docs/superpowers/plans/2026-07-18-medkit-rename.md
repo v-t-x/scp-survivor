@@ -17,7 +17,7 @@
 - 保持 18×18 红白程序化 fallback 的尺寸、颜色和绘制几何；不新增、删除或重画 PNG。
 - 不修改六分钟结构、数值、刷怪、AI、奖励、胜负、存档和 `localStorage` 语义。
 - 不修改 SCP-049、橘色路线、角色动画、App Platform、53/51/2 素材统计或 UI/Art cutoff。
-- 当前 worktree 固定为 `C:\scp-survivor-release-v1.6`，分支固定为 `codex/release-v1.6`；不得 rebase、squash、force-push 或重写历史。
+- 当前 worktree 固定为 `C:\scp-survivor-workspaces\releases\v1.6`，分支固定为 `codex/release-v1.6`；不得 rebase、squash、force-push 或重写历史。
 - `.superpowers/`、`dist/`、`node_modules/` 和临时 smoke 材料不得提交。
 - 本地 commit 已获批准；push、PR、merge、tag 和 GitHub Release 仍需原发布计划规定的独立授权。
 - 设计依据为 `docs/superpowers/specs/2026-07-18-medkit-rename-design.md`。
