@@ -941,3 +941,213 @@ Color palette: cold charcoal and restrained cool gray-blue armor plates and cart
 Constraints: exactly one round and exactly two parallel armor plates; all subject edges crisp and opaque; no cyan or turquoise accent pixels; no violet, purple, magenta, red, or green in the subject; do not use #00ff00 in the subject; no gradients, antialias blur, glow, shadow, floor plane, reflection, text, labels, numbers, logo, watermark, frame, extra icon, debris, or scene elements
 Avoid: a plus symbol, a gate without a projectile, smooth vector curves, soft edges, 3D bevel rendering, painterly texture, realistic materials, tiny unreadable details
 ```
+
+
+## 玩家角色 Gate 1 剪影
+
+本节记录玩家角色第一阶段 Gate 1（三选一剪影验收门）的全部四轮生成。十二项剪影于 2026-07-22 至 2026-07-23 使用 Kimi 内置 image_generation 插件（经 agent-gw `generate_image` 网关，1:1、1K、opaque 背景）生成；工具未公开具体模型名，故不推断。计划原假设的 OpenAI built-in `image_gen` 在本执行环境不可用，实际生成路径以本记录为准；该生成服务的输出权利条款同样须在商业发布前复核。四轮均只有文本输入；没有使用用户截图、SCP Wiki 图片、素材包或其他第三方图像作为输入；没有使用 CLI/API fallback。所有后处理使用 codex runtime Python 3.12（Pillow 12.2）执行。游戏底图来自本仓库基线经 WebBridge 真实浏览器在 960×540 普通 URL 完成标题→军械库→实战后的页面截图，未缩放。raw、cutout、final、contact sheet、zoom 与游戏 composite 全部保留在 `.superpowers/sdd/player-character/gate-1/`，该目录为本地审计物，不暂存。
+
+2026-07-23 用户验收结论：第三轮（男性高辨识度轮，下称 r3）A/B/C 三项全部接受保留；用户同时决定未来阶段加入角色选择界面，但本阶段不实现角色选择 UI，生产顺序为一名默认角色先行进入 Gate 2，另两名排队至未来多角色阶段（每名角色将拥有独立完整 sheet）。第一轮（女性方向）因项目所有者 2026-07-23 将首名角色方向调整为成年男性而整轮被拒；第二轮（男性 r2）因真实游戏尺寸下三名候选辨识度不足（用户评价三个候选在游戏里感觉都差不多）整轮被拒；第四轮（r4 精炼轮）经用户比较被认为不如 r3，整轮否决，仅作审计保留。
+
+### Gate 1 已接受剪影（r3，2026-07-23 用户验收保留）
+
+| Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| player-silhouette-amber-recon（候选 A 琥珀侦察尖兵） | PNG | `.superpowers/sdd/player-character/gate-1/final/silhouette-a.png`（审计物，不暂存） | Kimi 内置 image_generation（agent-gw `generate_image`，模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/build_player_character_assets.py` | 2026-07-23 | [P64](#p64-gate-1-round-3-male-variant-a-accepted)；audit raw `gate-1/raw/silhouette-a.png`；raw SHA-256 `9a64d691c136b4fe954c990ea60c170f69c42fb5cb77c8b50122769e2c1090aa` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill --force` 输出 cutout SHA-256 `afbf10f5cd585ea5746759a664c0938581ec9bb74f122de9a6519530e4ea6f0c`；随后 `build_player_character_assets.py silhouette`（Pillow nearest、无抖动量化、8-bit RGBA、二值 alpha、≤32 色、可见高归一 48、baseline y=56）输出 final SHA-256 `f0cf72ed45e90169c44d2466c75da16107b9dbcaefc49500c279bcd9af16bfbf` | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 候选；商业发布前复核 | Gate 1 剪影验收通过（2026-07-23 用户决定三名身份全部保留）；仅角色身份方向准入，不等同于素材生产或商业发布准入 | 64×64（可见高 48、可见宽 22、baseline y=56、二值 alpha、≤32 色） | 无 |
+| player-silhouette-crimson-breacher（候选 B 暗红重装突破手） | PNG | `.superpowers/sdd/player-character/gate-1/final/silhouette-b.png`（审计物，不暂存） | Kimi 内置 image_generation（agent-gw `generate_image`，模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/build_player_character_assets.py` | 2026-07-23 | [P65](#p65-gate-1-round-3-male-variant-b-accepted)；audit raw `gate-1/raw/silhouette-b.png`；raw SHA-256 `e68bade6516583d5d5d38ebdb3549df5f0faab290f9042da6ff6e4caf371e0d0` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill --force` 输出 cutout SHA-256 `90339bcee8b79f61c2f169284847668860b83cf11fd818f6d1f8315d69413694`；随后 `build_player_character_assets.py silhouette`（Pillow nearest、无抖动量化、8-bit RGBA、二值 alpha、≤32 色、可见高归一 48、baseline y=56）输出 final SHA-256 `01a39c79b51f28945c6247dae741a5584fd9848a0107a9710269b8c92968b4f4` | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 候选；商业发布前复核 | Gate 1 剪影验收通过（2026-07-23 用户决定三名身份全部保留）；仅角色身份方向准入，不等同于素材生产或商业发布准入 | 64×64（可见高 48、可见宽 34、baseline y=56、二值 alpha、≤32 色） | 无 |
+| player-silhouette-teal-tech（候选 C 青技术专家） | PNG | `.superpowers/sdd/player-character/gate-1/final/silhouette-c.png`（审计物，不暂存） | Kimi 内置 image_generation（agent-gw `generate_image`，模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `scripts/art/build_player_character_assets.py` | 2026-07-23 | [P66](#p66-gate-1-round-3-male-variant-c-accepted)；audit raw `gate-1/raw/silhouette-c.png`；raw SHA-256 `89bdfd0de7f85f34bcc7dc4d6c5b138e16e1cf218c84c206468e9db9ff0f376e` | 无手绘；bundled helper `--auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill --force` 输出 cutout SHA-256 `302db100ee5aada94a2b85c8dd7c9d53bb986d0a0b3a64f8a868b4ff734ff3e9`；随后 `build_player_character_assets.py silhouette`（Pillow nearest、无抖动量化、8-bit RGBA、二值 alpha、≤32 色、可见高归一 48、baseline y=56）输出 final SHA-256 `33391f62b742427b09cae2d41799f7c37467516995481d818ae054eed36541dd` | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 候选；商业发布前复核 | Gate 1 剪影验收通过（2026-07-23 用户决定三名身份全部保留）；仅角色身份方向准入，不等同于素材生产或商业发布准入 | 64×64（可见高 48、可见宽 20、baseline y=56、二值 alpha、≤32 色） | 无 |
+
+### 处理与审计产物
+
+- 游戏底图：`.superpowers/sdd/player-character/gate-1/gameplay-base-960x540.png`，SHA-256 `fca2c0e6657aa4f8f76e44367c7a534d57175e329ace8478c97de47b47e0d1b4`；WebBridge 真实浏览器 960×540 普通 URL 截图（标题→军械库→实战），anchor `(600, 360)` 周围 64×64 无角色、敌人、掉落物、弹道或 HUD，不暂存。
+- r3 游戏 composite：`gate-1/silhouette-{a,b,c}-game-960x540.png`，SHA-256 分别为 `7583e9faafd9268def7c7f49eb696dcc6f45b25c5c5482c901bcc538b883631a`、`6ea2b6e491172bc2c1d87513e807489d47873aaa5965f1f3aaaf38fe69ab0778`、`092057512675a8c1a68e6e4919628cb727c64ecc0b4db75226d1b0084edd539b`；命令 `build_player_character_assets.py preview --background gate-1/gameplay-base-960x540.png --silhouette gate-1/final/silhouette-{id}.png --anchor-x 600 --anchor-y 360 --output gate-1/silhouette-{id}-game-960x540.png`；64×64 候选不缩放，脚底固定 `(600, 360)`，不暂存。
+- r3 contact sheet：`gate-1/silhouettes-1x.png`（192×64）SHA-256 `2c300475bc4aea8f3666ac0e6452d3c7a34a90bd27f6377c9d8d30c17b46167c`，`gate-1/silhouettes-4x.png`（768×256）SHA-256 `60e9a41dcf54bc34615484c5862d0eb694c8147c46cad6bae363ff8dcc778559`；命令 `scripts/art/build_contact_sheet.py --inputs <三张 final> --scale {1|4} --columns 3`，不暂存。
+- r3 像素审查 zoom：`gate-1/zoom/silhouette-{a,b,c}-zoom.png`，SHA-256 分别为 `3b173782c1435c603850560c658be28deb53ea8fd03aaf26cf818b4092da406b`、`e6c28022757cfefce4f0bf9ed95a0fafe934c21f48f7bcbf4f53548ed34f7777`、`527126a6acd7ef3e0f46af85bc004886e80bbaaa77d3ff3b425c9387094ec942`；Pillow nearest-neighbor 放大审查图，不暂存。
+- 四轮完整后处理命令（对 `id` ∈ `a,b,c`）：bundled helper `remove_chroma_key.py --input gate-1/raw/silhouette-{id}.png --out gate-1/cutout/silhouette-{id}.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill --force`；`build_player_character_assets.py silhouette --input gate-1/cutout/silhouette-{id}.png --output gate-1/final/silhouette-{id}.png`；preview 与 contact sheet 命令如上。四轮均先保留 raw 再去绿，builder 将 alpha 强制为 0/255；未改用 CLI/API 或模型 fallback。
+
+### 筛选与失败尝试
+
+- 第一轮（女性方向，2026-07-22，P58–P60）：Agent 硬门槛通过，但项目所有者 2026-07-23 决定首名角色改为成年男性，整轮方向被拒，归档于 `gate-1/rejected-female/`。raw SHA-256：`05d7ab0e5634686feb8cf43579617906a6e9d8c66729246262d201f6a00a5005`(a)、`d6e01246bdfefb1cfebcb7769f54c6664e4b1501b4b41e0aedb349849896b162`(b)、`e629f6a48eede4b092bddd4324a362764d3e8d4dd7efe2b0c92fdb5cc7385b8d`(c)；cutout：`d8ee6b229a88ab04a4ebe1fc8b1eabbe568e536c26980d43e01fa1ae8077a23a`、`758939e9a55316fe3ef657caaa7498c2c13fd992f1c62527807e76e9cabf9ae1`、`cbce43b24a87496e21c7c5df54e707358372d0fdf5bec5759f0b41ec7afc04f3`；final：`cf4fc31596c65a5e6a716751a16681ce18974db11c70ee507b97c1c36aa5e2bd`、`32f52e06a6adbbb16445a3521abb7442a096fd8fd0f8b169ba07fd5337270dee`、`6f01ae2353cb55b8cceda1e222b06512629e3b5f8032be5488b8b6bfad517d3d`；composite：`f5409897673b4f34a4b1282a4d9ca77d800319163becd96487239478dd7b6123`、`d7b5252f7b4a720f569fb2b4857fcd7c33c513671934c7ed7075a875e9e1d8c6`、`b89bbca322d22802897f3dee5043661f140159090509460c64e8698f8ae339e3`；contact：`2cc16a9dd8f90dd1b1fa588fdeb9959198d0c2d187928f5fd94d7a01882edb07`(1×)、`47419fd731c5fea7f7e7cb88a29f6e25af8430135ccf2bb54268d227c395bc6b`(4×)。均不暂存。
+- 第二轮（男性 r2，2026-07-23，P61–P63）：像素合同全过，但真实游戏尺寸下三名候选辨识度不足，用户评价三个候选在游戏里感觉都差不多，整轮被拒，归档于 `gate-1/rejected-male-r2/`。raw：`c0740fad1ef938a2f6cf7001ae8cd3e539f619d6cfa6573f43625f445d187101`、`b00542f5fa9d6247ae89d945de986cf8e7e92859f445fa5a06664f3ed4c2a94a`、`3c2180fa5e3d0e58ec07e4f20bb3ce607353c3b62b15540de3d87eb8d4c6ba6a`；cutout：`57945cfb3a236e016ff510564187dacff7a0a0c693ea857405ed5b3ba5446b7d`、`632bf5e90a6b35ce40aece3d7d1dc621bb4f71e98c2b24cc7d11975735e04a9c`、`ccd9f0f1c3abc4fa5c85a6f30b65f66d587b8dee091e7c49ab1df6762eaff89e`；final：`3bd0b6d52722a12f9f60aded145640f89d981adfe5460bcdf64fca544fb8a18b`、`280baa8f33d9bc3632413be987f2e4750dc1588d52c07e6dc6977b553f872133`、`44e4d90b7c01b486ec40f546503a120558909a15815204f68913407bf5cf22ab`；composite：`1e0a21511e18ebd93b912fc490c630894a1f8900a5325024883b8f2aab6879cd`、`ee8212aa23e43e5be45fb3dd53f52c037c214c08127812166de924115c8e3a3e`、`1d8a2c29751a1c7ba4ba1873ecd2d317a7e5a6a6a925f3e5ee5b10ff6739d60e`；contact：`4a9306efac4cc9a6440431055669a4dc4192dc172268f86273b148ed2f459d6b`(1×)、`3d4a08acbb854d8a7c584c58d370193f7aceec15b6569260c08a4c9027ef4635`(4×)。均不暂存。
+- 第四轮（r4 精炼轮，2026-07-23，P67–P69）：在 r3 身份基础上做精修尝试，用户比较后认为反而不如上一版（r3），整轮否决，归档于 `gate-1/superseded-r4/`。raw：`9f2bd99e7dc202d5daf127c30381a2065119104faeb6502af85d8ffc9c8e7bd1`、`30da276570990dace736b3ceed88732bc90997acceb048b3e46428b24fccdf92`、`81c91b11c218e1cfa5af1a27d2fadab8288cb9ae68ec5d8a3a55cc7bd4cc8adb`；cutout：`6ad146444a49b889189b7016e94efa038d0725f2027ce216d3112674aa0869df`、`01a5b7b33f8666624d0529ca52235989ec6a09fe3d44a316a92f3e8864a51877`、`6fb84bc3756326f50a8c9627d0f3469a201ed0588c36b3235ca69133b30d6597`；final：`bcdfcf7187f409d6e88d7f264678e9e66dba5145b9e23b2da7c93fc9243fd5dc`、`8e402fd01a429fddb4ca6cea3348b9f138a138b15380075b1c642aacceb3441f`、`be65b83226cc7fb96953cfcffe46e3d6114dd53e66e495700286799d46a45fce`；composite：`d5c9d4ee7a5885bdd6111829dc9bef747b9e844b48277229069606078d336b8c`、`0ccbc8cf852dad339590a1050a3a293493aefaf71b70428a7e32650a208a88de`、`a3a792ae8e9947615e68dc62615cff1b60629792ca569a854b8a5fdf5ac652ea`；contact：`271166de9eb3786bbc9d545b6de5ef6b0389a94101e2e499241eb25e50424305`(1×)、`0350364ffa4f205f5c17a59d7f9a1b37a4aff62235ef2420cfcf83724d56b03a`(4×)。均不暂存。
+- WebBridge 截图驱动的请求/响应痕迹与 vite 日志见 `gate-1/webbridge/`，仅为审计，不暂存；`gate-1/capture-gameplay.sh` 为可复用的截图采集脚本，同属不暂存审计物。
+
+### P58 gate-1 round-1 female variant a rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult female Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant A: compact agile responder; short asymmetric bob visible around a low-profile half-mask; slim but realistic armored vest; muted amber shoulder identification strip.
+```
+
+### P59 gate-1 round-1 female variant b rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult female Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant B: balanced containment specialist; tied-back braid loop visible behind full respirator and goggles; medium protective vest; desaturated teal forearm identification tab.
+```
+
+### P60 gate-1 round-1 female variant c rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult female Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant C: robust breach responder; close-cropped side hair under a compact protective hood; heavier rectangular over-vest without oversized armor; muted crimson collar identification tab.
+```
+
+### P61 gate-1 round-2 male variant a rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant A: compact agile responder; short tactical crop hair visible around a low-profile half-mask; slim but realistic armored vest; muted amber shoulder identification strip.
+```
+
+### P62 gate-1 round-2 male variant b rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant B: balanced containment specialist; short buzz cut visible around a full respirator and goggles; medium protective vest; desaturated teal forearm identification tab.
+```
+
+### P63 gate-1 round-2 male variant c rejected
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark navy and graphite tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant C: robust breach responder; close-cropped hair under a compact protective hood; heavier rectangular over-vest without oversized armor; muted crimson collar identification tab.
+```
+
+### P64 gate-1 round-3 male variant a accepted
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant A: lean recon pointman, visibly the slimmest of three teammates; short hair under a single wide glowing AMBER visor band that wraps the whole upper head like a bright horizontal bar; lighter graphite-gray uniform tone; narrow shoulders; compact submachine gun held low; the amber visor band must be the largest and brightest color area on the character, unmistakable at tiny size.
+```
+
+### P65 gate-1 round-3 male variant b accepted
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant B: heavy breach responder, visibly the broadest of three teammates with a wide shoulder and back silhouette; bare buzz-cut head with a full respirator whose round jaw filters widen the head profile; two large muted CRIMSON shoulder pauldron pads forming bulky blocks on both shoulders; dark navy uniform; compact bullpup shotgun silhouette held low; the crimson pauldrons must be the dominant color feature, unmistakable at tiny size.
+```
+
+### P66 gate-1 round-3 male variant c accepted
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: detailed orthographic top-down 2D pixel art, coarse deliberate hard pixel clusters, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant C: containment tech specialist with a unique gear silhouette; hooded head with a slim teal visor slit; a tall slim backpack with a short antenna rising behind one shoulder and a glowing desaturated TEAL equipment panel covering most of the backpack; dark navy and graphite uniform; compact rifle held low; the backpack plus antenna and the teal panel must make this character unmistakable at tiny size.
+```
+
+### P67 gate-1 round-4 male variant a superseded
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: master-level detailed orthographic top-down 2D pixel art, deliberate hard pixel clusters, clean value grouping, crisp readable shapes at tiny size, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant A (refine an approved identity, keep it recognizable): lean recon pointman, visibly the slimmest of three teammates; short hair under an angular glowing AMBER visor band with a designed angular goggle frame wrapping the upper head; athletic narrow stance; suppressed compact submachine gun held low; graphite uniform in a slightly lighter value so the figure separates cleanly from dark floors; the amber visor band remains the largest and brightest color area, unmistakable at tiny size.
+```
+
+### P68 gate-1 round-4 male variant b superseded
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: master-level detailed orthographic top-down 2D pixel art, deliberate hard pixel clusters, clean value grouping, crisp readable shapes at tiny size, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant B (refine an approved identity, keep it recognizable): heavy breach responder, visibly the broadest of three teammates; massive ANGULAR shoulder pauldrons in muted crimson with dark armored cores, clearly designed equipment rather than round blobs; thick reinforced chest plate; wide braced stance; bare buzz-cut head with full respirator whose round jaw filters widen the head profile; dark navy uniform; compact bullpup shotgun held low; the crimson pauldrons remain the dominant color feature, unmistakable at tiny size.
+```
+
+### P69 gate-1 round-4 male variant c superseded
+
+```text
+Use case: stylized-concept
+Asset type: silhouette source for a production 64x64 top-down 2D pixel-art player character
+Primary request: exactly one full-body adult male Foundation anomalous-response operative, instantly readable at 48 pixels tall, neutral low-ready stance
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, no floor, no shadow, no gradient, no texture
+Style/medium: master-level detailed orthographic top-down 2D pixel art, deliberate hard pixel clusters, clean value grouping, crisp readable shapes at tiny size, realistic adult proportions, no antialiasing
+Composition/framing: one isolated character centered with generous padding, complete head, arms, compact held firearm, torso and both boots visible
+Shared subject: professional dark tactical uniform, compact chest rig, breathing or eye protection, no readable insignia, no exposed skin emphasis
+Constraints: strong hair/head silhouette; one stable identification color covering a LARGE clearly visible feature rather than a tiny tab; weapon integrated close to body; no #00ff00 on subject; no text, logo, watermark, scenery, muzzle flash, extra character, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
+Variant C (refine an approved identity, keep it recognizable): containment tech specialist; clean hooded head profile with a slim teal visor slit; tall slim backpack carrying a short comms mast tipped with a small teal light; large desaturated TEAL equipment panel with vertical light strips covering most of the backpack; dark navy and graphite uniform; compact rifle held low; backpack, mast and teal panel keep this character unmistakable at tiny size.
+```
