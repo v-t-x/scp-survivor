@@ -538,6 +538,11 @@ test("opening character integration preserves body configuration contracts", asy
     readFile(new URL("../src/main.js", import.meta.url), "utf8")
   ]);
   assert.match(world, /this\.player\.body\.setSize\(24, 24\)/);
+  assert.match(world, /resolveCharacterPresentation\(this, DEFAULT_CHARACTER_ID\)/);
+  assert.match(world, /this\.player\.characterId = presentation\.characterId;/);
+  assert.match(world, /this\.player\.presentationAnimationFamily = presentation\.animationFamily;/);
+  assert.match(world, /applyDisplayScalePreservingBody\(this\.player, presentation\.displayScale\)/);
+  assert.doesNotMatch(world, /CHARACTER_DISPLAY_SCALE\.player/);
   assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
   assert.match(enemies, /centerCircularBody\(boss, 18\)/);

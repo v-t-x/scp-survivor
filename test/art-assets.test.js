@@ -466,6 +466,29 @@ test("character frame gate rejects recoloring without alpha-shape motion", () =>
   );
 });
 
+test("response operative texture keys are declared, unique and not preloaded", () => {
+  assert.equal(TEXTURES.playerResponseOperativePrototypeSheet, "player-response-operative-prototype-sheet");
+  assert.equal(TEXTURES.playerResponseOperativeSheet, "player-response-operative-sheet");
+
+  const allTextureValues = Object.values(TEXTURES);
+  assert.equal(
+    new Set(allTextureValues).size,
+    allTextureValues.length,
+    "new character keys must stay unique across every declared texture key"
+  );
+
+  const r17Values = new Set(Object.values(r17TextureKeys));
+  const legacyValues = new Set(Object.values(legacyFallbackTextureKeys));
+  const spritesheetKeys = new Set(SPRITESHEET_ASSETS.map(({ key }) => key));
+  const imageKeys = new Set(IMAGE_ASSETS.map(({ key }) => key));
+  for (const key of [TEXTURES.playerResponseOperativePrototypeSheet, TEXTURES.playerResponseOperativeSheet]) {
+    assert.equal(r17Values.has(key), false, `${key} must not collide with R-17 keys`);
+    assert.equal(legacyValues.has(key), false, `${key} must not collide with legacy fallback keys`);
+    assert.equal(spritesheetKeys.has(key), false, `${key} must not be preloaded before its asset exists`);
+    assert.equal(imageKeys.has(key), false, `${key} must not be preloaded as a static image`);
+  }
+});
+
 test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");

@@ -1,16 +1,45 @@
 export const OPENING_VIEWPORT = Object.freeze({ width: 960, height: 540 });
 
-export const OPENING_ASSET_SPECS = Object.freeze({
-  floorTile: Object.freeze({ width: 32, height: 32 }),
-  facilityModule: Object.freeze({ allowedSizes: Object.freeze([64, 96, 128]) }),
-  player: Object.freeze({
+// The authoritative player asset contract is split into two named specs. The
+// legacy 48x48 sheet stays the Gate 3 default until explicit user acceptance;
+// the response operative spec is frozen now so Gates 2/3 can validate assets
+// against it without changing the authoritative default.
+export const OPENING_PLAYER_ASSET_SPECS = Object.freeze({
+  legacy: Object.freeze({
     frameWidth: 48,
     frameHeight: 48,
     directions: 4,
-    idleFrames: 4,
-    moveFrames: 6,
-    hitFrames: 2
+    framesPerDirection: 12,
+    totalFrames: 48,
+    displayScale: 1.2,
+    motions: Object.freeze({ idle: 4, move: 6, hit: 2 })
   }),
+  responseOperative: Object.freeze({
+    frameWidth: 64,
+    frameHeight: 64,
+    directions: 4,
+    framesPerDirection: 30,
+    totalFrames: 120,
+    displayScale: 1,
+    motions: Object.freeze({
+      idle: 4,
+      forward: 6,
+      backward: 6,
+      strafeLeft: 6,
+      strafeRight: 6,
+      hit: 2
+    })
+  })
+});
+
+export const DEFAULT_OPENING_PLAYER_ASSET_ID = "legacy"; // Gate 3 接受前
+export const DEFAULT_OPENING_PLAYER_ASSET_SPEC =
+  OPENING_PLAYER_ASSET_SPECS[DEFAULT_OPENING_PLAYER_ASSET_ID];
+
+export const OPENING_ASSET_SPECS = Object.freeze({
+  floorTile: Object.freeze({ width: 32, height: 32 }),
+  facilityModule: Object.freeze({ allowedSizes: Object.freeze([64, 96, 128]) }),
+  player: DEFAULT_OPENING_PLAYER_ASSET_SPEC,
   ordinaryEnemy: Object.freeze({
     frameWidth: 48,
     frameHeight: 48,

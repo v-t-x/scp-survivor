@@ -1,36 +1,87 @@
 import { TEXTURES } from "../assets/manifest.js";
+import { applyTextureAndScalePreservingBody } from "./presentationRules.js";
 
-export const CHARACTER_SHEETS = Object.freeze({
-  player: Object.freeze({
-    sheetKey: TEXTURES.playerOpeningSheet,
-    fallbackKey: TEXTURES.player
+export const DEFAULT_CHARACTER_ID = "foundation-response-operative";
+
+export const CHARACTER_PROFILES = Object.freeze({
+  [DEFAULT_CHARACTER_ID]: Object.freeze({
+    prototypeSheetKey: TEXTURES.playerResponseOperativePrototypeSheet,
+    productionSheetKey: TEXTURES.playerResponseOperativeSheet,
+    fallbackSheetKey: TEXTURES.playerOpeningSheet,
+    fallbackTextureKey: TEXTURES.player,
+    frameWidth: 64,
+    frameHeight: 64,
+    prototypeFrameCount: 28,
+    productionFrameCount: 120,
+    displayScale: 1,
+    fallbackDisplayScale: 1.2
   })
 });
 
-const DIRECTIONS = Object.freeze(["down", "left", "right", "up"]);
-const MOTIONS = Object.freeze({
-  idle: Object.freeze({ start: 0, end: 3, frameRate: 4 }),
-  move: Object.freeze({ start: 4, end: 9, frameRate: 8 }),
-  hit: Object.freeze({ start: 10, end: 11, frameRate: 10 })
-});
-const REQUIRED_FRAME_COUNT = 48;
-const PRESENTATION_HIT_DURATION_MS = 120;
-const warnedSheetKeys = new Set();
+const FACING_NAMES = Object.freeze(["down", "left", "right", "up"]);
+const LEGACY_MOTION_NAMES = Object.freeze(["idle", "move", "hit"]);
+const PROTOTYPE_MOTION_NAMES = Object.freeze([
+  "idle",
+  "forward",
+  "backward",
+  "strafeLeft",
+  "strafeRight"
+]);
+const PRODUCTION_MOTION_NAMES = Object.freeze([...PROTOTYPE_MOTION_NAMES, "hit"]);
 
-function hasCompleteSheet(scene, sheetKey) {
-  return Boolean(
-    scene?.textures?.exists(sheetKey)
-    // Phaser includes the spritesheet's __BASE frame in frameTotal.
-    && scene.textures.get(sheetKey)?.frameTotal > REQUIRED_FRAME_COUNT
-  );
+const LEGACY_MOTIONS = Object.freeze({
+  idle: Object.freeze({ start: 0, end: 3, frameRate: 4, repeat: -1 }),
+  move: Object.freeze({ start: 4, end: 9, frameRate: 8, repeat: -1 }),
+  hit: Object.freeze({ start: 10, end: 11, frameRate: 10, repeat: 0 })
+});
+const LEGACY_FRAMES_PER_DIRECTION = 12;
+const LEGACY_REQUIRED_FRAME_COUNT = 48;
+
+const PRODUCTION_MOTIONS = Object.freeze({
+  idle: Object.freeze({ start: 0, end: 3, frameRate: 4, repeat: -1 }),
+  forward: Object.freeze({ start: 4, end: 9, frameRate: 8, repeat: -1 }),
+  backward: Object.freeze({ start: 10, end: 15, frameRate: 8, repeat: -1 }),
+  strafeLeft: Object.freeze({ start: 16, end: 21, frameRate: 8, repeat: -1 }),
+  strafeRight: Object.freeze({ start: 22, end: 27, frameRate: 8, repeat: -1 }),
+  hit: Object.freeze({ start: 28, end: 29, frameRate: 10, repeat: 0 })
+});
+const PRODUCTION_FRAMES_PER_DIRECTION = 30;
+
+const PRESENTATION_HIT_DURATION_MS = 120;
+
+// Per-AnimationManager bookkeeping: which sheet keys failed a preflight or a
+// transactional create, and which sheet keys already emitted their single
+// warning. Keyed by the scene's AnimationManager so a scene restart resets state.
+const managerStateByAnims = new WeakMap();
+
+// Presentation-only hit window per sprite. Kept off the sprite and off the
+// scene so syncing never writes gameplay fields; a destroyed sprite drops out
+// of the WeakMap with its owner.
+const hitWindowDeadlineBySprite = new WeakMap();
+
+function getManagerState(scene) {
+  const manager = scene?.anims ?? scene;
+  let state = managerStateByAnims.get(manager);
+  if (!state) {
+    state = { failedSheetKeys: new Set(), warnedSheetKeys: new Set() };
+    managerStateByAnims.set(manager, state);
+  }
+  return state;
 }
 
-function warnForSheetOnce(scene, sheetKey) {
-  if (warnedSheetKeys.has(sheetKey)) {
+function isSheetFailed(scene, sheetKey) {
+  return getManagerState(scene).failedSheetKeys.has(sheetKey);
+}
+
+function markSheetFailedAndWarnOnce(scene, sheetKey, error = null) {
+  const state = getManagerState(scene);
+  state.failedSheetKeys.add(sheetKey);
+  if (state.warnedSheetKeys.has(sheetKey)) {
     return;
   }
-  warnedSheetKeys.add(sheetKey);
-  const message = `[character-presentation] Missing or incomplete spritesheet: ${sheetKey}; using static fallback.`;
+  state.warnedSheetKeys.add(sheetKey);
+  const detail = error?.message ? ` (${error.message})` : "";
+  const message = `[character-presentation] Missing, incomplete or failing spritesheet: ${sheetKey}; falling back to the previous character presentation.${detail}`;
   if (scene?.console?.warn) {
     scene.console.warn(message);
   } else {
@@ -38,40 +89,227 @@ function warnForSheetOnce(scene, sheetKey) {
   }
 }
 
-export function resolveCharacterTexture(scene, kind, fallbackKey) {
-  const config = CHARACTER_SHEETS[kind];
-  if (!config || !hasCompleteSheet(scene, config.sheetKey)) {
-    return fallbackKey;
+function getSheetFrameTotal(scene, sheetKey) {
+  if (!scene?.textures?.exists?.(sheetKey)) {
+    return null;
   }
-  return config.sheetKey;
+  const frameTotal = scene.textures.get?.(sheetKey)?.frameTotal;
+  return Number.isFinite(frameTotal) ? frameTotal : null;
+}
+
+function hasLegacySheet(scene, sheetKey) {
+  const frameTotal = getSheetFrameTotal(scene, sheetKey);
+  // Phaser includes the spritesheet's __BASE frame in frameTotal.
+  return frameTotal !== null && frameTotal > LEGACY_REQUIRED_FRAME_COUNT;
+}
+
+function hasExactSheet(scene, sheetKey, frameCount) {
+  // Phaser includes the spritesheet's __BASE frame in frameTotal.
+  return getSheetFrameTotal(scene, sheetKey) === frameCount + 1;
+}
+
+export function getPlayerMotion({ velocityX, velocityY, facingAngle }) {
+  const speedSq = velocityX * velocityX + velocityY * velocityY;
+  if (!Number.isFinite(speedSq) || speedSq <= 1) return "idle";
+  const angle = Number.isFinite(facingAngle) ? facingAngle : 0;
+  const forwardX = Math.cos(angle);
+  const forwardY = Math.sin(angle);
+  const longitudinal = velocityX * forwardX + velocityY * forwardY;
+  const lateral = forwardX * velocityY - forwardY * velocityX;
+  if (Math.abs(longitudinal) >= Math.abs(lateral)) {
+    return longitudinal >= 0 ? "forward" : "backward";
+  }
+  return lateral >= 0 ? "strafeRight" : "strafeLeft";
+}
+
+export function getCharacterAnimationKey({ characterId, animationFamily, motion, facing }) {
+  if (animationFamily === "legacy") {
+    if (!LEGACY_MOTION_NAMES.includes(motion) || !FACING_NAMES.includes(facing)) {
+      throw new RangeError(`legacy animations only cover idle/move/hit per direction; got ${motion}-${facing}`);
+    }
+    return `${characterId}-legacy-${motion}-${facing}`;
+  }
+  if (animationFamily === "prototype") {
+    // The Gate 2 prototype sheet contains only the down locomotion row: no hit
+    // frames and no left/right/up rows may be requested from it.
+    if (facing !== "down" || !PROTOTYPE_MOTION_NAMES.includes(motion)) {
+      throw new RangeError(`prototype animations only cover down locomotion; got ${motion}-${facing}`);
+    }
+    return `${characterId}-prototype-${motion}-down`;
+  }
+  if (animationFamily === "production") {
+    if (!PRODUCTION_MOTION_NAMES.includes(motion) || !FACING_NAMES.includes(facing)) {
+      throw new RangeError(`unknown production animation ${motion}-${facing}`);
+    }
+    return `${characterId}-production-${motion}-${facing}`;
+  }
+  throw new RangeError(`unknown character animation family: ${animationFamily}`);
+}
+
+function buildLegacyAnimationDefinitions(characterId, profile) {
+  const definitions = [];
+  FACING_NAMES.forEach((facing, row) => {
+    // Historical contract: the legacy sheet has no dedicated right row, so
+    // right-facing animations reuse the left row and mirror it via flipX.
+    const sourceRow = facing === "right" ? 1 : row;
+    for (const motion of LEGACY_MOTION_NAMES) {
+      const range = LEGACY_MOTIONS[motion];
+      definitions.push({
+        key: getCharacterAnimationKey({ characterId, animationFamily: "legacy", motion, facing }),
+        sheetKey: profile.fallbackSheetKey,
+        start: sourceRow * LEGACY_FRAMES_PER_DIRECTION + range.start,
+        end: sourceRow * LEGACY_FRAMES_PER_DIRECTION + range.end,
+        frameRate: range.frameRate,
+        repeat: range.repeat
+      });
+    }
+  });
+  return definitions;
+}
+
+function buildPrototypeAnimationDefinitions(characterId, profile) {
+  return PROTOTYPE_MOTION_NAMES.map((motion) => {
+    const range = PRODUCTION_MOTIONS[motion];
+    return {
+      key: getCharacterAnimationKey({ characterId, animationFamily: "prototype", motion, facing: "down" }),
+      sheetKey: profile.prototypeSheetKey,
+      start: range.start,
+      end: range.end,
+      frameRate: range.frameRate,
+      repeat: range.repeat
+    };
+  });
+}
+
+function buildProductionAnimationDefinitions(characterId, profile) {
+  const definitions = [];
+  FACING_NAMES.forEach((facing, row) => {
+    for (const motion of PRODUCTION_MOTION_NAMES) {
+      const range = PRODUCTION_MOTIONS[motion];
+      definitions.push({
+        key: getCharacterAnimationKey({ characterId, animationFamily: "production", motion, facing }),
+        sheetKey: profile.productionSheetKey,
+        start: row * PRODUCTION_FRAMES_PER_DIRECTION + range.start,
+        end: row * PRODUCTION_FRAMES_PER_DIRECTION + range.end,
+        frameRate: range.frameRate,
+        repeat: range.repeat
+      });
+    }
+  });
+  return definitions;
+}
+
+function registerAnimationBatch(scene, definitions, sheetKey) {
+  const keys = definitions.map(({ key }) => key);
+  const existingCount = keys.filter((key) => scene.anims.exists(key)).length;
+  if (existingCount === keys.length) return true;
+  if (existingCount > 0) keys.forEach((key) => scene.anims.remove(key));
+  const created = [];
+  try {
+    for (const definition of definitions) {
+      scene.anims.create({
+        key: definition.key,
+        frames: scene.anims.generateFrameNumbers(definition.sheetKey, {
+          start: definition.start,
+          end: definition.end
+        }),
+        frameRate: definition.frameRate,
+        repeat: definition.repeat
+      });
+      created.push(definition.key);
+    }
+    return true;
+  } catch (error) {
+    created.forEach((key) => scene.anims.remove(key));
+    markSheetFailedAndWarnOnce(scene, sheetKey, error);
+    return false;
+  }
 }
 
 export function registerOpeningCharacterAnimations(scene) {
-  for (const [kind, config] of Object.entries(CHARACTER_SHEETS)) {
-    if (!hasCompleteSheet(scene, config.sheetKey)) {
-      warnForSheetOnce(scene, config.sheetKey);
-      continue;
+  for (const characterId of Object.keys(CHARACTER_PROFILES)) {
+    const profile = CHARACTER_PROFILES[characterId];
+
+    if (hasLegacySheet(scene, profile.fallbackSheetKey)) {
+      registerAnimationBatch(scene, buildLegacyAnimationDefinitions(characterId, profile), profile.fallbackSheetKey);
+    } else {
+      markSheetFailedAndWarnOnce(scene, profile.fallbackSheetKey);
     }
 
-    DIRECTIONS.forEach((facing, row) => {
-      const sourceRow = facing === "right" ? 1 : row;
-      for (const [motion, range] of Object.entries(MOTIONS)) {
-        const key = `${kind}-${motion}-${facing}`;
-        if (scene.anims.exists(key)) {
-          continue;
-        }
-        scene.anims.create({
-          key,
-          frames: scene.anims.generateFrameNumbers(config.sheetKey, {
-            start: sourceRow * 12 + range.start,
-            end: sourceRow * 12 + range.end
-          }),
-          frameRate: range.frameRate,
-          repeat: motion === "hit" ? 0 : -1
-        });
+    // The Gate 2 prototype sheet is a dev-only asset: a normal boot never
+    // loads it, so a fully absent sheet stays silent. A present sheet must be
+    // exactly 28 frames (+ __BASE) or the batch is refused.
+    if (getSheetFrameTotal(scene, profile.prototypeSheetKey) !== null) {
+      if (
+        hasExactSheet(scene, profile.prototypeSheetKey, profile.prototypeFrameCount)
+        && !isSheetFailed(scene, profile.prototypeSheetKey)
+      ) {
+        registerAnimationBatch(scene, buildPrototypeAnimationDefinitions(characterId, profile), profile.prototypeSheetKey);
+      } else {
+        markSheetFailedAndWarnOnce(scene, profile.prototypeSheetKey);
       }
-    });
+    }
+
+    if (
+      hasExactSheet(scene, profile.productionSheetKey, profile.productionFrameCount)
+      && !isSheetFailed(scene, profile.productionSheetKey)
+    ) {
+      registerAnimationBatch(scene, buildProductionAnimationDefinitions(characterId, profile), profile.productionSheetKey);
+    } else {
+      markSheetFailedAndWarnOnce(scene, profile.productionSheetKey);
+    }
   }
+}
+
+export function resolveCharacterPresentation(
+  scene,
+  characterId = DEFAULT_CHARACTER_ID,
+  { allowPrototype = false } = {}
+) {
+  const profile = CHARACTER_PROFILES[characterId];
+  if (!profile) {
+    throw new RangeError(`unknown character id: ${characterId}`);
+  }
+
+  // Normal gameplay never resolves the Gate 2 prototype; only an explicit
+  // development bridge may pass allowPrototype.
+  if (
+    allowPrototype
+    && hasExactSheet(scene, profile.prototypeSheetKey, profile.prototypeFrameCount)
+    && !isSheetFailed(scene, profile.prototypeSheetKey)
+  ) {
+    return {
+      characterId,
+      textureKey: profile.prototypeSheetKey,
+      animationFamily: "prototype",
+      displayScale: profile.displayScale
+    };
+  }
+  if (
+    hasExactSheet(scene, profile.productionSheetKey, profile.productionFrameCount)
+    && !isSheetFailed(scene, profile.productionSheetKey)
+  ) {
+    return {
+      characterId,
+      textureKey: profile.productionSheetKey,
+      animationFamily: "production",
+      displayScale: profile.displayScale
+    };
+  }
+  if (hasLegacySheet(scene, profile.fallbackSheetKey) && !isSheetFailed(scene, profile.fallbackSheetKey)) {
+    return {
+      characterId,
+      textureKey: profile.fallbackSheetKey,
+      animationFamily: "legacy",
+      displayScale: profile.fallbackDisplayScale
+    };
+  }
+  return {
+    characterId,
+    textureKey: profile.fallbackTextureKey,
+    animationFamily: "static",
+    displayScale: profile.fallbackDisplayScale
+  };
 }
 
 export function getFacingFromVector(x, y, previousFacing = "down") {
@@ -91,54 +329,125 @@ function getFacingFromAngle(angle, previousFacing) {
   return getFacingFromVector(Math.cos(angle), Math.sin(angle), previousFacing);
 }
 
-export function getCharacterAnimationKey({ kind, motion, facing, hit }) {
-  return `${kind}-${hit ? "hit" : motion}-${facing}`;
+function toLegacyMotion(motion) {
+  if (motion === "hit") {
+    return "hit";
+  }
+  return motion === "idle" ? "idle" : "move";
 }
 
-function syncSprite(scene, sprite, kind) {
-  const config = CHARACTER_SHEETS[kind];
-  if (
-    !sprite?.active
-    || sprite.isDying
-    || !sprite.body?.velocity
-    || !config
-    || sprite.texture?.key !== config.sheetKey
-  ) {
-    return;
+function resolvePresentationHit(sprite, elapsedSurvivalMs) {
+  if (sprite.isTinted && (hitWindowDeadlineBySprite.get(sprite) ?? 0) <= elapsedSurvivalMs) {
+    hitWindowDeadlineBySprite.set(sprite, elapsedSurvivalMs + PRESENTATION_HIT_DURATION_MS);
   }
+  return (hitWindowDeadlineBySprite.get(sprite) ?? 0) > elapsedSurvivalMs;
+}
 
-  const elapsedSurvivalMs = scene.elapsedSurvivalMs ?? 0;
-  if (
-    sprite.isTinted
-    && (sprite.presentationHitUntilMs ?? 0) <= elapsedSurvivalMs
-  ) {
-    sprite.presentationHitUntilMs = elapsedSurvivalMs + PRESENTATION_HIT_DURATION_MS;
-  }
-
-  sprite.presentationFacing = kind === "player"
-    ? getFacingFromAngle(scene.playerFacingAngle, sprite.presentationFacing)
-    : getFacingFromVector(
-      sprite.body.velocity.x,
-      sprite.body.velocity.y,
-      sprite.presentationFacing
-    );
-  sprite.setFlipX?.(sprite.presentationFacing === "right");
-  const moving = sprite.body.velocity.lengthSq() > 1;
-  const key = getCharacterAnimationKey({
-    kind,
-    motion: moving ? "move" : "idle",
-    facing: sprite.presentationFacing,
-    hit: (sprite.presentationHitUntilMs ?? 0) > elapsedSurvivalMs
-  });
+function playAnimationIfRegistered(scene, sprite, sheetKey, key) {
   if (scene.anims?.exists && !scene.anims.exists(key)) {
-    warnForSheetOnce(scene, config.sheetKey);
+    markSheetFailedAndWarnOnce(scene, sheetKey);
     return;
   }
-  if (sprite.anims.currentAnim?.key !== key) {
+  if (sprite.anims?.currentAnim?.key !== key) {
     sprite.play(key, true);
   }
 }
 
-export function syncCharacterPresentation(scene) {
-  syncSprite(scene, scene.player, "player");
+function inferAnimationFamily(sprite, profile) {
+  const textureKey = sprite.texture?.key;
+  if (textureKey === profile.prototypeSheetKey) {
+    return "prototype";
+  }
+  if (textureKey === profile.productionSheetKey) {
+    return "production";
+  }
+  if (textureKey === profile.fallbackSheetKey) {
+    return "legacy";
+  }
+  return "static";
+}
+
+function syncPrototypePresentation(scene, sprite, characterId, profile, facing, motion) {
+  const usePrototypeSheet = facing === "down" && motion !== "hit";
+  const targetSheetKey = usePrototypeSheet ? profile.prototypeSheetKey : profile.fallbackSheetKey;
+  const targetScale = usePrototypeSheet ? profile.displayScale : profile.fallbackDisplayScale;
+  if (sprite.texture?.key !== targetSheetKey || sprite.scaleX !== targetScale) {
+    applyTextureAndScalePreservingBody(sprite, targetSheetKey, targetScale);
+  }
+  if (usePrototypeSheet) {
+    sprite.setFlipX?.(false);
+    playAnimationIfRegistered(
+      scene,
+      sprite,
+      profile.prototypeSheetKey,
+      getCharacterAnimationKey({ characterId, animationFamily: "prototype", motion, facing: "down" })
+    );
+    return;
+  }
+  // Any hit, and every left/right/up state, drops back to the original legacy
+  // sheet with its historical right mirror.
+  sprite.setFlipX?.(facing === "right");
+  playAnimationIfRegistered(
+    scene,
+    sprite,
+    profile.fallbackSheetKey,
+    getCharacterAnimationKey({ characterId, animationFamily: "legacy", motion: toLegacyMotion(motion), facing })
+  );
+}
+
+export function syncCharacterPresentation(scene, presentationOverride = null) {
+  const sprite = scene?.player;
+  if (!sprite?.active || sprite.isDying || !sprite.body?.velocity) {
+    return;
+  }
+  const characterId = sprite.characterId ?? DEFAULT_CHARACTER_ID;
+  const profile = CHARACTER_PROFILES[characterId] ?? CHARACTER_PROFILES[DEFAULT_CHARACTER_ID];
+  const family = sprite.presentationAnimationFamily ?? inferAnimationFamily(sprite, profile);
+  if (family === "static") {
+    return;
+  }
+
+  const currentElapsedMs = scene.elapsedSurvivalMs ?? 0;
+  // An override is consumed read-only for this frame; nothing below copies it
+  // into the scene, the Arcade body, timers, RNG or persistence.
+  const input = presentationOverride ?? {
+    facingAngle: scene.playerFacingAngle,
+    velocityX: sprite.body.velocity.x,
+    velocityY: sprite.body.velocity.y,
+    hit: resolvePresentationHit(sprite, currentElapsedMs)
+  };
+
+  sprite.presentationFacing = getFacingFromAngle(input.facingAngle, sprite.presentationFacing);
+  const facing = sprite.presentationFacing;
+  const motion = input.hit
+    ? "hit"
+    : getPlayerMotion({
+      velocityX: input.velocityX ?? 0,
+      velocityY: input.velocityY ?? 0,
+      facingAngle: input.facingAngle
+    });
+
+  if (family === "prototype") {
+    syncPrototypePresentation(scene, sprite, characterId, profile, facing, motion);
+    return;
+  }
+
+  if (family === "production") {
+    sprite.setFlipX?.(false);
+    playAnimationIfRegistered(
+      scene,
+      sprite,
+      profile.productionSheetKey,
+      getCharacterAnimationKey({ characterId, animationFamily: "production", motion, facing })
+    );
+    return;
+  }
+
+  sprite.setFlipX?.(facing === "right");
+  playAnimationIfRegistered(
+    scene,
+    sprite,
+    profile.fallbackSheetKey,
+    getCharacterAnimationKey({ characterId, animationFamily: "legacy", motion: toLegacyMotion(motion), facing })
+  );
 }

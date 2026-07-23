@@ -3,30 +3,67 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import {
-  CHARACTER_SHEETS,
+  CHARACTER_PROFILES,
+  DEFAULT_CHARACTER_ID,
   getCharacterAnimationKey,
   getFacingFromVector,
+  getPlayerMotion,
   registerOpeningCharacterAnimations,
-  resolveCharacterTexture,
+  resolveCharacterPresentation,
   syncCharacterPresentation
 } from "../src/art/characterPresentation.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 
-function createTextureScene({ available = true, frameTotal = 49 } = {}) {
+const LEGACY_SHEET = TEXTURES.playerOpeningSheet;
+const PROTOTYPE_SHEET = TEXTURES.playerResponseOperativePrototypeSheet;
+const PRODUCTION_SHEET = TEXTURES.playerResponseOperativeSheet;
+const STATIC_TEXTURE = TEXTURES.player;
+
+const FACING_NAMES = ["down", "left", "right", "up"];
+const FACING_ANGLES = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+const LOCOMOTION_MOTIONS = ["idle", "forward", "backward", "strafeLeft", "strafeRight"];
+const ALL_MOTIONS = [...LOCOMOTION_MOTIONS, "hit"];
+const LEGACY_MOTIONS = ["idle", "move", "hit"];
+
+function legacyKey(motion, facing) {
+  return `${DEFAULT_CHARACTER_ID}-legacy-${motion}-${facing}`;
+}
+
+function prototypeKey(motion) {
+  return `${DEFAULT_CHARACTER_ID}-prototype-${motion}-down`;
+}
+
+function productionKey(motion, facing) {
+  return `${DEFAULT_CHARACTER_ID}-production-${motion}-${facing}`;
+}
+
+function createAnimationScene({ frameTotals = {}, throwOnCreateIndex = -1 } = {}) {
   const created = [];
-  const existing = new Set();
+  const removed = [];
   const warnings = [];
+  const existing = new Set();
+  let createCalls = 0;
   return {
     created,
+    removed,
     warnings,
+    existing,
     textures: {
-      exists: () => available,
-      get: () => ({ frameTotal })
+      exists: (key) => Object.hasOwn(frameTotals, key),
+      get: (key) => ({ frameTotal: frameTotals[key] })
     },
     anims: {
       exists: (key) => existing.has(key),
+      remove: (key) => {
+        existing.delete(key);
+        removed.push(key);
+      },
       generateFrameNumbers: (sheetKey, range) => ({ sheetKey, ...range }),
       create: (config) => {
+        createCalls += 1;
+        if (createCalls === throwOnCreateIndex) {
+          throw new Error(`animation create failure at call ${createCalls}`);
+        }
         existing.add(config.key);
         created.push(config);
       }
@@ -37,59 +74,227 @@ function createTextureScene({ available = true, frameTotal = 49 } = {}) {
   };
 }
 
-function createSprite({
-  kind,
-  sheetKey,
-  velocity = { x: 0, y: 0 },
-  presentationFacing = "down",
-  presentationHitUntilMs = 0,
-  isTinted = false,
-  scaleX = 1,
-  scaleY = 1
-}) {
-  const played = [];
+const FRAME_SIZES = {
+  [LEGACY_SHEET]: 48,
+  [PROTOTYPE_SHEET]: 64,
+  [PRODUCTION_SHEET]: 64,
+  [STATIC_TEXTURE]: 48
+};
+
+function createPlayerSprite({ textureKey, animationFamily, scale }) {
   const sprite = {
+    x: 120,
+    y: 80,
     active: true,
     isDying: false,
-    enemyType: kind,
-    texture: { key: sheetKey },
-    body: {
-      width: 24,
-      height: 24,
-      offset: { x: 12, y: 12 },
-      velocity: {
-        ...velocity,
-        lengthSq() {
-          return this.x * this.x + this.y * this.y;
-        }
-      }
-    },
-    presentationFacing,
-    presentationHitUntilMs,
-    isTinted,
-    scaleX,
-    scaleY,
+    isTinted: false,
     flipX: false,
+    texture: { key: textureKey },
+    characterId: DEFAULT_CHARACTER_ID,
+    presentationAnimationFamily: animationFamily,
+    presentationFacing: "down",
+    scaleX: scale,
+    scaleY: scale,
+    width: FRAME_SIZES[textureKey],
+    height: FRAME_SIZES[textureKey],
+    displayOriginX: FRAME_SIZES[textureKey] / 2,
+    displayOriginY: FRAME_SIZES[textureKey] / 2,
     anims: { currentAnim: null },
+    played: [],
     setFlipX(value) {
       this.flipX = value;
       return this;
     },
     play(key) {
-      played.push(key);
+      this.played.push(key);
       this.anims.currentAnim = { key };
+      return this;
+    },
+    setTexture(key) {
+      this.texture.key = key;
+      this.width = FRAME_SIZES[key];
+      this.height = FRAME_SIZES[key];
+      this.displayOriginX = FRAME_SIZES[key] / 2;
+      this.displayOriginY = FRAME_SIZES[key] / 2;
+      return this;
+    },
+    setScale(value) {
+      this.scaleX = value;
+      this.scaleY = value;
+      return this;
     }
   };
-  return { sprite, played };
+  const sourceSize = 24 / scale;
+  sprite.body = {
+    sourceWidth: sourceSize,
+    sourceHeight: sourceSize,
+    width: 24,
+    height: 24,
+    isCircle: false,
+    radius: 0,
+    offset: {
+      x: (FRAME_SIZES[textureKey] - sourceSize) / 2,
+      y: (FRAME_SIZES[textureKey] - sourceSize) / 2,
+      set(x, y) {
+        this.x = x;
+        this.y = y;
+      }
+    },
+    position: { x: 0, y: 0 },
+    velocity: {
+      x: 0,
+      y: 0,
+      lengthSq() {
+        return this.x * this.x + this.y * this.y;
+      }
+    },
+    updateFromGameObject() {
+      this.width = this.sourceWidth * Math.abs(sprite.scaleX);
+      this.height = this.sourceHeight * Math.abs(sprite.scaleY);
+      this.position.x = sprite.x + sprite.scaleX * (this.offset.x - sprite.displayOriginX);
+      this.position.y = sprite.y + sprite.scaleY * (this.offset.y - sprite.displayOriginY);
+    }
+  };
+  sprite.body.updateFromGameObject();
+  return sprite;
 }
 
-test("opening character sheet contract is player-only", () => {
-  assert.deepEqual(CHARACTER_SHEETS, {
-    player: {
-      sheetKey: TEXTURES.playerOpeningSheet,
-      fallbackKey: TEXTURES.player
-    }
+function snapshotBodyGeometry(sprite) {
+  return {
+    width: sprite.body.width,
+    height: sprite.body.height,
+    positionX: sprite.body.position.x,
+    positionY: sprite.body.position.y
+  };
+}
+
+function assertBodyGeometryPreserved(sprite, before, context) {
+  const tolerance = 1e-9;
+  const after = snapshotBodyGeometry(sprite);
+  for (const field of ["width", "height", "positionX", "positionY"]) {
+    assert.ok(
+      Math.abs(after[field] - before[field]) < tolerance,
+      `${context}: body ${field} changed from ${before[field]} to ${after[field]}`
+    );
+  }
+}
+
+function velocityForMotion(motion, angle) {
+  const speed = 2;
+  const forwardX = Math.cos(angle);
+  const forwardY = Math.sin(angle);
+  switch (motion) {
+    case "forward":
+    case "hit":
+      return { x: forwardX * speed, y: forwardY * speed };
+    case "backward":
+      return { x: -forwardX * speed, y: -forwardY * speed };
+    case "strafeRight":
+      return { x: -forwardY * speed, y: forwardX * speed };
+    case "strafeLeft":
+      return { x: forwardY * speed, y: -forwardX * speed };
+    default:
+      return { x: 0, y: 0 };
+  }
+}
+
+function expectedPrototypeSync(facing, motion) {
+  if (facing === "down" && motion !== "hit") {
+    return {
+      textureKey: PROTOTYPE_SHEET,
+      scale: 1,
+      flipX: false,
+      key: prototypeKey(motion)
+    };
+  }
+  const mapped = motion === "hit" ? "hit" : motion === "idle" ? "idle" : "move";
+  return {
+    textureKey: LEGACY_SHEET,
+    scale: 1.2,
+    flipX: facing === "right",
+    key: legacyKey(mapped, facing)
+  };
+}
+
+test("character registry exposes the frozen default response operative profile", () => {
+  assert.equal(DEFAULT_CHARACTER_ID, "foundation-response-operative");
+  assert.deepEqual(CHARACTER_PROFILES[DEFAULT_CHARACTER_ID], {
+    prototypeSheetKey: TEXTURES.playerResponseOperativePrototypeSheet,
+    productionSheetKey: TEXTURES.playerResponseOperativeSheet,
+    fallbackSheetKey: TEXTURES.playerOpeningSheet,
+    fallbackTextureKey: TEXTURES.player,
+    frameWidth: 64,
+    frameHeight: 64,
+    prototypeFrameCount: 28,
+    productionFrameCount: 120,
+    displayScale: 1,
+    fallbackDisplayScale: 1.2
   });
+  assert.equal(Object.isFrozen(CHARACTER_PROFILES), true);
+  assert.equal(Object.isFrozen(CHARACTER_PROFILES[DEFAULT_CHARACTER_ID]), true);
+});
+
+test("player motion classifier projects velocity onto the committed facing", () => {
+  assert.equal(getPlayerMotion({ velocityX: 0, velocityY: 0, facingAngle: 0 }), "idle");
+  assert.equal(getPlayerMotion({ velocityX: 2, velocityY: 0, facingAngle: 0 }), "forward");
+  assert.equal(getPlayerMotion({ velocityX: -2, velocityY: 0, facingAngle: 0 }), "backward");
+  assert.equal(getPlayerMotion({ velocityX: 0, velocityY: 2, facingAngle: 0 }), "strafeRight");
+  assert.equal(getPlayerMotion({ velocityX: 0, velocityY: -2, facingAngle: 0 }), "strafeLeft");
+  assert.equal(getPlayerMotion({ velocityX: 2, velocityY: 2, facingAngle: 0 }), "forward");
+});
+
+test("animation keys are namespaced per family and validate their domain", () => {
+  assert.equal(
+    getCharacterAnimationKey({
+      characterId: DEFAULT_CHARACTER_ID,
+      animationFamily: "production",
+      motion: "backward",
+      facing: "right"
+    }),
+    "foundation-response-operative-production-backward-right"
+  );
+  for (const facing of FACING_NAMES) {
+    for (const motion of ALL_MOTIONS) {
+      assert.equal(
+        getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "production", motion, facing }),
+        productionKey(motion, facing)
+      );
+    }
+    for (const motion of LEGACY_MOTIONS) {
+      assert.equal(
+        getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "legacy", motion, facing }),
+        legacyKey(motion, facing)
+      );
+    }
+  }
+  for (const motion of LOCOMOTION_MOTIONS) {
+    assert.equal(
+      getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "prototype", motion, facing: "down" }),
+      prototypeKey(motion)
+    );
+  }
+  assert.throws(
+    () => getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "prototype", motion: "hit", facing: "down" }),
+    RangeError,
+    "prototype has no hit row"
+  );
+  for (const facing of ["left", "right", "up"]) {
+    assert.throws(
+      () => getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "prototype", motion: "idle", facing }),
+      RangeError,
+      `prototype has no ${facing} row`
+    );
+  }
+  assert.throws(
+    () => getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "legacy", motion: "forward", facing: "down" }),
+    RangeError,
+    "legacy keeps the idle/move/hit contract"
+  );
+  assert.throws(
+    () => getCharacterAnimationKey({ characterId: DEFAULT_CHARACTER_ID, animationFamily: "static", motion: "idle", facing: "down" }),
+    RangeError,
+    "static textures own no animation keys"
+  );
 });
 
 test("character facing preserves the last direction while idle", () => {
@@ -100,204 +305,384 @@ test("character facing preserves the last direction while idle", () => {
   assert.equal(getFacingFromVector(0, 0, "left"), "left");
 });
 
-test("animation keys map idle, move and hit without changing character kind", () => {
-  assert.equal(
-    getCharacterAnimationKey({ kind: "player", motion: "idle", facing: "down", hit: false }),
-    "player-idle-down"
-  );
-  assert.equal(
-    getCharacterAnimationKey({ kind: "player", motion: "move", facing: "left", hit: false }),
-    "player-move-left"
-  );
-  assert.equal(
-    getCharacterAnimationKey({ kind: "player", motion: "move", facing: "up", hit: true }),
-    "player-hit-up"
-  );
-});
+test("registration creates legacy twelve, prototype five and production twenty-four animations in order", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29, [PRODUCTION_SHEET]: 121 }
+  });
 
-test("character textures fall back when a sheet is missing or incomplete", () => {
-  assert.equal(resolveCharacterTexture(createTextureScene({ available: false }), "player", TEXTURES.player), TEXTURES.player);
-  assert.equal(resolveCharacterTexture(createTextureScene({ frameTotal: 48 }), "player", TEXTURES.player), TEXTURES.player);
-  assert.equal(
-    resolveCharacterTexture(createTextureScene(), "player", TEXTURES.player),
-    TEXTURES.playerOpeningSheet
-  );
-  assert.equal(resolveCharacterTexture(createTextureScene(), "crawler", TEXTURES.enemyCrawler), TEXTURES.enemyCrawler);
-});
-
-test("animation registration is complete, frame-exact and idempotent", () => {
-  const scene = createTextureScene();
-  registerOpeningCharacterAnimations(scene);
   registerOpeningCharacterAnimations(scene);
 
-  assert.equal(scene.created.length, 12);
-  const byKey = new Map(scene.created.map((animation) => [animation.key, animation]));
-  assert.deepEqual(byKey.get("player-idle-down").frames, {
-    sheetKey: TEXTURES.playerOpeningSheet,
-    start: 0,
-    end: 3
-  });
-  assert.deepEqual(byKey.get("player-move-left").frames, {
-    sheetKey: TEXTURES.playerOpeningSheet,
-    start: 16,
-    end: 21
-  });
+  assert.equal(scene.created.length, 41);
   assert.deepEqual(
-    byKey.get("player-move-right").frames,
-    byKey.get("player-move-left").frames,
-    "right-facing player animation should mirror the full-size left-facing row"
+    scene.created.map((animation) => animation.key),
+    [
+      ...FACING_NAMES.flatMap((facing) => LEGACY_MOTIONS.map((motion) => legacyKey(motion, facing))),
+      ...LOCOMOTION_MOTIONS.map((motion) => prototypeKey(motion)),
+      ...FACING_NAMES.flatMap((facing) => ALL_MOTIONS.map((motion) => productionKey(motion, facing)))
+    ]
   );
-  assert.equal(byKey.get("player-idle-down").repeat, -1);
-  assert.equal(byKey.get("player-move-down").frameRate, 8);
-  assert.equal(byKey.get("player-hit-down").repeat, 0);
+
+  const byKey = new Map(scene.created.map((animation) => [animation.key, animation]));
+  assert.deepEqual(byKey.get(legacyKey("idle", "down")).frames, { sheetKey: LEGACY_SHEET, start: 0, end: 3 });
+  assert.deepEqual(byKey.get(legacyKey("move", "left")).frames, { sheetKey: LEGACY_SHEET, start: 16, end: 21 });
+  assert.deepEqual(
+    byKey.get(legacyKey("move", "right")).frames,
+    byKey.get(legacyKey("move", "left")).frames,
+    "legacy right-facing rows keep the historical left-row mirror"
+  );
+  assert.deepEqual(byKey.get(legacyKey("hit", "up")).frames, { sheetKey: LEGACY_SHEET, start: 46, end: 47 });
+  assert.equal(byKey.get(legacyKey("hit", "down")).repeat, 0);
+  assert.equal(byKey.get(legacyKey("move", "down")).repeat, -1);
+
+  assert.deepEqual(byKey.get(prototypeKey("idle")).frames, { sheetKey: PROTOTYPE_SHEET, start: 0, end: 3 });
+  assert.deepEqual(byKey.get(prototypeKey("forward")).frames, { sheetKey: PROTOTYPE_SHEET, start: 4, end: 9 });
+  assert.deepEqual(byKey.get(prototypeKey("backward")).frames, { sheetKey: PROTOTYPE_SHEET, start: 10, end: 15 });
+  assert.deepEqual(byKey.get(prototypeKey("strafeLeft")).frames, { sheetKey: PROTOTYPE_SHEET, start: 16, end: 21 });
+  assert.deepEqual(byKey.get(prototypeKey("strafeRight")).frames, { sheetKey: PROTOTYPE_SHEET, start: 22, end: 27 });
+  const prototypeKeys = scene.created.map(({ key }) => key).filter((key) => key.includes("-prototype-"));
+  assert.equal(prototypeKeys.length, 5);
+  assert.equal(prototypeKeys.some((key) => key.includes("hit")), false, "prototype registers no hit animation");
+  assert.equal(prototypeKeys.every((key) => key.endsWith("-down")), true, "prototype registers only down animations");
+
+  assert.deepEqual(byKey.get(productionKey("idle", "down")).frames, { sheetKey: PRODUCTION_SHEET, start: 0, end: 3 });
+  assert.deepEqual(
+    byKey.get(productionKey("backward", "right")).frames,
+    { sheetKey: PRODUCTION_SHEET, start: 70, end: 75 },
+    "production right uses the real third row"
+  );
+  assert.deepEqual(byKey.get(productionKey("hit", "up")).frames, { sheetKey: PRODUCTION_SHEET, start: 118, end: 119 });
+  assert.equal(byKey.get(productionKey("hit", "down")).repeat, 0);
+  assert.equal(byKey.get(productionKey("forward", "left")).frameRate, 8);
+  assert.equal(byKey.get(productionKey("idle", "left")).frameRate, 4);
   assert.deepEqual(scene.warnings, []);
 });
 
-test("missing or incomplete sheets warn at most once per key and register nothing", () => {
-  const missing = createTextureScene({ available: false });
-  registerOpeningCharacterAnimations(missing);
-  registerOpeningCharacterAnimations(missing);
-  assert.equal(missing.created.length, 0);
-  assert.equal(missing.warnings.length, 1);
-  assert.match(missing.warnings[0], /player-opening-sheet/);
+test("completed registration is idempotent and never duplicates keys", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29, [PRODUCTION_SHEET]: 121 }
+  });
+
+  registerOpeningCharacterAnimations(scene);
+  registerOpeningCharacterAnimations(scene);
+
+  assert.equal(scene.created.length, 41);
+  assert.deepEqual(scene.removed, []);
+  assert.equal(scene.existing.size, 41);
+  assert.deepEqual(scene.warnings, []);
 });
 
-test("tinted player enters hit-facing and keeps it until hitUntil expires", () => {
-  const player = createSprite({
-    kind: "player",
-    sheetKey: TEXTURES.playerOpeningSheet,
-    velocity: { x: 0, y: -55 },
-    isTinted: true
+test("wrong frame totals fail preflight without partial registration", () => {
+  for (const prototypeTotal of [28, 30]) {
+    const scene = createAnimationScene({
+      frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: prototypeTotal, [PRODUCTION_SHEET]: 121 }
+    });
+    registerOpeningCharacterAnimations(scene);
+    assert.equal(scene.created.length, 36, `prototype frameTotal ${prototypeTotal}`);
+    assert.equal(scene.created.some(({ key }) => key.includes("-prototype-")), false);
+    assert.equal(scene.warnings.length, 1);
+    assert.match(scene.warnings[0], new RegExp(PROTOTYPE_SHEET));
+  }
+
+  for (const productionTotal of [120, 122]) {
+    const scene = createAnimationScene({
+      frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: productionTotal }
+    });
+    registerOpeningCharacterAnimations(scene);
+    assert.equal(scene.created.length, 12, `production frameTotal ${productionTotal}`);
+    assert.equal(scene.created.some(({ key }) => key.includes("-production-")), false);
+    assert.equal(scene.warnings.length, 1);
+    assert.match(scene.warnings[0], new RegExp(PRODUCTION_SHEET));
+  }
+});
+
+test("a failing prototype batch rolls back only its own created keys", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29, [PRODUCTION_SHEET]: 121 },
+    throwOnCreateIndex: 12 + 3
   });
-  const playerBodyBefore = structuredClone({
-    width: player.sprite.body.width,
-    height: player.sprite.body.height,
-    offset: player.sprite.body.offset,
-    velocity: { x: player.sprite.body.velocity.x, y: player.sprite.body.velocity.y }
+
+  assert.doesNotThrow(() => registerOpeningCharacterAnimations(scene));
+  assert.deepEqual(scene.removed, [prototypeKey("idle"), prototypeKey("forward")]);
+  assert.equal(scene.existing.size, 12 + 24);
+  assert.equal([...scene.existing].some((key) => key.includes("-prototype-")), false);
+  assert.equal(scene.created.length, 12 + 2 + 24);
+  assert.equal(scene.warnings.length, 1);
+  assert.match(scene.warnings[0], new RegExp(PROTOTYPE_SHEET));
+});
+
+test("a failing production batch rolls back only its own created keys", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 121 },
+    throwOnCreateIndex: 12 + 7
   });
-  const scene = {
-    elapsedSurvivalMs: 1_000,
-    player: player.sprite,
-    playerFacingAngle: -Math.PI / 2
-  };
 
-  syncCharacterPresentation(scene);
-
-  assert.deepEqual(player.played, ["player-hit-up"]);
-  assert.equal(player.sprite.presentationHitUntilMs, 1_120);
-  assert.equal(player.sprite.presentationFacing, "up");
-  assert.equal(player.sprite.flipX, false);
-  assert.equal(player.sprite.scaleX, 1);
-  assert.equal(player.sprite.scaleY, 1);
-
-  player.sprite.isTinted = false;
-  scene.elapsedSurvivalMs = 1_119;
-  syncCharacterPresentation(scene);
-  assert.deepEqual(player.played, ["player-hit-up"]);
-
-  scene.elapsedSurvivalMs = 1_120;
-  syncCharacterPresentation(scene);
-  assert.deepEqual(player.played, ["player-hit-up", "player-move-up"]);
+  assert.doesNotThrow(() => registerOpeningCharacterAnimations(scene));
   assert.deepEqual(
-    {
-      width: player.sprite.body.width,
-      height: player.sprite.body.height,
-      offset: player.sprite.body.offset,
-      velocity: { x: player.sprite.body.velocity.x, y: player.sprite.body.velocity.y }
-    },
-    playerBodyBefore
+    scene.removed,
+    ALL_MOTIONS.map((motion) => productionKey(motion, "down"))
+  );
+  assert.equal(scene.existing.size, 12);
+  assert.equal(scene.warnings.length, 1);
+  assert.match(scene.warnings[0], new RegExp(PRODUCTION_SHEET));
+});
+
+test("missing sheets warn at most once per AnimationManager and register nothing", () => {
+  const scene = createAnimationScene({ frameTotals: {} });
+
+  registerOpeningCharacterAnimations(scene);
+  registerOpeningCharacterAnimations(scene);
+
+  assert.equal(scene.created.length, 0);
+  assert.equal(scene.warnings.length, 2);
+  assert.match(scene.warnings[0], new RegExp(LEGACY_SHEET));
+  assert.match(scene.warnings[1], new RegExp(PRODUCTION_SHEET));
+  assert.equal(
+    scene.warnings.filter((message) => message.includes("prototype")).length,
+    0,
+    "the absent dev-only prototype sheet stays silent"
   );
 });
 
-test("stationary player retains the latest firing-facing without changing scale", () => {
-  const firingFacing = getFacingFromVector(1, 0, "down");
-  const player = createSprite({
-    kind: "player",
-    sheetKey: TEXTURES.playerOpeningSheet,
-    velocity: { x: 0, y: 0 },
-    presentationFacing: firingFacing,
-    scaleX: 1.2,
-    scaleY: 1.2
+test("resolve ignores the prototype sheet during normal gameplay resolution", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29 }
   });
 
-  syncCharacterPresentation({
-    elapsedSurvivalMs: 0,
-    player: player.sprite,
-    playerFacingAngle: 0
+  assert.deepEqual(resolveCharacterPresentation(scene), {
+    characterId: DEFAULT_CHARACTER_ID,
+    textureKey: LEGACY_SHEET,
+    animationFamily: "legacy",
+    displayScale: 1.2
   });
-
-  assert.equal(player.sprite.presentationFacing, "right");
-  assert.equal(player.sprite.flipX, true);
-  assert.deepEqual(player.played, ["player-idle-right"]);
-  assert.equal(player.sprite.scaleX, 1.2);
-  assert.equal(player.sprite.scaleY, 1.2);
+  assert.deepEqual(resolveCharacterPresentation(scene, DEFAULT_CHARACTER_ID, { allowPrototype: true }), {
+    characterId: DEFAULT_CHARACTER_ID,
+    textureKey: PROTOTYPE_SHEET,
+    animationFamily: "prototype",
+    displayScale: 1
+  });
 });
 
-test("horizontal facing mirrors right without changing character scale", () => {
-  const player = createSprite({
-    kind: "player",
-    sheetKey: TEXTURES.playerOpeningSheet,
-    velocity: { x: 90, y: 0 },
-    scaleX: 1.2,
-    scaleY: 1.2
+test("resolve prefers an exact 120-frame production sheet and falls back through legacy to static", () => {
+  const full = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29, [PRODUCTION_SHEET]: 121 }
   });
-  const scene = {
-    elapsedSurvivalMs: 0,
-    player: player.sprite,
+  assert.deepEqual(resolveCharacterPresentation(full), {
+    characterId: DEFAULT_CHARACTER_ID,
+    textureKey: PRODUCTION_SHEET,
+    animationFamily: "production",
+    displayScale: 1
+  });
+
+  const wrongProduction = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 120 }
+  });
+  assert.deepEqual(resolveCharacterPresentation(wrongProduction), {
+    characterId: DEFAULT_CHARACTER_ID,
+    textureKey: LEGACY_SHEET,
+    animationFamily: "legacy",
+    displayScale: 1.2
+  });
+
+  const empty = createAnimationScene({ frameTotals: {} });
+  assert.deepEqual(resolveCharacterPresentation(empty), {
+    characterId: DEFAULT_CHARACTER_ID,
+    textureKey: STATIC_TEXTURE,
+    animationFamily: "static",
+    displayScale: 1.2
+  });
+
+  const prototypeOnly = createAnimationScene({ frameTotals: { [PROTOTYPE_SHEET]: 29 } });
+  assert.equal(resolveCharacterPresentation(prototypeOnly).animationFamily, "static");
+  assert.equal(resolveCharacterPresentation(prototypeOnly).displayScale, 1.2);
+});
+
+test("production sync plays every classified motion without flipping and preserves the body", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 121 }
+  });
+  registerOpeningCharacterAnimations(scene);
+  const sprite = createPlayerSprite({ textureKey: PRODUCTION_SHEET, animationFamily: "production", scale: 1 });
+  Object.assign(scene, {
+    player: sprite,
     playerFacingAngle: 0,
-    enemies: { getChildren: () => [] }
-  };
+    elapsedSurvivalMs: 1_000
+  });
+  const bodyBefore = snapshotBodyGeometry(sprite);
 
-  syncCharacterPresentation(scene);
+  for (const facing of FACING_NAMES) {
+    for (const motion of LOCOMOTION_MOTIONS) {
+      const angle = FACING_ANGLES[facing];
+      const velocity = velocityForMotion(motion, angle);
+      scene.playerFacingAngle = angle;
+      sprite.body.velocity.x = velocity.x;
+      sprite.body.velocity.y = velocity.y;
 
-  assert.equal(player.sprite.presentationFacing, "right");
-  assert.equal(player.sprite.flipX, true);
-  assert.equal(player.sprite.scaleX, 1.2);
-  assert.equal(player.sprite.scaleY, 1.2);
+      syncCharacterPresentation(scene);
 
-  player.sprite.body.velocity.x = -90;
-  syncCharacterPresentation(scene);
-
-  assert.equal(player.sprite.presentationFacing, "right");
-  assert.equal(player.sprite.flipX, true);
-  assert.equal(player.sprite.scaleX, 1.2);
+      assert.equal(sprite.anims.currentAnim.key, productionKey(motion, facing), `${motion}-${facing}`);
+      assert.equal(sprite.flipX, false, `${motion}-${facing} never mirrors`);
+      assert.equal(sprite.texture.key, PRODUCTION_SHEET);
+      assert.equal(sprite.scaleX, 1);
+      assert.equal(sprite.scaleY, 1);
+    }
+  }
+  assertBodyGeometryPreserved(sprite, bodyBefore, "production sync");
 });
 
-test("player uses committed attack facing while velocity selects only idle or move", () => {
-  const player = createSprite({
-    kind: "player",
-    sheetKey: TEXTURES.playerOpeningSheet,
-    velocity: { x: 0, y: -90 },
-    presentationFacing: "down"
+test("production hit override holds for 120ms and then restores the classified motion", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 121 }
   });
-  const scene = {
-    elapsedSurvivalMs: 0,
-    player: player.sprite,
-    playerFacingAngle: 0
-  };
+  registerOpeningCharacterAnimations(scene);
+  const sprite = createPlayerSprite({ textureKey: PRODUCTION_SHEET, animationFamily: "production", scale: 1 });
+  Object.assign(scene, {
+    player: sprite,
+    playerFacingAngle: -Math.PI / 2,
+    elapsedSurvivalMs: 1_000
+  });
+  sprite.body.velocity.y = -55;
+  sprite.isTinted = true;
 
   syncCharacterPresentation(scene);
+  assert.deepEqual(sprite.played, [productionKey("hit", "up")]);
+  assert.equal(sprite.flipX, false);
 
-  assert.equal(player.sprite.presentationFacing, "right");
-  assert.equal(player.sprite.flipX, true);
-  assert.deepEqual(player.played, ["player-move-right"]);
-
-  scene.playerFacingAngle = -Math.PI / 2;
+  sprite.isTinted = false;
+  scene.elapsedSurvivalMs = 1_119;
   syncCharacterPresentation(scene);
-  assert.equal(player.sprite.presentationFacing, "up");
-  assert.deepEqual(player.played, ["player-move-right", "player-move-up"]);
+  assert.deepEqual(sprite.played, [productionKey("hit", "up")]);
+
+  scene.elapsedSurvivalMs = 1_120;
+  syncCharacterPresentation(scene);
+  assert.deepEqual(sprite.played, [productionKey("hit", "up"), productionKey("forward", "up")]);
+  assert.equal(sprite.flipX, false);
 });
 
-test("static fallbacks and later-wave textures are presentation-compatible", () => {
-  const fallbackPlayer = createSprite({ kind: "player", sheetKey: TEXTURES.player });
-  const crawler = createSprite({ kind: "crawler", sheetKey: TEXTURES.enemyCrawler });
-  syncCharacterPresentation({
-    elapsedSurvivalMs: 0,
-    player: fallbackPlayer.sprite,
-    enemies: { getChildren: () => [crawler.sprite] }
+test("legacy sync keeps the idle, move and hit contract with the right-row mirror", () => {
+  const scene = createAnimationScene({ frameTotals: { [LEGACY_SHEET]: 49 } });
+  registerOpeningCharacterAnimations(scene);
+  const sprite = createPlayerSprite({ textureKey: LEGACY_SHEET, animationFamily: "legacy", scale: 1.2 });
+  Object.assign(scene, {
+    player: sprite,
+    playerFacingAngle: -Math.PI / 2,
+    elapsedSurvivalMs: 1_000
   });
-  assert.deepEqual(fallbackPlayer.played, []);
-  assert.deepEqual(crawler.played, []);
+  sprite.body.velocity.y = -55;
+  sprite.isTinted = true;
+
+  syncCharacterPresentation(scene);
+  assert.deepEqual(sprite.played, [legacyKey("hit", "up")]);
+  assert.equal(sprite.flipX, false);
+  assert.equal(sprite.scaleX, 1.2);
+
+  sprite.isTinted = false;
+  scene.elapsedSurvivalMs = 1_119;
+  syncCharacterPresentation(scene);
+  assert.deepEqual(sprite.played, [legacyKey("hit", "up")]);
+
+  scene.elapsedSurvivalMs = 1_120;
+  syncCharacterPresentation(scene);
+  assert.deepEqual(sprite.played, [legacyKey("hit", "up"), legacyKey("move", "up")]);
+
+  scene.playerFacingAngle = 0;
+  sprite.body.velocity.y = 0;
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.flipX, true, "legacy keeps the historical right mirror");
+  assert.equal(sprite.anims.currentAnim.key, legacyKey("idle", "right"));
+  assert.equal(sprite.scaleX, 1.2);
+});
+
+test("prototype sync consumes only the override and swaps sheets through the body-preserving path", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29 }
+  });
+  registerOpeningCharacterAnimations(scene);
+  const sprite = createPlayerSprite({ textureKey: PROTOTYPE_SHEET, animationFamily: "prototype", scale: 1 });
+  Object.assign(scene, {
+    player: sprite,
+    playerFacingAngle: 0.123,
+    elapsedSurvivalMs: 5_000,
+    isPaused: false
+  });
+  const sceneBefore = {
+    playerFacingAngle: scene.playerFacingAngle,
+    elapsedSurvivalMs: scene.elapsedSurvivalMs,
+    isPaused: scene.isPaused
+  };
+  const bodyBefore = snapshotBodyGeometry(sprite);
+
+  const expectedKeys = new Set();
+  for (const facing of FACING_NAMES) {
+    for (const motion of ALL_MOTIONS) {
+      const angle = FACING_ANGLES[facing];
+      const velocity = velocityForMotion(motion, angle);
+      const override = {
+        facingAngle: angle,
+        velocityX: velocity.x,
+        velocityY: velocity.y,
+        hit: motion === "hit"
+      };
+      const expected = expectedPrototypeSync(facing, motion);
+      const context = `${facing}-${motion}`;
+      expectedKeys.add(expected.key);
+
+      syncCharacterPresentation(scene, override);
+
+      assert.equal(sprite.texture.key, expected.textureKey, `${context} texture`);
+      assert.equal(sprite.scaleX, expected.scale, `${context} scaleX`);
+      assert.equal(sprite.scaleY, expected.scale, `${context} scaleY`);
+      assert.equal(sprite.flipX, expected.flipX, `${context} flipX`);
+      assert.equal(sprite.anims.currentAnim.key, expected.key, `${context} animation key`);
+      assertBodyGeometryPreserved(sprite, bodyBefore, context);
+    }
+  }
+  for (const key of expectedKeys) {
+    assert.ok(sprite.played.includes(key), `played ${key}`);
+  }
+
+  assert.deepEqual(
+    {
+      playerFacingAngle: scene.playerFacingAngle,
+      elapsedSurvivalMs: scene.elapsedSurvivalMs,
+      isPaused: scene.isPaused
+    },
+    sceneBefore,
+    "overrides never leak into scene gameplay state"
+  );
+  assert.deepEqual(
+    { x: sprite.body.velocity.x, y: sprite.body.velocity.y },
+    { x: 0, y: 0 },
+    "overrides never leak into the Arcade body velocity"
+  );
+  assert.equal(sprite.presentationHitUntilMs, undefined, "presentation never writes a hit deadline");
+});
+
+test("static fallback sprites stay untouched", () => {
+  const scene = createAnimationScene({ frameTotals: {} });
+  const sprite = createPlayerSprite({ textureKey: STATIC_TEXTURE, animationFamily: "static", scale: 1.2 });
+  Object.assign(scene, { player: sprite, playerFacingAngle: 0, elapsedSurvivalMs: 0 });
+
+  syncCharacterPresentation(scene);
+
+  assert.deepEqual(sprite.played, []);
+  assert.equal(sprite.texture.key, STATIC_TEXTURE);
+});
+
+test("sync warns once and stops playback when the target animation is missing", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 121 },
+    throwOnCreateIndex: 12 + 1
+  });
+  registerOpeningCharacterAnimations(scene);
+  assert.equal(scene.warnings.length, 1);
+  const sprite = createPlayerSprite({ textureKey: PRODUCTION_SHEET, animationFamily: "production", scale: 1 });
+  Object.assign(scene, { player: sprite, playerFacingAngle: 0, elapsedSurvivalMs: 0 });
+
+  syncCharacterPresentation(scene);
+  syncCharacterPresentation(scene);
+
+  assert.deepEqual(sprite.played, []);
+  assert.equal(scene.warnings.length, 1, "the failed sheet warns once across registration and sync");
 });
 
 test("player and enemy creation retain the approved physics geometry and order", async () => {
@@ -315,20 +700,24 @@ test("player and enemy creation retain the approved physics geometry and order",
     enemies.indexOf("  spawnScp049Boss()"),
     enemies.indexOf("  updateBoss()")
   );
+  assert.match(createPlayer, /resolveCharacterPresentation\(this, DEFAULT_CHARACTER_ID\)/);
+  assert.match(createPlayer, /this\.player\.characterId = presentation\.characterId;/);
+  assert.match(createPlayer, /this\.player\.presentationAnimationFamily = presentation\.animationFamily;/);
   assert.match(createPlayer, /physics\.add\.sprite/);
   const creation = createPlayer.indexOf("physics.add.sprite");
   const collide = createPlayer.indexOf("setCollideWorldBounds(true)");
   const body = createPlayer.indexOf("body.setSize(24, 24)");
   const scale = createPlayer.indexOf("applyDisplayScalePreservingBody");
   assert.ok(creation < collide && collide < body && body < scale);
+  assert.match(createPlayer, /applyDisplayScalePreservingBody\(this\.player, presentation\.displayScale\)/);
 
   assert.match(createGroups, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
   assert.doesNotMatch(createGroups, /createCallback/);
-  assert.doesNotMatch(createGroups, /resolveCharacterTexture/);
+  assert.doesNotMatch(createGroups, /resolveCharacterPresentation/);
   assert.equal(
-    world.match(/resolveCharacterTexture\s*\(/g)?.length,
+    world.match(/resolveCharacterPresentation\s*\(/g)?.length,
     1,
-    "resolveCharacterTexture must be called only for the player"
+    "resolveCharacterPresentation must be called only for the player"
   );
   assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.setCircle\(config\.bodyRadius\)/);
@@ -372,5 +761,8 @@ test("presentation adapter source never writes gameplay, body or timer state", a
   );
   assert.doesNotMatch(source, /\.body\.(?:setSize|setOffset|setCircle|setVelocity)/);
   assert.doesNotMatch(source, /\.(?:health|moveSpeed|elapsedSurvivalMs|playerInvulnerableUntilMs)\s*=/);
+  assert.doesNotMatch(source, /scene\.playerFacingAngle\s*=/);
+  assert.doesNotMatch(source, /presentationHitUntilMs\s*=/);
   assert.doesNotMatch(source, /\.time\.(?:addEvent|delayedCall)/);
+  assert.doesNotMatch(source, /\.on\(|\.once\(/);
 });

@@ -5,6 +5,9 @@ import * as contract from "../src/art/openingVisualContract.js";
 const {
   OPENING_VIEWPORT,
   OPENING_ASSET_SPECS,
+  OPENING_PLAYER_ASSET_SPECS,
+  DEFAULT_OPENING_PLAYER_ASSET_ID,
+  DEFAULT_OPENING_PLAYER_ASSET_SPEC,
   HUD_REGIONS,
   OPENING_FACILITY_ZONES
 } = contract;
@@ -63,6 +66,42 @@ function regionsOverlap(first, second) {
   );
 }
 
+test("opening player asset specs freeze the named legacy and response operative contracts", () => {
+  assert.deepEqual(OPENING_PLAYER_ASSET_SPECS.legacy, {
+    frameWidth: 48,
+    frameHeight: 48,
+    directions: 4,
+    framesPerDirection: 12,
+    totalFrames: 48,
+    displayScale: 1.2,
+    motions: { idle: 4, move: 6, hit: 2 }
+  });
+  assert.deepEqual(OPENING_PLAYER_ASSET_SPECS.responseOperative, {
+    frameWidth: 64,
+    frameHeight: 64,
+    directions: 4,
+    framesPerDirection: 30,
+    totalFrames: 120,
+    displayScale: 1,
+    motions: {
+      idle: 4,
+      forward: 6,
+      backward: 6,
+      strafeLeft: 6,
+      strafeRight: 6,
+      hit: 2
+    }
+  });
+  assert.equal(DEFAULT_OPENING_PLAYER_ASSET_ID, "legacy");
+  assert.equal(DEFAULT_OPENING_PLAYER_ASSET_SPEC, OPENING_PLAYER_ASSET_SPECS.legacy);
+  assert.equal(OPENING_ASSET_SPECS.player, DEFAULT_OPENING_PLAYER_ASSET_SPEC);
+  assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS), true);
+  assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS.legacy), true);
+  assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS.responseOperative), true);
+  assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS.legacy.motions), true);
+  assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS.responseOperative.motions), true);
+});
+
 test("HUD regions freeze five non-overlapping panels inside the approved viewport", () => {
   assert.deepEqual(Object.keys(HUD_REGIONS), [
     "mission",
@@ -99,14 +138,6 @@ test("HUD regions freeze five non-overlapping panels inside the approved viewpor
 test("opening visual contract fixes the approved production dimensions", () => {
   assert.deepEqual(OPENING_VIEWPORT, { width: 960, height: 540 });
   assert.deepEqual(OPENING_ASSET_SPECS.facilityModule.allowedSizes, [64, 96, 128]);
-  assert.deepEqual(OPENING_ASSET_SPECS.player, {
-    frameWidth: 48,
-    frameHeight: 48,
-    directions: 4,
-    idleFrames: 4,
-    moveFrames: 6,
-    hitFrames: 2
-  });
   assert.deepEqual(OPENING_ASSET_SPECS.weaponIllustration, { width: 96, height: 96 });
   assert.equal(HUD_REGIONS.mission.anchor, "top-left");
   assert.equal(HUD_REGIONS.vitals.anchor, "bottom-left");

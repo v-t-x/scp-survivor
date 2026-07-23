@@ -13,6 +13,8 @@
 export const TEXTURES = {
   player: "player-rect",
   playerOpeningSheet: "player-opening-sheet",
+  playerResponseOperativePrototypeSheet: "player-response-operative-prototype-sheet",
+  playerResponseOperativeSheet: "player-response-operative-sheet",
   enemyInfected: "enemy-infected",
   infectedOpeningSheet: "infected-opening-sheet",
   r17Drifter: "r17-drifter",
