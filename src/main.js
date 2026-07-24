@@ -152,6 +152,20 @@ class PrototypeScene extends Phaser.Scene {
     this.isPaused = false;
     this.createStartScreen();
     this.updateUI();
+
+    // Gate 2 development seam: only an explicit ?playerCharacterPrototype=1 dev
+    // URL installs the read-only visual state bridge. Production builds never
+    // include it because import.meta.env.DEV is statically false there.
+    if (
+      import.meta.env?.DEV === true
+      && new URLSearchParams(window.location.search).get("playerCharacterPrototype") === "1"
+    ) {
+      import("./art/playerCharacterVisualStateDriver.js")
+        .then(({ installPlayerCharacterVisualStateBridge }) => {
+          installPlayerCharacterVisualStateBridge(this, window);
+        })
+        .catch((error) => console.error("[player-character-prototype]", error));
+    }
   }
 
 
