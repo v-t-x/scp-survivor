@@ -276,7 +276,7 @@ build_player_character_assets.py production --down-board PATH --down-hit-board P
 
 ```python
 FRAME_SIZE = 64
-TARGET_VISIBLE_HEIGHT = 48
+TARGET_VISIBLE_HEIGHT = 50  # 修订：2026-07-24，原为 48，见下方修订注记
 MIN_VISIBLE_HEIGHT = 44
 MAX_VISIBLE_HEIGHT = 50
 MAX_VISIBLE_WIDTH = 60
@@ -300,6 +300,10 @@ PROTOTYPE_SOURCE_CELLS = (0, 1, 2, 3, 6, 7, 8, 9, 10, 11,
 - `prototype` 只提取 `PROTOTYPE_SOURCE_CELLS`，按 idle/forward/backward/strafeLeft/strafeRight 连续打包成 28 帧单行 1792×64；不得读取 legacy sheet，不得生成 hit 或其他方向，也不得用空 cell 凑成 30/120 帧。
 - `production` 的 down 0–27 原样复用 Gate 2 已接受 source board；down 28–29 来自独立 hit board；left/right/up 全部来自各自原生板。
 - production 组装前比较 left/right 的归一化 alpha hash；若整行满足镜像相等则失败。
+
+> **修订注记（2026-07-24，Task 5 Step 9）**：`TARGET_VISIBLE_HEIGHT` 由 48 修订为 50。依据：Gate 2 资源门禁反馈——union-max 归一化语义下 target=48 使各 motion 中位可见高度恒为 47，低于合同要求的 48–50，且与 legacy 各方向中位显示高度（50.4）漂移 3.4px 超过批准的 2px；target=50 时 28 帧全部落在 48–50（仍在批准的 44–50 帧区间内），五个 motion 中位数为 49–50，最大显示漂移 1.4px。48 本身是 Task 2 选择的工程常量而非设计批准值，设计批准的是 44–50 区间与漂移 ≤2px，本次修订不越界。Gate 1 已归档剪影仍按 48 记录（历史事实不动）；此后 silhouette/prototype/production 输出统一为 50 目标。
+
+> **修订注记（2026-07-24，Task 5 Step 11/12）**：main.js 开发缝新增 `?playerCharacterPrototype=live` 实时预览门。起因：首次交付试玩时发现 `=1` 只安装只读摆姿 bridge（烟雾测试驱动用），正常对局内没有任何代码会置 `presentationPrototypeEnabled`，用户玩不到原型。live 门在每帧 scene update 后把真实 gameplay 状态（playerFacingAngle、body.velocity、isTinted）刷新进 sticky override 并置位 enable flag——帧同步本就按 sticky override 分发，因此 Task 4 合同与 driver 均零改动；hit 用 `isTinted` 近似（模块级 hit 窗口不可达，预览可接受）。两门同样只在 `import.meta.env.DEV === true` 下生效，生产构建死代码消除（dist grep 无 `playerCharacterPrototype`）。已实测：出生朝下 idle 显示原型（琥珀像素指纹 15–20，legacy 恒 0），左移回退 legacy。同日按用户验收反馈二次修订：live 门将呈现朝向固定为 down（仅呈现，游戏朝向/瞄准不受影响），WASD 任意方向都触发原型动画（S=forward、W=backward、A/D=strafe、站立=idle），避免「只有朝下才能看到新角色」的试玩死角；受击仍回退 legacy hit（原型无 hit 帧，Gate 3 补齐）。
 
 - [ ] **Step 4: 运行 GREEN 与既有像素工具回归**
 
@@ -791,8 +795,14 @@ export function createPlayerCharacterVisualStateDriver({
       player.presentationSmokeOverride = override;
       syncPresentation(scene, override);
       const body = bodySnapshot(player.body);
-      if (JSON.stringify(body) !== JSON.stringify(beforeBody)) {
-        throw new Error(`player body changed in visual state ${name}`);
+      // 修订（2026-07-24，Step 11 首次真实浏览器集成反馈）：只比较世界几何
+      // (x/y/width/height)。applyTextureAndScalePreservingBody 会按新帧的
+      // displayOrigin 重算 body.offset 以保持世界几何不变，offset 本身合法变化；
+      // 快照仍报告 offset 但不纳入保护比较。
+      for (const field of ["x", "y", "width", "height"]) {
+        if (body[field] !== beforeBody[field]) {
+          throw new Error(`player body ${field} changed in visual state ${name}`);
+        }
       }
       return Object.freeze({
         name,

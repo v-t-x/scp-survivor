@@ -136,6 +136,11 @@ export const SPRITESHEET_ASSETS = [
     frameConfig: { frameWidth: 48, frameHeight: 48 }
   },
   {
+    key: TEXTURES.playerResponseOperativePrototypeSheet,
+    path: "assets/art/characters/player-response-operative-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
     key: TEXTURES.r17Drifter,
     path: "assets/art/enemies/r17-drifter.png",
     frameConfig: { frameWidth: 48, frameHeight: 48 }

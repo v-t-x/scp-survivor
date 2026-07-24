@@ -114,8 +114,14 @@ export function createPlayerCharacterVisualStateDriver({
       player.presentationSmokeOverride = override;
       syncPresentation(scene, override);
       const body = bodySnapshot(player.body);
-      if (JSON.stringify(body) !== JSON.stringify(beforeBody)) {
-        throw new Error(`player body changed in visual state ${name}`);
+      // World geometry (x/y/width/height) is the gameplay-relevant invariant.
+      // applyTextureAndScalePreservingBody legitimately recomputes body.offset
+      // from the new frame's displayOrigin to keep that world geometry stable,
+      // so offsets are reported in the snapshot but excluded from this guard.
+      for (const field of ["x", "y", "width", "height"]) {
+        if (body[field] !== beforeBody[field]) {
+          throw new Error(`player body ${field} changed in visual state ${name}`);
+        }
       }
       return Object.freeze({
         name,

@@ -7,7 +7,11 @@ from PIL import Image
 
 
 FRAME_SIZE = 64
-TARGET_VISIBLE_HEIGHT = 48
+# Revised 48 -> 50 on 2026-07-24 from Gate 2 asset-gate feedback: with union-max
+# normalization the per-motion medians land one pixel below target at 48, while
+# 50 puts every motion median at 49 (display drift 1.4px <= approved 2px) and
+# keeps every frame inside the approved 44-50 band.
+TARGET_VISIBLE_HEIGHT = 50
 MIN_VISIBLE_HEIGHT = 44
 MAX_VISIBLE_HEIGHT = 50
 MAX_VISIBLE_WIDTH = 60

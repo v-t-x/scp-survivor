@@ -95,12 +95,21 @@ const approvedEnemySheets = [
   { key: "r17-bud", path: "assets/art/enemies/r17-bud.png", size: [128, 32], frame: [32, 32], visibleExtent: 22 }
 ];
 
+const approvedPlayerPrototypeSheets = [
+  {
+    key: "player-response-operative-prototype-sheet",
+    path: "assets/art/characters/player-response-operative-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  }
+];
+
 const approvedSpritesheets = [
   ...approvedCharacterSheets.map(({ key, path }) => ({
     key,
     path,
     frameConfig: { frameWidth: 48, frameHeight: 48 }
   })),
+  ...approvedPlayerPrototypeSheets,
   ...approvedEnemySheets.map(({ key, path, frame: [frameWidth, frameHeight] }) => ({
     key,
     path,
@@ -466,7 +475,7 @@ test("character frame gate rejects recoloring without alpha-shape motion", () =>
   );
 });
 
-test("response operative texture keys are declared, unique and not preloaded", () => {
+test("response operative texture keys are declared, unique, with only the approved prototype preloaded", () => {
   assert.equal(TEXTURES.playerResponseOperativePrototypeSheet, "player-response-operative-prototype-sheet");
   assert.equal(TEXTURES.playerResponseOperativeSheet, "player-response-operative-sheet");
 
@@ -484,9 +493,18 @@ test("response operative texture keys are declared, unique and not preloaded", (
   for (const key of [TEXTURES.playerResponseOperativePrototypeSheet, TEXTURES.playerResponseOperativeSheet]) {
     assert.equal(r17Values.has(key), false, `${key} must not collide with R-17 keys`);
     assert.equal(legacyValues.has(key), false, `${key} must not collide with legacy fallback keys`);
-    assert.equal(spritesheetKeys.has(key), false, `${key} must not be preloaded before its asset exists`);
     assert.equal(imageKeys.has(key), false, `${key} must not be preloaded as a static image`);
   }
+  assert.equal(
+    spritesheetKeys.has(TEXTURES.playerResponseOperativePrototypeSheet),
+    true,
+    "prototype sheet became an approved preloaded asset at Gate 2"
+  );
+  assert.equal(
+    spritesheetKeys.has(TEXTURES.playerResponseOperativeSheet),
+    false,
+    "production sheet must not be preloaded before its asset exists"
+  );
 });
 
 test("production manifest declares the approved static vertical slice", () => {

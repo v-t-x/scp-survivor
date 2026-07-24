@@ -380,6 +380,70 @@ test("a throwing syncPresentation restores the presentation before rethrowing", 
   assert.throws(() => driver.applyState("down-idle"), /already restored/);
 });
 
+test("applyState tolerates offset-only recomputation when the frame geometry changes", () => {
+  // Reproduces the first real-browser smoke failure: the live player spawns on
+  // the legacy 48px frame at scale 1.2, and Phaser's setTexture updates the
+  // frame size and displayOrigin. applyTextureAndScalePreservingBody then
+  // recomputes body.offset to keep the world geometry (x/y/width/height)
+  // stable; the offset itself legitimately changes.
+  const { scene, player } = createFixture();
+  player.texture.key = LEGACY_SHEET;
+  player.presentationAnimationFamily = "legacy";
+  player.scaleX = 1.2;
+  player.scaleY = 1.2;
+  player.anims.currentAnim = { key: `${DEFAULT_CHARACTER_ID}-legacy-idle-down` };
+  player.setTexture = function setTexture(key) {
+    this.texture.key = key;
+    const frameSize = key === PROTOTYPE_SHEET ? FRAME_SIZE : 48;
+    this.width = frameSize;
+    this.height = frameSize;
+    this.displayOriginX = frameSize / 2;
+    this.displayOriginY = frameSize / 2;
+    return this;
+  };
+  player.setTexture(LEGACY_SHEET);
+  player.body.sourceWidth = 20;
+  player.body.sourceHeight = 20;
+  player.body.offset.set(24, 24);
+  player.body.updateFromGameObject();
+  assert.equal(player.body.x, 400);
+  assert.equal(player.body.width, 24);
+
+  const driver = createPlayerCharacterVisualStateDriver({ scene });
+
+  const prototypeResult = driver.applyState("down-idle");
+  assert.equal(prototypeResult.textureKey, PROTOTYPE_SHEET);
+  assert.deepEqual(prototypeResult.body, {
+    x: 400, y: 300, width: 24, height: 24, offsetX: 32, offsetY: 32
+  }, "prototype frame recomputes the offset but keeps world geometry");
+
+  const legacyResult = driver.applyState("left-forward");
+  assert.equal(legacyResult.textureKey, LEGACY_SHEET);
+  assert.deepEqual(legacyResult.body, {
+    x: 400, y: 300, width: 24, height: 24, offsetX: 24, offsetY: 24
+  }, "legacy frame restores the original offset and keeps world geometry");
+
+  driver.restore();
+});
+
+test("applyState throws and restores when world body geometry changes", () => {
+  const { scene, player } = createFixture();
+  const driver = createPlayerCharacterVisualStateDriver({
+    scene,
+    syncPresentation() {
+      player.body.width = 99;
+    }
+  });
+
+  assert.throws(
+    () => driver.applyState("down-idle"),
+    /player body width changed in visual state down-idle/
+  );
+  assert.equal(player.body.width, 24, "restore returns the live body to 24px");
+  assert.equal(player.texture.key, PROTOTYPE_SHEET);
+  assert.throws(() => driver.applyState("down-idle"), /already restored/);
+});
+
 test("driver never touches RNG or storage even when both throw on access", () => {
   const originalRandom = Math.random;
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");

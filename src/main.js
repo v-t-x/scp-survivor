@@ -166,6 +166,30 @@ class PrototypeScene extends Phaser.Scene {
         })
         .catch((error) => console.error("[player-character-prototype]", error));
     }
+    // Gate 2 live preview: ?playerCharacterPrototype=live keeps a sticky
+    // presentation override refreshed from real gameplay state every frame,
+    // so the down-direction prototype plays during normal dev sessions.
+    // Equally dev-only: production builds statically drop this branch.
+    if (
+      import.meta.env?.DEV === true
+      && new URLSearchParams(window.location.search).get("playerCharacterPrototype") === "live"
+    ) {
+      const liveOverride = { facingAngle: 0, velocityX: 0, velocityY: 0, hit: false };
+      this.events.on("update", () => {
+        if (!this.player?.body) {
+          return;
+        }
+        // Pin the presentation facing to down so every WASD motion exercises
+        // the prototype locomotion set (the sheet is down-only at Gate 2);
+        // gameplay facing/aim is untouched because this is presentation-only.
+        liveOverride.facingAngle = Math.PI / 2;
+        liveOverride.velocityX = this.player.body.velocity.x;
+        liveOverride.velocityY = this.player.body.velocity.y;
+        liveOverride.hit = this.player.isTinted === true;
+        this.player.presentationPrototypeEnabled = true;
+        this.player.presentationSmokeOverride = liveOverride;
+      });
+    }
   }
 
 

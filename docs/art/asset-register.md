@@ -1151,3 +1151,59 @@ Constraints: strong hair/head silhouette; one stable identification color coveri
 Avoid: chibi, oversized head, school uniform, idol costume, swimsuit, exaggerated body proportions, 3D, isometric, side-view, smooth painting, soft transparency
 Variant C (refine an approved identity, keep it recognizable): containment tech specialist; clean hooded head profile with a slim teal visor slit; tall slim backpack carrying a short comms mast tipped with a small teal light; large desaturated TEAL equipment panel with vertical light strips covering most of the backpack; dark navy and graphite uniform; compact rifle held low; backpack, mast and teal panel keep this character unmistakable at tiny size.
 ```
+
+## 玩家角色 Gate 2 原型
+
+本节记录玩家角色第一阶段 Gate 2（down 方向移动原型验收门）的全部生成。两轮方向板于 2026-07-24 使用 Kimi 内置 image_generation 插件（经 agent-gw `generate_image` 网关，1:1、1K、opaque 背景）生成；工具未公开具体模型名，故不推断；该生成服务的输出权利条款同样须在商业发布前复核。两轮均以 Gate 1 已接受剪影 A（[P64](#p64-gate-1-round-3-male-variant-a-accepted)）作为 Image 1 唯一身份、造型、识别色与像素风参考输入；没有使用用户截图、SCP Wiki 图片、素材包或其他第三方图像作为输入；没有使用 CLI/API fallback。所有后处理使用 codex runtime Python 3.12（Pillow 12.2）执行。raw、cutout、被拒轮次、提示词、浏览器 smoke 截图与状态快照全部保留在 `.superpowers/sdd/player-character/gate-2/`，该目录为本地审计物，不暂存。
+
+2026-07-24 用户验收结论：原型经 `?playerCharacterPrototype=live` 实时预览试玩（WASD 全触发原型动画、呈现朝向钉死 down），用户回复"可以"，批准进入 Gate 3 完整 120 帧四方向 production，Gate 2 以此形式验收通过；造型与尺寸无负反馈。原型在 production 用户接受前不删除、不替换默认角色；当前仅经开发门显示，`DEFAULT_OPENING_PLAYER_ASSET_ID` 仍为 `legacy`。
+
+### Gate 2 已接受原型（r2，2026-07-24 用户批准进入 Gate 3）
+
+| Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| player-response-operative-prototype（琥珀侦察尖兵 down 方向移动原型表） | PNG | `public/assets/art/characters/player-response-operative-prototype.png` | Kimi 内置 image_generation（agent-gw `generate_image`，模型名未由工具暴露）+ bundled `remove_chroma_key.py` + `gate-2/clean_board_components.py` + `scripts/art/build_player_character_assets.py` | 2026-07-24 | [P70](#p70-gate-2-down-prototype-r2-accepted)；audit raw `gate-2/raw/down-prototype.png`；raw SHA-256 `9643fadffb8cba64be3acdc2b5d0099f52282ad156d40e1d8b2b8a3bb073b48a` | 无手绘；bundled helper chroma 抠图后，`clean_board_components.py` 连通分量清洗移除 5499 个游离像素（含 raw 左下"AI生成"水印残留，水印整体落在 row 6 空白区，未被读入任何帧），输出 clean cutout SHA-256 `6db1772ae5c07dd5ee0170b5a6d5be0f0c186035eab27a393a7353aa55732221`；随后 `build_player_character_assets.py prototype`（6×6 网格裁帧、Pillow nearest、二值 alpha、可见高归一 50、五动作中位 49–50、baseline 对齐）输出 prototype SHA-256 `584d714f33f01429bf842c3e3bc1f3d95e2df61fe7f84c613afd2e010081cca2` | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 原型；商业发布前复核 | Gate 2 原型验收通过（2026-07-24 用户试玩后批准进入 Gate 3）；仅 down 方向五动作原型准入，不含 hit、left/right/up 方向与 legacy 像素；不等同于 production 或商业发布准入 | 1792×64（28 帧 64×64：idle 4 + forward/backward/strafeLeft/strafeRight 各 6，二值 alpha） | 无 |
+
+### 处理与审计产物
+
+- 运行时接入：Task 4 运行时角色呈现合同（commit `d01a46c`，`driver` 身体保护收窄为世界几何比较）+ `main.js` 双开发门 `?playerCharacterPrototype=1`（bridge 烟雾）与 `=live`（实时预览，呈现朝向钉死 down，WASD 全触发原型动画）；`manifest.js` 新增 `playerCharacterPrototype` entry；`build` 通过且 dist grep 无 `playerCharacterPrototype` 泄漏到默认路径。
+- 浏览器 smoke：`.superpowers/sdd/player-character/gate-2/run_prototype_smoke.py`，最终输出 `SMOKE_OK: 24 states, 11 screenshots, 0 console errors`；截图与 `state-snapshots.json` 存于 `gate-2/`，不暂存。WebBridge 后台标签页 RAF 冻结经 `Page.addScriptToEvaluateOnNewDocument` 注入 `requestAnimationFrame→setTimeout` shim 解决；live 模式以琥珀像素指纹（sheet 688、上屏 15–63、legacy 0–16）与 WASD 实测验证。
+- 评审页：`gate-2/gate-2-review.html`（含 `=live` 说明与 WASD 行为），不暂存。
+- 测试证据：Node 全套 339/339（含 driver 12、art-assets、player-character-assets 原型合同）；Python 13/13（builder）；与基线相比无回归。
+
+### 筛选与失败尝试
+
+- 第一轮（r1，2026-07-24，P71）：生成结果为 4×5 网格而非指定的 6×6、backward 行画成背面（违反"全部正面朝向"约束）、画面带"AI生成"水印，Agent 硬门槛不通过，未进入抠图与组装，归档于 `gate-2/rejected-r1/`。raw SHA-256 `6581a8e19b4ba4dd7ccd015fa76f0e1ba7326001ad05f53a9abb7972d19d2300`；prompt 归档 SHA-256 `5ea887bd3b8cd182930b675db0ee6fe7f1c1f363a27f9b1e821ebfdc48dc10d1`。均不暂存。
+
+### P70 gate-2 down prototype r2 accepted
+
+```text
+Use case: identity-preserve
+Asset type: source pose board for one-direction prototype of a production 64x64 top-down 2D pixel-art player spritesheet
+Input images: Image 1 is the sole approved identity, silhouette, uniform, protection gear, identification color and pixel-art reference
+Primary request: exactly 28 isolated poses of the same adult male Foundation anomalous-response operative arranged in a precise 6-column by 6-row grid of 36 equal square cells that fills the entire canvas edge to edge; every pose natively faces straight down toward the viewer with the amber visor band clearly visible
+Layout: row 1 columns 1-4 are four idle phases, columns 5-6 stay empty flat green; row 2 columns 1-6 are six forward tactical walk phases; row 3 columns 1-6 are six backward tactical walk phases; row 4 columns 1-6 are six left-strafe phases; row 5 columns 1-6 are six right-strafe phases; row 6 columns 1-6 stay empty flat green
+Facing: all 28 poses show the FRONT of the character facing the viewer; the backward-walk row keeps the identical front view and only reverses the leg stepping; never draw the back, backpack or rear of the character
+Motion: real alternating boot contact, knee bend, hip/shoulder counter-rotation and compact weapon stabilization; backward visibly plants heels and withdraws weight; strafes use distinct crossing/opening footwork without rotating the torso away from down
+Scene/backdrop: perfectly flat uniform #00ff00 chroma-key background in every cell including the 8 empty cells, no cell border, no grid lines
+Style/medium: detailed orthographic top-down 2D pixel art, coarse hard pixel clusters, realistic adult proportions, same palette and identity as Image 1, no antialiasing
+Composition/framing: one centered pose per populated cell, equal scale, full body, stable baseline, generous cell padding, no overlap between cells
+Constraints: every populated pose differs by real limb articulation after translation alignment; preserve exact hair/head silhouette, respirator/goggles, tactical uniform, amber visor identification color and compact held firearm; weapon keeps pointing down; no mirroring, recolor-only, translation-only, bob-only or scale-only variants; no shadow, floor, text, logo, watermark, muzzle flash, blood, extra person, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, 3D, isometric, side-view, rear view, smooth painting, soft transparency, duplicated poses, wrong column count, missing cells
+```
+
+### P71 gate-2 down prototype r1 rejected
+
+```text
+Use case: identity-preserve
+Asset type: source pose board for one-direction prototype of a production 64x64 top-down 2D pixel-art player spritesheet
+Input images: Image 1 is the sole approved identity, silhouette, uniform, protection gear, identification color and pixel-art reference
+Primary request: exactly 28 isolated poses of the same adult male Foundation anomalous-response operative in a precise 6-row by 6-column grid, all natively facing down toward the viewer
+Layout: row 1 columns 1-4 are idle phases and columns 5-6 empty; row 2 is forward tactical walk phases; row 3 is backward tactical walk phases; row 4 is left-strafe phases; row 5 is right-strafe phases; row 6 empty
+Motion: real alternating boot contact, knee bend, hip/shoulder counter-rotation and compact weapon stabilization; backward visibly plants heels and withdraws weight; strafes use distinct crossing/opening footwork without rotating the torso away from down
+Scene/backdrop: perfectly flat uniform #00ff00 chroma-key background in every cell, no cell border
+Style/medium: detailed orthographic top-down 2D pixel art, coarse hard pixel clusters, realistic adult proportions, same palette and identity as Image 1, no antialiasing
+Composition/framing: equal scale, full body, stable baseline, generous cell padding, no overlap
+Constraints: every populated pose differs by real limb articulation after translation alignment; preserve exact hair/head silhouette, respirator/goggles, tactical uniform, identification color and compact held firearm; weapon keeps pointing down; no mirroring, recolor-only, translation-only, bob-only or scale-only variants; no shadow, floor, text, logo, watermark, muzzle flash, blood, extra person, floating weapon or separate shoulder module
+Avoid: chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency, duplicated poses
+```

@@ -14,6 +14,9 @@ FRAME_SIZE = 64
 BASELINE_Y = 56
 BOARD_SIZE = 1024
 CONTENT_HEIGHT = 48
+# Output height target after the 2026-07-24 Gate 2 revision
+# (builder TARGET_VISIBLE_HEIGHT 48 -> 50).
+TARGET_HEIGHT = 50
 HIT_BOARD_WIDTH = 240
 HIT_BOARD_HEIGHT = 120
 HIT_WIDTHS = (50, 54)
@@ -189,12 +192,15 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
         )
         return (result, output)
 
-    def assert_frame_geometry(self, frame, expected_width: int) -> None:
+    def assert_frame_geometry(self, frame, source_width: int) -> None:
         bbox = visible_bbox(frame)
         self.assertIsNotNone(bbox)
         left, top, right, bottom = bbox
-        self.assertEqual(right - left, expected_width)
-        self.assertEqual(bottom - top, CONTENT_HEIGHT)
+        # Every fixture board has uniform content height CONTENT_HEIGHT, so the
+        # builder's union-height scale is exactly TARGET_HEIGHT / CONTENT_HEIGHT.
+        scale = TARGET_HEIGHT / CONTENT_HEIGHT
+        self.assertEqual(right - left, max(1, round(source_width * scale)))
+        self.assertEqual(bottom - top, TARGET_HEIGHT)
         # The last opaque row is the baseline row y=56 (PIL bbox bottom is exclusive).
         self.assertEqual(bottom - 1, BASELINE_Y)
         # Horizontal center must be x=32; left+right-1 is 63 (even width) or 64 (odd width).
@@ -205,7 +211,7 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
         self.assertEqual({pixel[3] for pixel in pixels}, {0, 255})
         self.assertLessEqual(len({pixel[:3] for pixel in pixels if pixel[3] == 255}), 32)
 
-    def test_silhouette_is_64_square_with_48_pixel_subject_and_y56_baseline(self) -> None:
+    def test_silhouette_is_64_square_with_50_pixel_subject_and_y56_baseline(self) -> None:
         from PIL import Image
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -224,7 +230,7 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
             bbox = visible_bbox(silhouette)
             self.assertIsNotNone(bbox)
             left, top, right, bottom = bbox
-            self.assertEqual(bottom - top, 48)
+            self.assertEqual(bottom - top, TARGET_HEIGHT)
             self.assertEqual(bottom - 1, BASELINE_Y)
 
     def test_preview_composites_native_silhouette_on_960x540_without_resampling(self) -> None:
