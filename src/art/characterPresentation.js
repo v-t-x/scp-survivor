@@ -402,7 +402,18 @@ export function syncCharacterPresentation(scene, presentationOverride = null) {
   }
   const characterId = sprite.characterId ?? DEFAULT_CHARACTER_ID;
   const profile = CHARACTER_PROFILES[characterId] ?? CHARACTER_PROFILES[DEFAULT_CHARACTER_ID];
-  const family = sprite.presentationAnimationFamily ?? inferAnimationFamily(sprite, profile);
+  // The Gate 2 dev driver installs a sticky override plus an enable flag on
+  // the player sprite; the regular frame sync (called without arguments) must
+  // keep honoring them until the driver restores. The prototype path stays
+  // unreachable without both the flag and an exact 28-frame sheet.
+  const stickyOverride = presentationOverride ?? sprite.presentationSmokeOverride ?? null;
+  const prototypeRequested = sprite.presentationPrototypeEnabled === true
+    && stickyOverride !== null
+    && hasExactSheet(scene, profile.prototypeSheetKey, profile.prototypeFrameCount)
+    && !isSheetFailed(scene, profile.prototypeSheetKey);
+  const family = prototypeRequested
+    ? "prototype"
+    : (sprite.presentationAnimationFamily ?? inferAnimationFamily(sprite, profile));
   if (family === "static") {
     return;
   }
@@ -410,7 +421,7 @@ export function syncCharacterPresentation(scene, presentationOverride = null) {
   const currentElapsedMs = scene.elapsedSurvivalMs ?? 0;
   // An override is consumed read-only for this frame; nothing below copies it
   // into the scene, the Arcade body, timers, RNG or persistence.
-  const input = presentationOverride ?? {
+  const input = stickyOverride ?? {
     facingAngle: scene.playerFacingAngle,
     velocityX: sprite.body.velocity.x,
     velocityY: sprite.body.velocity.y,

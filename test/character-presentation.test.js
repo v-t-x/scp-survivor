@@ -657,6 +657,95 @@ test("prototype sync consumes only the override and swaps sheets through the bod
   assert.equal(sprite.presentationHitUntilMs, undefined, "presentation never writes a hit deadline");
 });
 
+test("a legacy-spawned player honors the dev driver's sticky prototype override", () => {
+  const scene = createAnimationScene({
+    frameTotals: { [LEGACY_SHEET]: 49, [PROTOTYPE_SHEET]: 29 }
+  });
+  registerOpeningCharacterAnimations(scene);
+  // Real Gate 2 boot: createPlayer resolves with allowPrototype=false, so the
+  // sprite always spawns on the legacy sheet at 1.2 even when the 28-frame
+  // prototype sheet is preloaded; only the dev driver fields below may opt it
+  // into the prototype presentation.
+  const sprite = createPlayerSprite({ textureKey: LEGACY_SHEET, animationFamily: "legacy", scale: 1.2 });
+  Object.assign(scene, {
+    player: sprite,
+    playerFacingAngle: Math.PI / 2,
+    elapsedSurvivalMs: 1_000
+  });
+  const bodyBefore = snapshotBodyGeometry(sprite);
+
+  const downForward = velocityForMotion("forward", FACING_ANGLES.down);
+  sprite.presentationPrototypeEnabled = true;
+  sprite.presentationSmokeOverride = {
+    facingAngle: FACING_ANGLES.down,
+    velocityX: downForward.x,
+    velocityY: downForward.y,
+    hit: false
+  };
+
+  // The regular frame sync passes no override (main.js update loop), yet the
+  // sticky driver override must keep the prototype presentation across frames.
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, PROTOTYPE_SHEET, "sticky down-forward uses the prototype sheet");
+  assert.equal(sprite.scaleX, 1, "prototype displays at 1.0");
+  assert.equal(sprite.flipX, false);
+  assert.equal(sprite.anims.currentAnim.key, prototypeKey("forward"));
+  assertBodyGeometryPreserved(sprite, bodyBefore, "sticky down-forward");
+
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, PROTOTYPE_SHEET, "prototype presentation survives the next frame");
+  assert.equal(sprite.anims.currentAnim.key, prototypeKey("forward"));
+
+  // A left state immediately drops back to the original legacy sheet at 1.2.
+  const leftForward = velocityForMotion("forward", FACING_ANGLES.left);
+  sprite.presentationSmokeOverride = {
+    facingAngle: FACING_ANGLES.left,
+    velocityX: leftForward.x,
+    velocityY: leftForward.y,
+    hit: false
+  };
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, LEGACY_SHEET, "left drops back to the legacy sheet");
+  assert.equal(sprite.scaleX, 1.2, "legacy displays at 1.2");
+  assert.equal(sprite.anims.currentAnim.key, legacyKey("move", "left"));
+  assertBodyGeometryPreserved(sprite, bodyBefore, "sticky left-forward");
+
+  // A sticky hit override covers with the legacy hit animation.
+  sprite.presentationSmokeOverride = {
+    facingAngle: FACING_ANGLES.down,
+    velocityX: 0,
+    velocityY: 0,
+    hit: true
+  };
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, LEGACY_SHEET, "hit never uses the prototype sheet");
+  assert.equal(sprite.anims.currentAnim.key, legacyKey("hit", "down"));
+
+  // With the enable flag off, the same override never reaches the prototype sheet.
+  sprite.presentationPrototypeEnabled = false;
+  sprite.presentationSmokeOverride = {
+    facingAngle: FACING_ANGLES.down,
+    velocityX: downForward.x,
+    velocityY: downForward.y,
+    hit: false
+  };
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, LEGACY_SHEET, "disabled flag keeps the legacy sheet");
+  assert.equal(sprite.scaleX, 1.2);
+  assert.equal(sprite.anims.currentAnim.key, legacyKey("move", "down"));
+
+  // After the driver restores (fields deleted), normal gameplay sync resumes.
+  delete sprite.presentationPrototypeEnabled;
+  delete sprite.presentationSmokeOverride;
+  scene.playerFacingAngle = 0;
+  sprite.body.velocity.x = 55;
+  syncCharacterPresentation(scene);
+  assert.equal(sprite.texture.key, LEGACY_SHEET);
+  assert.equal(sprite.anims.currentAnim.key, legacyKey("move", "right"));
+  assert.equal(sprite.flipX, true, "legacy right mirror resumes after restore");
+  assertBodyGeometryPreserved(sprite, bodyBefore, "restored gameplay sync");
+});
+
 test("static fallback sprites stay untouched", () => {
   const scene = createAnimationScene({ frameTotals: {} });
   const sprite = createPlayerSprite({ textureKey: STATIC_TEXTURE, animationFamily: "static", scale: 1.2 });
