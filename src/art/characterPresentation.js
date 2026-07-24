@@ -51,7 +51,9 @@ const PRESENTATION_HIT_DURATION_MS = 120;
 
 // Per-AnimationManager bookkeeping: which sheet keys failed a preflight or a
 // transactional create, and which sheet keys already emitted their single
-// warning. Keyed by the scene's AnimationManager so a scene restart resets state.
+// warning. Keyed by the game-global AnimationManager, so the state lives
+// exactly as long as the loaded textures it describes; warn-once therefore
+// means once per app boot, not once per run.
 const managerStateByAnims = new WeakMap();
 
 // Presentation-only hit window per sprite. Kept off the sprite and off the
@@ -236,9 +238,10 @@ export function registerOpeningCharacterAnimations(scene) {
       markSheetFailedAndWarnOnce(scene, profile.fallbackSheetKey);
     }
 
-    // The Gate 2 prototype sheet is a dev-only asset: a normal boot never
-    // loads it, so a fully absent sheet stays silent. A present sheet must be
-    // exactly 28 frames (+ __BASE) or the batch is refused.
+    // The Gate 2 prototype sheet is a dev-only asset: a normal boot preloads
+    // it through the manifest but never resolves it without the explicit
+    // development bridge, so a fully absent sheet stays silent. A present
+    // sheet must be exactly 28 frames (+ __BASE) or the batch is refused.
     if (getSheetFrameTotal(scene, profile.prototypeSheetKey) !== null) {
       if (
         hasExactSheet(scene, profile.prototypeSheetKey, profile.prototypeFrameCount)
