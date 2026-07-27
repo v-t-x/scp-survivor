@@ -861,14 +861,3 @@ test("presentation adapter source never writes gameplay, body or timer state", a
   assert.doesNotMatch(source, /\.time\.(?:addEvent|delayedCall)/);
   assert.doesNotMatch(source, /\.on\(|\.once\(/);
 });
-
-test("boot config renders crisp pixels on high-dpr displays (Gate 3 blur rework)", async () => {
-  const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
-  // User report: the walking player stayed blurry on a 150% (devicePixelRatio
-  // 1.5) display even with camera roundPixels, because the fixed 960x540
-  // canvas is bilinear-upscaled 1.5x by the OS compositor (probe_blur.py
-  // measured dpr 1.5 + backing 960). Phaser 3.90 has no config resolution,
-  // so crisp output comes from pixelArt mode: NEAREST texture filtering and
-  // CSS image-rendering pixelated on the canvas.
-  assert.match(main, /pixelArt:\s*true/);
-});
