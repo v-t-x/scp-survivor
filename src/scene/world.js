@@ -112,11 +112,6 @@ export const worldMixin = {
     this.player.once("destroy", () => {
       this.combatFeedback?.untrackActor(this.player);
     });
-    // Render on the integer pixel grid: with the default integer zoom, camera
-    // roundPixels floors both the scroll and every sprite quad, so the 64x64
-    // player texture stays crisp while the lerp-follow camera moves instead of
-    // shimmering through sub-pixel sampling phases (Gate 3 rework: user report).
-    this.cameras.main.setRoundPixels(true);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
   },
 

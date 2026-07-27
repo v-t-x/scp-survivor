@@ -799,12 +799,6 @@ test("player and enemy creation retain the approved physics geometry and order",
   const scale = createPlayer.indexOf("applyDisplayScalePreservingBody");
   assert.ok(creation < collide && collide < body && body < scale);
   assert.match(createPlayer, /applyDisplayScalePreservingBody\(this\.player, presentation\.displayScale\)/);
-  // Gate 3 rework (user report: the moving player shimmered and blurred): the
-  // main camera must render at integer pixel positions. With camera
-  // roundPixels set and the default integer zoom, Phaser floors both the
-  // scroll and every sprite quad, so the 64x64 player texture is always
-  // sampled on the pixel grid instead of crawling through sub-pixel phases.
-  assert.match(createPlayer, /cameras\.main\.setRoundPixels\(true\)/);
 
   assert.match(createGroups, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
   assert.doesNotMatch(createGroups, /createCallback/);
