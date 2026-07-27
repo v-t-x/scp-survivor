@@ -303,6 +303,14 @@ const config = {
   parent: "app",
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
+  // Crisp pixel presentation: NEAREST texture filtering, no MSAA and CSS
+  // image-rendering pixelated (Phaser's pixelArt chain). On 125%/150%
+  // displays the OS compositor upscales the fixed 960x540 canvas after
+  // rendering (Gate 3 rework: probe_blur.py measured devicePixelRatio 1.5),
+  // and LINEAR filtering made that final upscale visibly blur the moving
+  // player. Phaser 3.90 has no config resolution. Presentation-only; game
+  // coordinates are unchanged.
+  pixelArt: true,
   physics: {
     default: "arcade",
     arcade: {
