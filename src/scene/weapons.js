@@ -331,7 +331,8 @@ export const weaponsMixin = {
       committedBullets
     );
     if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
+      // Shot direction feeds muzzle VFX only; movement owns the body facing
+      // (user-approved contract change, 2026-07-28).
       this.emitAttackPresentation?.({
         weaponId: "pistol",
         originX: this.player.x,
@@ -402,10 +403,6 @@ export const weaponsMixin = {
       baseAngle,
       committedBullets
     );
-    if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
-    }
-
     if (weapon.currentShells <= 0) {
       weapon.isReloading = true;
       weapon.reloadEndAtMs = this.elapsedSurvivalMs + weapon.reloadDurationMs;
@@ -482,7 +479,7 @@ export const weaponsMixin = {
         currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
       }
       if (committedPresentationAngle !== null) {
-        this.playerFacingAngle = committedPresentationAngle;
+        // Shot direction feeds muzzle VFX only; movement owns the body facing.
         this.emitAttackPresentation?.({
           weaponId: "tesla",
           originX: this.player.x,
@@ -552,7 +549,7 @@ export const weaponsMixin = {
     }
 
     if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
+      // Shot direction feeds muzzle VFX only; movement owns the body facing.
       this.emitAttackPresentation?.({
         weaponId: "tesla",
         originX: this.player.x,

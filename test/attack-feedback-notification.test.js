@@ -192,7 +192,7 @@ test("pistol and breacher notify once after successful projectile commitments an
   });
   assertCommittedBeforeNotification(realPistol.events, "bullet");
   assert.equal(realPistol.muzzleCount, 0);
-  assert.equal(realPistol.facing, 0.05);
+  assert.equal(realPistol.facing, Math.PI, "attacks never rotate the player");
   for (const run of pistolRuns.slice(1)) {
     assert.deepEqual(run.bullets, realPistol.bullets, `${run.mode} must not alter pistol projectile commitment`);
     assert.equal(run.facing, realPistol.facing, `${run.mode} must not alter pistol facing`);
@@ -207,7 +207,7 @@ test("pistol and breacher notify once after successful projectile commitments an
   });
   assertCommittedBeforeNotification(realShotgun.events, "bullet");
   assert.equal(realShotgun.muzzleCount, 0);
-  assert.equal(realShotgun.facing, 0.12);
+  assert.equal(realShotgun.facing, Math.PI, "attacks never rotate the player");
   for (const run of shotgunRuns.slice(1)) {
     assert.deepEqual(run.bullets, realShotgun.bullets, `${run.mode} must not alter shotgun pellets`);
     assert.deepEqual(
@@ -258,7 +258,7 @@ test("Tesla chain notifies after actual damage without adding a duplicate chain 
   assertSnapshot(real.snapshots[0], {
     weaponId: "tesla", originX: 100, originY: 100, angle: 0, shotCount: 2, heavy: true
   });
-  assert.equal(real.facing, 0);
+  assert.equal(real.facing, Math.PI, "attacks never rotate the player");
   assert.equal(real.events.filter((event) => event === "muzzle").length, 0);
   for (const run of runs.slice(1)) {
     assert.deepEqual(run.damage, real.damage, `${run.mode} must not alter Tesla damage count or falloff`);
@@ -343,7 +343,7 @@ test("isolated weapon seams remain safe when the effects mixin is not installed"
   assert.doesNotThrow(() => {
     attackWithPistol.call(pistol.scene, { range: 300, damage: 4, projectileSpeed: 200 });
   });
-  assert.equal(pistol.scene.playerFacingAngle, 0.05);
+  assert.equal(pistol.scene.playerFacingAngle, Math.PI, "attacks never rotate the player");
 
   const tesla = {
     player: { x: 100, y: 100 },
@@ -356,7 +356,7 @@ test("isolated weapon seams remain safe when the effects mixin is not installed"
   assert.doesNotThrow(() => {
     attackWithTesla.call(tesla, { range: 300, damage: 9, chainTargets: 1, chainSearchRadius: 80 });
   });
-  assert.equal(tesla.playerFacingAngle, Math.PI / 2);
+  assert.equal(tesla.playerFacingAngle, Math.PI, "tesla never rotates the player");
 });
 
 test("cooldown, no target, zero allocation, pause, and game-over paths notify zero times", async () => {

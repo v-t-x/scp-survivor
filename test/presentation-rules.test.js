@@ -550,7 +550,7 @@ test("opening character integration preserves body configuration contracts", asy
   assert.match(main, /syncCharacterPresentation\(this\)/);
 });
 
-test("player presentation receives attack-facing separately from movement fallback memory", async () => {
+test("player presentation facing is driven by movement while dash fallback memory stays separate", async () => {
   const [main, systems, presentation] = await Promise.all([
     readFile(new URL("../src/main.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8"),
@@ -561,8 +561,12 @@ test("player presentation receives attack-facing separately from movement fallba
     systems.indexOf("  tryStartDash()")
   );
 
+  // Approved contract change (user, 2026-07-28): the body follows movement;
+  // firing never rotates it. Movement therefore owns playerFacingAngle while
+  // the dash fallback memory stays a separate write.
   assert.match(main, /this\.playerMovementFallbackAngle\s*=\s*0/);
-  assert.match(movement, /this\.playerMovementFallbackAngle\s*=\s*Math\.atan2/);
-  assert.doesNotMatch(movement, /this\.playerFacingAngle\s*=/);
+  assert.match(movement, /Math\.atan2\(direction\.y, direction\.x\)/);
+  assert.match(movement, /this\.playerFacingAngle\s*=/);
+  assert.match(movement, /this\.playerMovementFallbackAngle\s*=/);
   assert.match(presentation, /scene\.playerFacingAngle/);
 });

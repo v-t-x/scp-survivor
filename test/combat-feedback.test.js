@@ -121,8 +121,9 @@ test("a full pool selects the oldest inactive visual instead of its insertion or
   controller.notifyAttack({ originX: 4, originY: 0, angle: 0, shotCount: 1, heavy: false });
 
   assert.equal(scene.created.length, 2);
-  assert.equal(scene.created[1].x, 4, "the oldest inactive effect visual must be reused first");
-  assert.equal(scene.created[0].x, 3, "the newer inactive effect visual must remain untouched");
+  // Muzzle contract: light shots render 14px ahead of the origin along angle 0.
+  assert.equal(scene.created[1].x, 4 + 14, "the oldest inactive effect visual must be reused first");
+  assert.equal(scene.created[0].x, 3 + 14, "the newer inactive effect visual must remain untouched");
 });
 
 test("pause stops only combat-feedback updates and destroy releases every owned visual idempotently", async () => {

@@ -19,6 +19,35 @@ const NOOP_METHODS = Object.freeze({
 const DEFAULT_POOL_LIMITS = Object.freeze({ attack: 12, hit: 24, death: 12 });
 const DEFAULT_EFFECT_DURATION_MS = 140;
 
+// Muzzle VFX contract: the flash renders ahead of the player origin along the
+// shot angle (movement owns the body facing, so shots never rotate it).
+const MUZZLE_OFFSET_PX = Object.freeze({ light: 14, heavy: 16 });
+const RECOIL_SKEW = 0.05;
+const RECOIL_DURATION_MS = 80;
+
+// A brief skew pulse opposite the shot direction. Skew is the only safe
+// channel: position/scale/displayOrigin feed the Arcade body recompute, so
+// the recoil must never touch them.
+function applyRecoilPulse(scene, payload) {
+  try {
+    const player = scene.player;
+    if (!player || player.active === false) return;
+    if (typeof scene.tweens?.add !== "function") return;
+    const angle = finiteNumber(payload.angle);
+    scene.tweens.add({
+      targets: player,
+      props: {
+        skewX: { from: 0, to: -Math.cos(angle) * RECOIL_SKEW },
+        skewY: { from: 0, to: -Math.sin(angle) * RECOIL_SKEW }
+      },
+      duration: RECOIL_DURATION_MS,
+      yoyo: true
+    });
+  } catch {
+    // Recoil is cosmetic; it must never break shot feedback.
+  }
+}
+
 const MATERIAL_STYLES = Object.freeze({
   neutral: Object.freeze({ kind: "neutral", hitTint: 0x9ed4df, deathTint: 0x8b2635, accentTint: 0xd7e3e8, hitSize: [12, 6], deathSize: [24, 12] }),
   biomass: Object.freeze({ kind: "biomass", hitTint: 0xa14a72, deathTint: 0x6e274f, accentTint: 0x41152f, hitSize: [11, 5], deathSize: [22, 10] }),
@@ -62,16 +91,23 @@ function createShadowVisual(scene, x, y) {
 
 function drawAttackGraphic(graphics, snapshot) {
   const heavy = snapshot.heavy === true;
-  const length = heavy ? 13 : 9;
-  const spread = heavy ? 5 : 3;
+  const core = heavy ? 5 : 4;
+  const tracer = heavy ? 40 : 30;
   setVisual(graphics, "clear");
-  setVisual(graphics, "lineStyle", heavy ? 3 : 2, heavy ? 0xd39c3c : 0x8be7f1, 0.95);
-  setVisual(graphics, "lineBetween", 0, 0, length, 0);
-  setVisual(graphics, "lineBetween", 2, 0, length - 2, -spread);
-  setVisual(graphics, "lineBetween", 2, 0, length - 2, spread);
+  // Flash core: a bright square right at the muzzle point.
+  setVisual(graphics, "fillStyle", heavy ? 0xffd27a : 0xeafcff, 0.95);
+  setVisual(graphics, "fillRect", -core / 2, -core / 2, core, core);
+  // Forward tracer sells the shot direction without rotating the player body.
+  setVisual(graphics, "lineStyle", heavy ? 3 : 2, heavy ? 0xffb054 : 0x8be7f1, 0.95);
+  setVisual(graphics, "lineBetween", 2, 0, tracer, 0);
   if (heavy) {
-    setVisual(graphics, "lineStyle", 1, 0xffe7a3, 0.8);
-    setVisual(graphics, "lineBetween", -2, 0, length + 3, 0);
+    // Heavy weapons flare into a short spread fan.
+    setVisual(graphics, "lineBetween", 2, 0, 28, -9);
+    setVisual(graphics, "lineBetween", 2, 0, 28, 9);
+  } else {
+    // Light weapons get a bright inner tracer core.
+    setVisual(graphics, "lineStyle", 1, 0xffffff, 0.8);
+    setVisual(graphics, "lineBetween", 6, 0, tracer - 8, 0);
   }
 }
 
@@ -310,17 +346,23 @@ function createRealCombatFeedbackController(scene, options) {
     trackActor,
     untrackActor,
     notifyAttack(payload = {}) {
-      return activateEffect("attack", payload, (visual, snapshot, isGraphics) => {
-        setVisual(visual, "setPosition", finiteNumber(snapshot.originX), finiteNumber(snapshot.originY));
-        setVisual(visual, "setRotation", finiteNumber(snapshot.angle));
+      const activated = activateEffect("attack", payload, (visual, snapshot, isGraphics) => {
+        const angle = finiteNumber(snapshot.angle);
+        const offset = snapshot.heavy === true ? MUZZLE_OFFSET_PX.heavy : MUZZLE_OFFSET_PX.light;
+        setVisual(visual, "setPosition",
+          Math.round(finiteNumber(snapshot.originX) + Math.cos(angle) * offset),
+          Math.round(finiteNumber(snapshot.originY) + Math.sin(angle) * offset));
+        setVisual(visual, "setRotation", angle);
         if (isGraphics) {
           drawAttackGraphic(visual, snapshot);
         } else {
-          setVisual(visual, "setDisplaySize", snapshot.heavy ? 24 : 16, snapshot.heavy ? 12 : 8);
-          setVisual(visual, "setTint", snapshot.heavy ? 0xd39c3c : 0x8be7f1);
+          setVisual(visual, "setDisplaySize", snapshot.heavy ? 30 : 22, snapshot.heavy ? 12 : 8);
+          setVisual(visual, "setTint", snapshot.heavy ? 0xffd27a : 0xeafcff);
         }
         setVisual(visual, "setDepth", COMBAT_PRESENTATION_DEPTH.decorationMin + 2);
       });
+      if (activated) applyRecoilPulse(scene, payload);
+      return activated;
     },
     notifyHit(payload = {}) {
       return activateEffect("hit", payload, (visual, snapshot, isGraphics) => {

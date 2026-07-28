@@ -77,7 +77,10 @@ function createWeaponScene(overrides = {}) {
   };
 }
 
-test("movement remembers its own direction without changing the committed attack facing", async () => {
+// Approved contract change (user, 2026-07-28): the body follows MOVEMENT only;
+// firing never rotates the character. Shot direction is carried by the attack
+// presentation snapshot for muzzle VFX instead of by snapping the sprite.
+test("movement drives the presentation facing and stays sticky when input stops", async () => {
   const { handlePlayerMovement, tryStartDash } = await loadSystemMethods(
     "handlePlayerMovement",
     "tryStartDash"
@@ -106,39 +109,66 @@ test("movement remembers its own direction without changing the committed attack
 
   handlePlayerMovement.call(scene);
   assert.deepEqual(velocity, [[0, -100]]);
-  assert.equal(scene.playerFacingAngle, 0, "WASD must not overwrite attack-facing");
+  assert.equal(scene.playerFacingAngle, -Math.PI / 2, "moving up faces up");
   assert.equal(scene.playerMovementFallbackAngle, -Math.PI / 2);
 
   scene.keys.up.isDown = false;
+  handlePlayerMovement.call(scene);
+  assert.equal(scene.playerFacingAngle, -Math.PI / 2, "facing is sticky without input");
+
+  // A no-input dash falls back to the last movement direction and owns facing
+  // for its duration, even over a manually divergent prior facing.
+  scene.playerFacingAngle = 0.3;
   tryStartDash.call(scene);
   assert.equal(scene.dashAngle, -Math.PI / 2, "no-input dash keeps the last movement direction");
-  assert.equal(scene.playerFacingAngle, 0);
+  handlePlayerMovement.call(scene);
+  assert.equal(scene.playerFacingAngle, -Math.PI / 2, "dash movement faces the dash vector");
 });
 
-test("pistol commits the successful projectile closest to the target angle", async () => {
+test("pistol never rotates the player but still notifies with the committed closest angle", async () => {
   const { attackWithPistol } = await loadMethods("attackWithPistol");
   const returnedAngles = [0.45, 0.08, -0.21];
+  const presentations = [];
   const scene = createWeaponScene({
     spawnPlayerProjectile() {
       return { presentationAngle: returnedAngles.shift() };
+    },
+    emitAttackPresentation(snapshot, fallbackDirection) {
+      presentations.push({ snapshot, fallbackDirection });
     }
   });
 
   assert.equal(attackWithPistol.call(scene, { range: 300, damage: 4, projectileSpeed: 200 }), true);
-  assert.equal(scene.playerFacingAngle, 0.08);
+  assert.equal(scene.playerFacingAngle, Math.PI, "attacks must not overwrite movement-facing");
+  assert.equal(presentations.length, 1);
+  assert.equal(presentations[0].fallbackDirection, 0.08);
+  assert.equal(presentations[0].snapshot.angle, 0.08);
 });
 
-test("pistol leaves facing unchanged when no projectile commits", async () => {
+test("pistol without a committed projectile neither turns the player nor notifies", async () => {
   const { attackWithPistol } = await loadMethods("attackWithPistol");
-  const scene = createWeaponScene({ spawnPlayerProjectile: () => null });
+  const presentations = [];
+  const scene = createWeaponScene({
+    spawnPlayerProjectile: () => null,
+    emitAttackPresentation(snapshot, fallbackDirection) {
+      presentations.push({ snapshot, fallbackDirection });
+    }
+  });
 
   assert.equal(attackWithPistol.call(scene, { range: 300, damage: 4, projectileSpeed: 200 }), true);
   assert.equal(scene.playerFacingAngle, Math.PI);
+  assert.equal(presentations.length, 0);
 });
 
-test("shotgun does not turn the player unless a pellet is successfully committed", async () => {
+test("shotgun never turns the player, with or without a committed pellet", async () => {
   const { attackWithShotgun } = await loadMethods("attackWithShotgun");
-  const scene = createWeaponScene({ spawnPlayerProjectile: () => null });
+  const presentations = [];
+  const scene = createWeaponScene({
+    spawnPlayerProjectile: () => null,
+    emitAttackPresentation(snapshot, fallbackDirection) {
+      presentations.push({ snapshot, fallbackDirection });
+    }
+  });
   const weapon = {
     isReloading: false, currentShells: 2, triggerRange: 120, range: 300,
     nextShotId: 1, pelletCount: 2, spreadDeg: 20, damage: 8,
@@ -146,8 +176,9 @@ test("shotgun does not turn the player unless a pellet is successfully committed
   };
 
   assert.equal(attackWithShotgun.call(scene, weapon), true);
-  assert.equal(weapon.currentShells, 1, "ammo behavior remains committed even when a visual-facing update is unavailable");
+  assert.equal(weapon.currentShells, 1, "ammo behavior stays committed");
   assert.equal(scene.playerFacingAngle, Math.PI);
+  assert.equal(presentations.length, 0, "no pellet committed, no presentation");
 });
 
 test("spawned projectiles expose an immutable committed presentation angle", async () => {
@@ -170,16 +201,20 @@ test("spawned projectiles expose an immutable committed presentation angle", asy
   assert.deepEqual(bullet.body.velocity, [Math.cos(0.25) * 100, Math.sin(0.25) * 100]);
 });
 
-test("Tesla commits first-target facing only after its first lightning and damage complete", async () => {
+test("tesla never rotates the player but notifies after its first committed chain hit", async () => {
   const { attackWithTesla } = await loadMethods("attackWithTesla");
   const calls = [];
+  const presentations = [];
   const scene = createWeaponScene({
     findNearestEnemy: () => ({ x: 100, y: 200, active: true }),
     spawnLightningSegment() { calls.push("lightning"); },
-    damageEnemy() { calls.push("damage"); }
+    damageEnemy() { calls.push("damage"); },
+    emitAttackPresentation(snapshot) { presentations.push(snapshot); }
   });
 
   assert.equal(attackWithTesla.call(scene, { range: 300, damage: 9, chainTargets: 1, chainSearchRadius: 80 }), true);
   assert.deepEqual(calls, ["lightning", "damage"]);
-  assert.equal(scene.playerFacingAngle, Math.PI / 2);
+  assert.equal(scene.playerFacingAngle, Math.PI, "tesla must not overwrite movement-facing");
+  assert.equal(presentations.length, 1);
+  assert.equal(presentations[0].angle, Math.PI / 2);
 });

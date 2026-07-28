@@ -64,6 +64,8 @@ export const systemsMixin = {
 
     // While dashing, lock velocity to the dash vector.
     if (this.elapsedSurvivalMs < this.dashUntilMs) {
+      // Dashing is movement: the presentation facing follows the dash vector.
+      this.playerFacingAngle = this.dashAngle;
       body.setVelocity(
         Math.cos(this.dashAngle) * BALANCE.player.dashSpeed,
         Math.sin(this.dashAngle) * BALANCE.player.dashSpeed
@@ -90,7 +92,11 @@ export const systemsMixin = {
     const direction = new Phaser.Math.Vector2(velocityX, velocityY).normalize();
     const effectiveSpeed = this.playerMoveSpeed * this.moveSpeedBuffMultiplier;
     if (direction.lengthSq() > 0) {
-      this.playerMovementFallbackAngle = Math.atan2(direction.y, direction.x);
+      const movementAngle = Math.atan2(direction.y, direction.x);
+      // The body follows movement (user-approved 2026-07-28); firing never
+      // rotates the character — shot direction is shown by muzzle VFX instead.
+      this.playerFacingAngle = movementAngle;
+      this.playerMovementFallbackAngle = movementAngle;
     }
     body.setVelocity(
       direction.x * effectiveSpeed,
