@@ -88,9 +88,9 @@ export const BALANCE = {
     breacherExplosionDamageMultiplier: 0.6,
     teslaFieldRadius: 130,
     teslaFieldTickMs: 600,
-    // Tesla's base damage is now a small channel tick. Keep the mutation's
-    // established 8-damage pulse instead of accidentally reducing it to 2.
-    teslaFieldDamageMultiplier: 2
+    // Field damage is Math.round(base damage * multiplier). With 6-damage
+    // channel ticks, 4 / 3 keeps this historical mutation pulse at 8.
+    teslaFieldDamageMultiplier: 4 / 3
   },
   meta: {
     // Local-storage meta progression: credits earned per run, spent on perks.

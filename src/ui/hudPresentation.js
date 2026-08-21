@@ -114,15 +114,22 @@ function getWeaponPresentation(state) {
   }
 
   const cooldownMs = finiteNumber(weapon.cooldownMs);
+  const hasUsableTick = cooldownMs > 0;
+  const hasChannelState = typeof weapon.isChanneling === "boolean";
   const isChanneling = weapon.isChanneling === true;
+  const statusText = !hasUsableTick
+    ? "电击状态不可用"
+    : !hasChannelState
+    ? `电击就绪 · ${cooldownMs.toFixed(0)}ms/跳`
+    : isChanneling
+      ? `持续电击中 · ${cooldownMs.toFixed(0)}ms/跳`
+      : `等待锁定 · ${cooldownMs.toFixed(0)}ms/跳`;
   return Object.freeze({
     ...base,
     detail: `等级 ${level} · 每跳 ${finiteNumber(weapon.damage).toFixed(1)} · 链击 ${Math.max(0, Math.floor(finiteNumber(weapon.chainTargets)))}`,
-    statusText: isChanneling
-      ? `持续电击中 · ${cooldownMs.toFixed(0)}ms/跳`
-      : `等待锁定 · ${cooldownMs.toFixed(0)}ms/跳`,
-    statusRatio: isChanneling ? 1 : 0,
-    statusTone: isChanneling ? "warning" : "neutral"
+    statusText,
+    statusRatio: hasUsableTick && (isChanneling || !hasChannelState) ? 1 : 0,
+    statusTone: !hasUsableTick ? "neutral" : isChanneling ? "warning" : hasChannelState ? "neutral" : "contained"
   });
 }
 

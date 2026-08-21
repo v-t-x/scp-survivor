@@ -102,6 +102,18 @@ test("weapon selection describes Tesla as 6 damage per 300 ms channel tick while
   ].join("\n"));
 });
 
+test("Tesla field configuration preserves the historical 8-damage pulse after the 6-damage channel change", () => {
+  const fieldPulseDamage = Math.max(
+    1,
+    Math.round(
+      BALANCE.weapons.tesla.baseDamage * BALANCE.weaponUpgrades.teslaFieldDamageMultiplier
+    )
+  );
+
+  assert.equal(BALANCE.weapons.tesla.baseDamage, 6);
+  assert.equal(fieldPulseDamage, 8);
+});
+
 test("active Tesla HUD reports continuous shock and its 300 ms tick instead of ready or cooldown", () => {
   const view = weaponHud({
     id: "tesla",
@@ -132,6 +144,22 @@ test("idle Tesla HUD clearly waits for a target while retaining its 300 ms tick 
 
   assert.equal(view.statusText, "等待锁定 · 300ms/跳");
   assert.doesNotMatch(view.statusText, /冷却|就绪/);
+});
+
+test("Tesla HUD distinguishes missing channel state from explicit idle and active state", () => {
+  const baseWeapon = {
+    id: "tesla",
+    name: "特斯拉收容发射器",
+    currentLevel: 1,
+    damage: 6,
+    chainTargets: 3,
+    cooldownMs: 300,
+    nextAttackAtMs: 1_300
+  };
+
+  assert.equal(weaponHud(baseWeapon).statusText, "电击就绪 · 300ms/跳");
+  assert.equal(weaponHud({ ...baseWeapon, isChanneling: false }).statusText, "等待锁定 · 300ms/跳");
+  assert.equal(weaponHud({ ...baseWeapon, isChanneling: true }).statusText, "持续电击中 · 300ms/跳");
 });
 
 test("rifle HUD keeps its existing damage detail and rate presentation", () => {
