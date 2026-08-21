@@ -58,7 +58,7 @@ async function loadCombatFeedback() {
 
 function assertControllerShape(controller) {
   assert.deepEqual(Object.keys(controller).sort(), [
-    "destroy", "notifyAttack", "notifyDeath", "notifyHit", "setPaused", "trackActor", "untrackActor", "update"
+    "destroy", "notifyAttack", "notifyDeath", "notifyHit", "notifyTeslaChannel", "setPaused", "trackActor", "untrackActor", "update"
   ]);
 }
 
@@ -66,6 +66,8 @@ test("tracked actors receive one display-only contact shadow without actor mutat
   const { createCombatFeedbackController } = await loadCombatFeedback();
   const scene = createSceneStub();
   const actor = createActor();
+  actor.x = 100.25;
+  actor.y = 200.5;
   const before = structuredClone(actor);
   const controller = createCombatFeedbackController(scene);
 
@@ -78,10 +80,45 @@ test("tracked actors receive one display-only contact shadow without actor mutat
   assert.equal(scene.calls.physics, 0, "shadows must not enter a physics group");
   assert.deepEqual(actor, before, "combat feedback must not mutate actor physics or presentation fields");
   assert.equal(scene.created[0].key, "contact-shadow");
-  assert.equal(scene.created[0].x, 100);
-  assert.equal(scene.created[0].y, 221, "shadow belongs below actor feet");
+  assert.equal(scene.created[0].x, 100.25, "default shadows preserve fractional actor x coordinates");
+  assert.equal(scene.created[0].y, 221.5, "default shadows preserve fractional actor y coordinates");
   assert.equal(scene.created[0].depth, 41, "shadow follows actor.depth - 1 on every update");
   assert.deepEqual([scene.created[0].displayWidth, scene.created[0].displayHeight], [36, 18]);
+});
+
+test("player shadows use a wider integer-aligned display without actor or body mutations", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const scene = createSceneStub();
+  const actor = createActor();
+  actor.x = 100.4;
+  actor.y = 200.6;
+  const before = structuredClone(actor);
+  const controller = createCombatFeedbackController(scene);
+
+  assert.equal(controller.trackActor(actor, {
+    kind: "player",
+    radius: 12,
+    offsetY: 3,
+    widthScale: 1.5,
+    roundPosition: true
+  }), true);
+  controller.update(10);
+
+  assert.deepEqual(actor, before, "shadow display options must not mutate the gameplay actor or Arcade Body");
+  assert.deepEqual([scene.created[0].x, scene.created[0].y], [100, 216]);
+  assert.deepEqual([scene.created[0].displayWidth, scene.created[0].displayHeight], [36, 12]);
+});
+
+test("invalid player shadow width scales fall back to the default width", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const scene = createSceneStub();
+  const actor = createActor();
+  const controller = createCombatFeedbackController(scene);
+
+  controller.trackActor(actor, { radius: 12, widthScale: 0 });
+  controller.update(10);
+
+  assert.deepEqual([scene.created[0].displayWidth, scene.created[0].displayHeight], [24, 12]);
 });
 
 test("attack hit and death pools stay bounded and reuse inactive visuals", async () => {
@@ -193,6 +230,74 @@ test("effect activation configuration failures roll back pooled records and all 
     controller.destroy();
   });
   assert.ok(scene.created.every((visual) => visual.destroyCalls === 1), "destroy remains idempotent after activation rollback");
+});
+
+test("muzzle allocation failure still forwards committed attack recoil to player presentation", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const scene = createSceneStub({ failOn: "setPosition" });
+  const notifications = [];
+  scene.playerPresentation = {
+    notifyAttack(payload) {
+      notifications.push(structuredClone(payload));
+      return true;
+    }
+  };
+  const controller = createCombatFeedbackController(scene);
+
+  assert.equal(
+    controller.notifyAttack({
+      weaponId: "shotgun",
+      originX: 20,
+      originY: 30,
+      angle: 0.75,
+      shotCount: 3,
+      heavy: true
+    }),
+    false,
+    "muzzle allocation result still controls legacy muzzle fallback"
+  );
+  assert.deepEqual(notifications, [{
+    angle: 0.75,
+    weaponId: "shotgun",
+    heavy: true
+  }]);
+});
+
+test("attack feedback freezes the formal action point before recoil without mutating the caller payload", async () => {
+  const { createCombatFeedbackController } = await loadCombatFeedback();
+  const scene = createSceneStub();
+  const order = [];
+  scene.playerPresentation = {
+    notifyAttack(payload) {
+      order.push(["notifyAttack", structuredClone(payload)]);
+      return true;
+    },
+    getAttackEffectOrigin(payload) {
+      order.push(["getAttackEffectOrigin", structuredClone(payload)]);
+      return { x: 71, y: 83, vfxType: "ballistic" };
+    }
+  };
+  const controller = createCombatFeedbackController(scene);
+  const payload = {
+    weaponId: "pistol",
+    originX: 20,
+    originY: 30,
+    angle: 0.25,
+    shotCount: 1,
+    heavy: false
+  };
+  const before = structuredClone(payload);
+
+  assert.equal(controller.notifyAttack(payload), true);
+  assert.deepEqual(order, [
+    ["getAttackEffectOrigin", { weaponId: "pistol", angle: 0.25 }],
+    ["notifyAttack", { angle: 0.25, weaponId: "pistol", heavy: false }]
+  ]);
+  assert.deepEqual([scene.created[0].x, scene.created[0].y], [71, 83]);
+  assert.deepEqual(payload, before, "resolved visual coordinates must not be written into the caller payload");
+  assert.equal(Object.isFrozen(payload), false, "feedback must freeze only its private snapshot");
+  assert.equal(Object.hasOwn(scene, "originX"), false, "resolved coordinates must not be written onto the Scene");
+  assert.equal(Object.hasOwn(scene, "originY"), false, "resolved coordinates must not be written onto the Scene");
 });
 
 test("production graphics render distinct material silhouettes instead of recolored contact-shadow ovals", async () => {

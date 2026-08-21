@@ -220,6 +220,22 @@ test("nonlethal hits notify once after health commitment and preserve exactly on
   }
 });
 
+test("continuous Tesla ticks can suppress per-target hit audio without suppressing damage feedback", async () => {
+  const damageEnemy = await loadDamageEnemy();
+  const enemy = createEnemy();
+  const { scene, events, snapshots } = createScene(enemy, "real");
+
+  damageEnemy.call(scene, enemy, 3, 118, 178, 0, 0, {
+    sourceWeaponId: "tesla",
+    suppressHitSound: true
+  });
+
+  assert.equal(enemy.health, 7);
+  assert.equal(events.filter((event) => event === "sound").length, 0);
+  assert.equal(events.filter((event) => event === "damageNumber").length, 1);
+  assert.equal(snapshots.hit.length, 1);
+});
+
 test("lethal normal and biomass hits commit rewards death state and kill count before independent notifications", async () => {
   const damageEnemy = await loadDamageEnemy();
   for (const [name, overrides, expectedSplits] of [
@@ -387,7 +403,7 @@ test("real penetration explosion Tesla chain and biomass split routes notify onc
   const attackWithTesla = await loadWeaponMethod("attackWithTesla");
   assert.equal(attackWithTesla.call(tesla.scene, {
     range: 400, damage: 4, chainTargets: 2, chainSearchRadius: 200
-  }), true);
+  }, [teslaA, teslaB]), true);
   assert.equal(tesla.snapshots.hit.length, 2, "each real Tesla chain damage notifies once");
 
   const biomass = createEnemy({
@@ -409,6 +425,124 @@ test("real penetration explosion Tesla chain and biomass split routes notify onc
   assert.equal(biomassRun.snapshots.hitState[0].splits, BALANCE.enemy.elite.types.biomass.childCount);
   assert.equal(biomassRun.snapshots.hit.length, 1);
   assert.equal(biomassRun.snapshots.death.length, 1);
+});
+
+test("player damage commits health and invulnerability before notifying visible hit feedback", async () => {
+  const combat = await loadCombatMethods("applyPlayerDamage", "triggerPlayerDamageFeedback");
+
+  for (const mode of ["real", "false", "missing", "throw"]) {
+    const events = [];
+    const notifications = [];
+    const delayed = [];
+    const player = {
+      active: true,
+      x: 20,
+      y: 30,
+      tintCalls: 0,
+      clearTintCalls: 0,
+      setTint() {
+        this.tintCalls += 1;
+        events.push("anchorTint");
+      },
+      clearTint() {
+        this.clearTintCalls += 1;
+        events.push("anchorClearTint");
+      }
+    };
+    const scene = {
+      player,
+      elapsedSurvivalMs: 1_000,
+      playerInvulnerableUntilMs: 0,
+      health: 10,
+      cameras: { main: { shake() { events.push("shake"); } } },
+      time: {
+        delayedCall(delay, callback) {
+          delayed.push({ delay, callback });
+          return {};
+        }
+      },
+      playSound() { events.push("sound"); },
+      updateUI() { events.push("ui"); },
+      triggerGameOver() { events.push("gameOver"); }
+    };
+    if (mode !== "missing") {
+      scene.playerPresentation = {
+        notifyHit(snapshot) {
+          notifications.push({
+            snapshot: structuredClone(snapshot),
+            health: scene.health,
+            invulnerableUntilMs: scene.playerInvulnerableUntilMs
+          });
+          events.push("visibleHit");
+          if (mode === "throw") throw new Error("visible hit failed");
+          return mode === "real";
+        }
+      };
+    }
+    Object.assign(scene, combat);
+
+    assert.doesNotThrow(() => scene.applyPlayerDamage(3, 200, 300));
+    assert.equal(scene.health, 7, `${mode} preserves player damage`);
+    assert.equal(
+      scene.playerInvulnerableUntilMs,
+      1_000 + BALANCE.player.damageCooldownMs,
+      `${mode} preserves damage cooldown`
+    );
+    assert.equal(events.includes("gameOver"), false);
+    if (mode !== "missing") {
+      assert.deepEqual(notifications, [{
+        snapshot: {
+          atMs: 1_000,
+          durationMs: BALANCE.feedback.playerDamageTintMs,
+          tint: 0xff6666
+        },
+        health: 7,
+        invulnerableUntilMs: 1_000 + BALANCE.player.damageCooldownMs
+      }]);
+    }
+
+    const expectedFallback = mode === "real" ? 0 : 1;
+    assert.equal(player.tintCalls, expectedFallback, `${mode} anchor tint fallback count`);
+    assert.equal(delayed.length, expectedFallback, `${mode} anchor tint cleanup count`);
+    if (delayed[0]) {
+      delayed[0].callback();
+      assert.equal(player.clearTintCalls, 1, `${mode} clears only its fallback tint`);
+    }
+  }
+});
+
+test("invulnerability blinking uses visible alpha and falls back to the anchor per call", async () => {
+  const updatePlayerInvulnerabilityVisual = await loadEffectsMethod(
+    "updatePlayerInvulnerabilityVisual"
+  );
+
+  for (const mode of ["real", "false", "missing", "throw"]) {
+    const visibleAlphas = [];
+    const anchorAlphas = [];
+    const scene = {
+      elapsedSurvivalMs: 100,
+      playerInvulnerableUntilMs: 200,
+      player: {
+        active: true,
+        setAlpha(alpha) {
+          anchorAlphas.push(alpha);
+        }
+      }
+    };
+    if (mode !== "missing") {
+      scene.playerPresentation = {
+        setAlpha(alpha) {
+          visibleAlphas.push(alpha);
+          if (mode === "throw") throw new Error("visible alpha failed");
+          return mode === "real";
+        }
+      };
+    }
+
+    assert.doesNotThrow(() => updatePlayerInvulnerabilityVisual.call(scene));
+    assert.deepEqual(visibleAlphas, mode === "missing" ? [] : [0.35]);
+    assert.deepEqual(anchorAlphas, mode === "real" ? [] : [0.35]);
+  }
 });
 
 test("direct death effect keeps legacy particles by default and explicitly defers only controller-routed particles", async () => {

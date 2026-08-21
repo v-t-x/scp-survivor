@@ -21,6 +21,7 @@ import {
 import {
   applyDisplayScalePreservingBody
 } from "../art/presentationRules.js";
+import { createPlayerPresentationController } from "../art/playerPresentationController.js";
 
 // Domain mixin: world. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const worldMixin = {
@@ -107,12 +108,23 @@ export const worldMixin = {
     this.combatFeedback.trackActor(this.player, {
       kind: "player",
       radius: 12,
-      offsetY: 3
+      offsetY: 3,
+      widthScale: 1.5,
+      roundPosition: true
     });
     this.player.once("destroy", () => {
       this.combatFeedback?.untrackActor(this.player);
     });
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.playerPresentation = null;
+    try {
+      this.playerPresentation = createPlayerPresentationController(this, {
+        anchor: this.player,
+        characterId: presentation.characterId
+      });
+    } catch {
+      this.player.setVisible?.(true);
+    }
+    this.cameras.main.startFollow(this.player, true, 0.3, 0.3);
   },
 
 

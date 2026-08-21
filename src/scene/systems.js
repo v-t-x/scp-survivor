@@ -152,6 +152,11 @@ export const systemsMixin = {
       this.spawnEvent.paused = true;
     }
     try {
+      this.playerPresentation?.setPaused?.(true);
+    } catch {
+      // Player presentation pause cannot block committed gameplay pause state.
+    }
+    try {
       this.combatFeedback?.setPaused?.(true);
     } catch {
       // Presentation pause state cannot block committed gameplay pause state.
@@ -176,6 +181,11 @@ export const systemsMixin = {
       this.spawnEvent.paused = false;
     } else if (this.regularSpawningActive && !this.spawnEvent && !this.isGameOver) {
       this.scheduleNextSpawn();
+    }
+    try {
+      this.playerPresentation?.setPaused?.(false);
+    } catch {
+      // Player presentation resume cannot block committed gameplay resume state.
     }
     try {
       this.combatFeedback?.setPaused?.(false);

@@ -201,20 +201,41 @@ test("spawned projectiles expose an immutable committed presentation angle", asy
   assert.deepEqual(bullet.body.velocity, [Math.cos(0.25) * 100, Math.sin(0.25) * 100]);
 });
 
-test("tesla never rotates the player but notifies after its first committed chain hit", async () => {
-  const { attackWithTesla } = await loadMethods("attackWithTesla");
+test("Tesla channel start damages once and aims its presentation without rotating the player", async () => {
+  const methods = await loadMethods(
+    "isTeslaChannelTargetValid",
+    "resolveTeslaChannelTargets",
+    "createTeslaChannelSnapshot",
+    "stopTeslaChannel",
+    "updateTeslaChannel",
+    "attackWithTesla"
+  );
   const calls = [];
   const presentations = [];
+  const target = { x: 100, y: 200, active: true };
   const scene = createWeaponScene({
-    findNearestEnemy: () => ({ x: 100, y: 200, active: true }),
-    spawnLightningSegment() { calls.push("lightning"); },
+    findNearestEnemy: () => target,
     damageEnemy() { calls.push("damage"); },
-    emitAttackPresentation(snapshot) { presentations.push(snapshot); }
+    resolvePlayerAttackVisualOrigin({ originX, originY }) { return { x: originX, y: originY }; },
+    emitTeslaChannelPresentation(snapshot) { presentations.push(snapshot); }
   });
+  Object.assign(scene, methods);
+  const weapon = {
+    range: 300,
+    damage: 9,
+    chainTargets: 1,
+    chainSearchRadius: 80,
+    cooldownMs: 300,
+    nextAttackAtMs: 0,
+    channelTarget: null,
+    channelTargets: [],
+    isChanneling: false
+  };
 
-  assert.equal(attackWithTesla.call(scene, { range: 300, damage: 9, chainTargets: 1, chainSearchRadius: 80 }), true);
-  assert.deepEqual(calls, ["lightning", "damage"]);
+  assert.equal(methods.updateTeslaChannel.call(scene, weapon), true);
+  assert.deepEqual(calls, ["damage"]);
   assert.equal(scene.playerFacingAngle, Math.PI, "tesla must not overwrite movement-facing");
   assert.equal(presentations.length, 1);
+  assert.equal(presentations[0].phase, "start");
   assert.equal(presentations[0].angle, Math.PI / 2);
 });
