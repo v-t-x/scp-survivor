@@ -1,10 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { build as viteBuild } from "vite";
 
 import config, { NON_PRODUCTION_PLAYER_ASSETS } from "../vite.config.js";
+
+const REPOSITORY_VITE_CONFIG = fileURLToPath(new URL("../vite.config.js", import.meta.url));
+const PUBLIC_SENTINEL_BYTES = Buffer.from("task-1-public-source-sentinel\n", "utf8");
 
 const NON_PRODUCTION_PLAYER_ASSET_PATHS = [
   "assets/art/characters/player-response-operative-prototype.png",
@@ -41,6 +46,72 @@ const REQUIRED_RUNTIME_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/foundation-containment-rifle-icon.png",
   "assets/art/weapons/tesla-containment-emitter-icon.png"
 ];
+
+async function withTemporaryViteProject(prefix, run) {
+  const root = await mkdtemp(path.join(tmpdir(), prefix));
+  const publicDir = path.join(root, "public");
+  try {
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "index.html"),
+      '<!doctype html><html><body><script type="module" src="/src/main.js"></script></body></html>'
+    );
+    await writeFile(path.join(root, "src", "main.js"), 'document.body.dataset.task = "asset-boundary";');
+    await run({ root, publicDir });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function observeViteBuild(root, build) {
+  try {
+    await viteBuild({
+      root,
+      configFile: REPOSITORY_VITE_CONFIG,
+      logLevel: "silent",
+      build: { emptyOutDir: true, ...build }
+    });
+    return { status: "fulfilled" };
+  } catch (error) {
+    return { status: "rejected", message: String(error?.message ?? error) };
+  }
+}
+
+async function listRelativeFiles(directory, relativeDirectory = "") {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) {
+      return listRelativeFiles(path.join(directory, entry.name), relativePath);
+    }
+    return [relativePath];
+  }));
+  return files.flat().sort();
+}
+
+function cwdRelativeRollupOutput(target) {
+  return path.relative(process.cwd(), target).replaceAll(path.sep, "/");
+}
+
+async function assertViteRejectsBeforePublicMutation({ root, publicDir, build }) {
+  const sentinel = path.join(publicDir, "task-1-public-source-sentinel.txt");
+  await mkdir(path.dirname(sentinel), { recursive: true });
+  await writeFile(sentinel, PUBLIC_SENTINEL_BYTES);
+  const publicFilesBeforeBuild = await listRelativeFiles(publicDir);
+
+  const outcome = await observeViteBuild(root, build);
+  const sentinelAfterBuild = await readFile(sentinel).catch(() => null);
+  const publicFilesAfterBuild = await listRelativeFiles(publicDir).catch(() => null);
+  assert.deepEqual(
+    { status: outcome.status, sentinelAfterBuild, publicFilesAfterBuild },
+    {
+      status: "rejected",
+      sentinelAfterBuild: PUBLIC_SENTINEL_BYTES,
+      publicFilesAfterBuild: publicFilesBeforeBuild
+    }
+  );
+  assert.match(outcome.message, /public/i);
+}
 
 test("build cleanup removes every non-production player candidate but retains runtime assets", async () => {
   assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
@@ -107,4 +178,97 @@ test("build cleanup refuses every public descendant before touching source playe
     process.chdir(previousCwd);
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("real Vite build rejects a public output before emptyOutDir mutates the source directory", async () => {
+  await withTemporaryViteProject("scp-vite-public-outdir-", ({ root, publicDir }) => (
+    assertViteRejectsBeforePublicMutation({ root, publicDir, build: { outDir: "public" } })
+  ));
+});
+
+test("real Vite build rejects a public descendant output before emptyOutDir mutates the source directory", async () => {
+  await withTemporaryViteProject("scp-vite-public-child-", ({ root, publicDir }) => (
+    assertViteRejectsBeforePublicMutation({ root, publicDir, build: { outDir: path.join("public", "generated") } })
+  ));
+});
+
+test("real Vite build rejects an ancestor output before emptyOutDir mutates the public source directory", async () => {
+  await withTemporaryViteProject("scp-vite-public-ancestor-", ({ root, publicDir }) => (
+    assertViteRejectsBeforePublicMutation({ root, publicDir, build: { outDir: "." } })
+  ));
+});
+
+test("real Vite build rejects a single Rollup output directory that targets public", async () => {
+  await withTemporaryViteProject("scp-vite-rollup-single-", ({ root, publicDir }) => (
+    assertViteRejectsBeforePublicMutation({
+      root,
+      publicDir,
+      build: {
+        outDir: "dist",
+        rollupOptions: {
+          output: {
+            dir: process.platform === "win32"
+              ? cwdRelativeRollupOutput(publicDir).replace(/public$/i, "PUBLIC")
+              : cwdRelativeRollupOutput(publicDir)
+          }
+        }
+      }
+    })
+  ));
+});
+
+test("real Vite build rejects an array Rollup output containing a public directory", async () => {
+  await withTemporaryViteProject("scp-vite-rollup-array-", ({ root, publicDir }) => (
+    assertViteRejectsBeforePublicMutation({
+      root,
+      publicDir,
+      build: {
+        outDir: "dist",
+        rollupOptions: {
+          output: [
+            { dir: cwdRelativeRollupOutput(path.join(root, "dist-first")) },
+            { dir: cwdRelativeRollupOutput(publicDir) }
+          ]
+        }
+      }
+    })
+  ));
+});
+
+test("real Vite build rejects a junction-resolved output below public before mutation", async () => {
+  await withTemporaryViteProject("scp-vite-public-junction-", async ({ root, publicDir }) => {
+    const publicAlias = path.join(root, "public-link");
+    await mkdir(publicDir, { recursive: true });
+    await symlink(publicDir, publicAlias, "junction");
+    await assertViteRejectsBeforePublicMutation({
+      root,
+      publicDir,
+      build: {
+        outDir: "dist",
+        rollupOptions: {
+          output: { dir: cwdRelativeRollupOutput(path.join(publicAlias, "generated")) }
+        }
+      }
+    });
+  });
+});
+
+test("real Vite build allows a separate dist and strips non-production player assets", async () => {
+  await withTemporaryViteProject("scp-vite-dist-", async ({ root, publicDir }) => {
+    const candidate = path.join(publicDir, NON_PRODUCTION_PLAYER_ASSET_PATHS[0]);
+    const runtime = path.join(publicDir, REQUIRED_RUNTIME_PLAYER_ASSET_PATHS[0]);
+    await mkdir(path.dirname(candidate), { recursive: true });
+    await mkdir(path.dirname(runtime), { recursive: true });
+    await writeFile(candidate, "remove-from-dist");
+    await writeFile(runtime, "keep-in-dist");
+
+    const outcome = await observeViteBuild(root, { outDir: "dist" });
+    assert.equal(outcome.status, "fulfilled", outcome.message);
+    await assert.rejects(stat(path.join(root, "dist", NON_PRODUCTION_PLAYER_ASSET_PATHS[0])));
+    assert.equal(
+      await readFile(path.join(root, "dist", REQUIRED_RUNTIME_PLAYER_ASSET_PATHS[0]), "utf8"),
+      "keep-in-dist"
+    );
+    await stat(path.join(root, "dist", "index.html"));
+  });
 });
