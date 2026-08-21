@@ -1,5 +1,11 @@
 import { TEXTURES } from "../assets/manifest.js";
 import { applyTextureAndScalePreservingBody } from "./presentationRules.js";
+import { getPlayerDynamicSampleDefinition } from "./playerDynamicSampleDefinitions.js";
+import {
+  BODY_SOCKET_FRAME_COUNT,
+  BODY_SOCKET_SCHEMA_VERSION,
+  PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS
+} from "./playerResponseOperativeBodySockets.js";
 
 export const DEFAULT_CHARACTER_ID = "foundation-response-operative";
 
@@ -48,6 +54,8 @@ const PRODUCTION_MOTIONS = Object.freeze({
 const PRODUCTION_FRAMES_PER_DIRECTION = 30;
 
 const PRESENTATION_HIT_DURATION_MS = 120;
+const DYNAMIC_SAMPLE_FRAME_COUNT = 5;
+const BODY_PROTOTYPE_FRAME_COUNT = 28;
 
 // Per-AnimationManager bookkeeping: which sheet keys failed a preflight or a
 // transactional create, and which sheet keys already emitted their single
@@ -108,6 +116,26 @@ function hasLegacySheet(scene, sheetKey) {
 function hasExactSheet(scene, sheetKey, frameCount) {
   // Phaser includes the spritesheet's __BASE frame in frameTotal.
   return getSheetFrameTotal(scene, sheetKey) === frameCount + 1;
+}
+
+function hasCompleteBodySocketContract(profile) {
+  if (
+    BODY_SOCKET_SCHEMA_VERSION !== 1
+    || BODY_SOCKET_FRAME_COUNT !== BODY_PROTOTYPE_FRAME_COUNT
+    || !Array.isArray(PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS)
+    || PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS.length !== BODY_PROTOTYPE_FRAME_COUNT
+  ) {
+    return false;
+  }
+  return PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS.every((socket, index) => (
+    socket?.index === index
+    && ["front", "behind"].includes(socket.equipmentLayer)
+    && ["gripX", "gripY", "supportX", "supportY"].every((key) => (
+      Number.isInteger(socket[key])
+      && socket[key] >= 0
+      && socket[key] < profile.frameWidth
+    ))
+  ));
 }
 
 export function getPlayerMotion({ velocityX, velocityY, facingAngle }) {
@@ -267,11 +295,52 @@ export function registerOpeningCharacterAnimations(scene) {
 export function resolveCharacterPresentation(
   scene,
   characterId = DEFAULT_CHARACTER_ID,
-  { allowPrototype = false } = {}
+  {
+    allowPrototype = false,
+    allowBodyPreview = false,
+    sampleMode = null
+  } = {}
 ) {
   const profile = CHARACTER_PROFILES[characterId];
   if (!profile) {
     throw new RangeError(`unknown character id: ${characterId}`);
+  }
+
+  const sampleDefinition = getPlayerDynamicSampleDefinition(sampleMode);
+  if (
+    sampleDefinition
+    && hasExactSheet(
+      scene,
+      sampleDefinition.textureKey,
+      DYNAMIC_SAMPLE_FRAME_COUNT
+    )
+    && !isSheetFailed(scene, sampleDefinition.textureKey)
+  ) {
+    return {
+      characterId,
+      textureKey: sampleDefinition.textureKey,
+      animationFamily: "dynamic-sample",
+      displayScale: profile.displayScale,
+      sampleMode: sampleDefinition.mode
+    };
+  }
+
+  if (
+    allowBodyPreview
+    && hasExactSheet(
+      scene,
+      TEXTURES.playerResponseOperativeBodyPrototypeSheet,
+      BODY_PROTOTYPE_FRAME_COUNT
+    )
+    && !isSheetFailed(scene, TEXTURES.playerResponseOperativeBodyPrototypeSheet)
+    && hasCompleteBodySocketContract(profile)
+  ) {
+    return {
+      characterId,
+      textureKey: TEXTURES.playerResponseOperativeBodyPrototypeSheet,
+      animationFamily: "prototype",
+      displayScale: profile.displayScale
+    };
   }
 
   // Normal gameplay never resolves the Gate 2 prototype; only an explicit
@@ -339,8 +408,8 @@ function toLegacyMotion(motion) {
   return motion === "idle" ? "idle" : "move";
 }
 
-function resolvePresentationHit(sprite, elapsedSurvivalMs) {
-  if (sprite.isTinted && (hitWindowDeadlineBySprite.get(sprite) ?? 0) <= elapsedSurvivalMs) {
+function resolvePresentationHit(sprite, elapsedSurvivalMs, isTinted = sprite.isTinted) {
+  if (isTinted && (hitWindowDeadlineBySprite.get(sprite) ?? 0) <= elapsedSurvivalMs) {
     hitWindowDeadlineBySprite.set(sprite, elapsedSurvivalMs + PRESENTATION_HIT_DURATION_MS);
   }
   return (hitWindowDeadlineBySprite.get(sprite) ?? 0) > elapsedSurvivalMs;
@@ -398,9 +467,8 @@ function syncPrototypePresentation(scene, sprite, characterId, profile, facing, 
   );
 }
 
-export function syncCharacterPresentation(scene, presentationOverride = null) {
-  const sprite = scene?.player;
-  if (!sprite?.active || sprite.isDying || !sprite.body?.velocity) {
+export function syncCharacterVisual(scene, sprite, presentationInput = null) {
+  if (!sprite?.active || sprite.isDying) {
     return;
   }
   const characterId = sprite.characterId ?? DEFAULT_CHARACTER_ID;
@@ -409,7 +477,7 @@ export function syncCharacterPresentation(scene, presentationOverride = null) {
   // the player sprite; the regular frame sync (called without arguments) must
   // keep honoring them until the driver restores. The prototype path stays
   // unreachable without both the flag and an exact 28-frame sheet.
-  const stickyOverride = presentationOverride ?? sprite.presentationSmokeOverride ?? null;
+  const stickyOverride = presentationInput ?? sprite.presentationSmokeOverride ?? null;
   const prototypeRequested = sprite.presentationPrototypeEnabled === true
     && stickyOverride !== null
     && hasExactSheet(scene, profile.prototypeSheetKey, profile.prototypeFrameCount)
@@ -421,19 +489,22 @@ export function syncCharacterPresentation(scene, presentationOverride = null) {
     return;
   }
 
-  const currentElapsedMs = scene.elapsedSurvivalMs ?? 0;
+  const currentElapsedMs = stickyOverride?.elapsedMs ?? scene.elapsedSurvivalMs ?? 0;
   // An override is consumed read-only for this frame; nothing below copies it
   // into the scene, the Arcade body, timers, RNG or persistence.
   const input = stickyOverride ?? {
     facingAngle: scene.playerFacingAngle,
-    velocityX: sprite.body.velocity.x,
-    velocityY: sprite.body.velocity.y,
-    hit: resolvePresentationHit(sprite, currentElapsedMs)
+    velocityX: sprite.body?.velocity?.x ?? 0,
+    velocityY: sprite.body?.velocity?.y ?? 0,
+    isTinted: sprite.isTinted
   };
+  const hit = typeof input.hit === "boolean"
+    ? input.hit
+    : resolvePresentationHit(sprite, currentElapsedMs, input.isTinted === true);
 
   sprite.presentationFacing = getFacingFromAngle(input.facingAngle, sprite.presentationFacing);
   const facing = sprite.presentationFacing;
-  const motion = input.hit
+  const motion = hit
     ? "hit"
     : getPlayerMotion({
       velocityX: input.velocityX ?? 0,
@@ -464,4 +535,12 @@ export function syncCharacterPresentation(scene, presentationOverride = null) {
     profile.fallbackSheetKey,
     getCharacterAnimationKey({ characterId, animationFamily: "legacy", motion: toLegacyMotion(motion), facing })
   );
+}
+
+export function syncCharacterPresentation(scene, presentationOverride = null) {
+  const sprite = scene?.player;
+  if (!sprite?.body?.velocity) {
+    return;
+  }
+  syncCharacterVisual(scene, sprite, presentationOverride);
 }

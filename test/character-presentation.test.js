@@ -10,7 +10,8 @@ import {
   getPlayerMotion,
   registerOpeningCharacterAnimations,
   resolveCharacterPresentation,
-  syncCharacterPresentation
+  syncCharacterPresentation,
+  syncCharacterVisual
 } from "../src/art/characterPresentation.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 
@@ -757,6 +758,84 @@ test("static fallback sprites stay untouched", () => {
   assert.equal(sprite.texture.key, STATIC_TEXTURE);
 });
 
+test("explicit body resolution requires the exact 28-frame body sheet and complete socket contract", () => {
+  const BODY_SHEET = "player-response-operative-body-prototype-sheet";
+  const base = { [LEGACY_SHEET]: 49 };
+
+  for (const frameTotal of [undefined, 1, 28, 30]) {
+    const frameTotals = frameTotal === undefined
+      ? base
+      : { ...base, [BODY_SHEET]: frameTotal };
+    const scene = createAnimationScene({ frameTotals });
+    assert.equal(
+      resolveCharacterPresentation(scene, DEFAULT_CHARACTER_ID, { allowBodyPreview: true }).animationFamily,
+      "legacy"
+    );
+  }
+
+  const scene = createAnimationScene({
+    frameTotals: { ...base, [BODY_SHEET]: 29 }
+  });
+  assert.deepEqual(
+    resolveCharacterPresentation(scene, DEFAULT_CHARACTER_ID, { allowBodyPreview: true }),
+    {
+      characterId: DEFAULT_CHARACTER_ID,
+      textureKey: BODY_SHEET,
+      animationFamily: "prototype",
+      displayScale: 1
+    }
+  );
+});
+
+test("syncCharacterVisual drives a non-physics sprite and owns its hit window", () => {
+  const scene = createAnimationScene({ frameTotals: { [LEGACY_SHEET]: 49 } });
+  registerOpeningCharacterAnimations(scene);
+  const anchor = createPlayerSprite({
+    textureKey: LEGACY_SHEET,
+    animationFamily: "legacy",
+    scale: 1.2
+  });
+  const visual = createPlayerSprite({
+    textureKey: LEGACY_SHEET,
+    animationFamily: "legacy",
+    scale: 1.2
+  });
+  delete visual.body;
+  scene.player = anchor;
+
+  syncCharacterVisual(scene, visual, {
+    facingAngle: 0,
+    velocityX: 2,
+    velocityY: 0,
+    isTinted: true,
+    elapsedMs: 1_000
+  });
+  assert.deepEqual(visual.played, [legacyKey("hit", "right")]);
+  assert.equal(anchor.played.length, 0);
+
+  syncCharacterVisual(scene, visual, {
+    facingAngle: 0,
+    velocityX: 2,
+    velocityY: 0,
+    isTinted: false,
+    elapsedMs: 1_119
+  });
+  assert.deepEqual(visual.played, [legacyKey("hit", "right")]);
+
+  syncCharacterVisual(scene, visual, {
+    facingAngle: 0,
+    velocityX: 2,
+    velocityY: 0,
+    isTinted: false,
+    elapsedMs: 1_120
+  });
+  assert.deepEqual(visual.played, [
+    legacyKey("hit", "right"),
+    legacyKey("move", "right")
+  ]);
+  assert.equal(visual.body, undefined);
+});
+
 test("sync warns once and stops playback when the target animation is missing", () => {
   const scene = createAnimationScene({
     frameTotals: { [LEGACY_SHEET]: 49, [PRODUCTION_SHEET]: 121 },
@@ -799,6 +878,18 @@ test("player and enemy creation retain the approved physics geometry and order",
   const scale = createPlayer.indexOf("applyDisplayScalePreservingBody");
   assert.ok(creation < collide && collide < body && body < scale);
   assert.match(createPlayer, /applyDisplayScalePreservingBody\(this\.player, presentation\.displayScale\)/);
+  assert.match(createPlayer, /createPlayerPresentationController\(this,\s*{\s*anchor: this\.player,/);
+  assert.doesNotMatch(createPlayer, /allowBodyPreview|previewMode|playerPresentation:/);
+  assert.ok(
+    createPlayer.indexOf("body.setSize(24, 24)")
+      < createPlayer.indexOf("createPlayerPresentationController"),
+    "the formal presentation attaches only after the 24x24 gameplay body exists"
+  );
+  assert.ok(
+    createPlayer.indexOf("createPlayerPresentationController")
+      < createPlayer.indexOf("startFollow(this.player"),
+    "the camera continues following the gameplay anchor after presentation attachment"
+  );
 
   assert.match(createGroups, /classType:\s*Phaser\.Physics\.Arcade\.Sprite/);
   assert.doesNotMatch(createGroups, /createCallback/);
@@ -849,6 +940,7 @@ test("presentation adapter source never writes gameplay, body or timer state", a
     "utf8"
   );
   assert.doesNotMatch(source, /\.body\.(?:setSize|setOffset|setCircle|setVelocity)/);
+  assert.doesNotMatch(source, /scene\.(?:health|elapsedSurvivalMs|playerFacingAngle)\s*=/);
   assert.doesNotMatch(source, /\.(?:health|moveSpeed|elapsedSurvivalMs|playerInvulnerableUntilMs)\s*=/);
   assert.doesNotMatch(source, /scene\.playerFacingAngle\s*=/);
   assert.doesNotMatch(source, /presentationHitUntilMs\s*=/);

@@ -7,467 +7,541 @@ import {
   createPlayerCharacterVisualStateDriver,
   installPlayerCharacterVisualStateBridge
 } from "../src/art/playerCharacterVisualStateDriver.js";
-import {
-  DEFAULT_CHARACTER_ID,
-  getPlayerMotion,
-  registerOpeningCharacterAnimations
-} from "../src/art/characterPresentation.js";
-import { TEXTURES } from "../src/assets/manifest.js";
 
-const LEGACY_SHEET = TEXTURES.playerOpeningSheet;
-const PROTOTYPE_SHEET = TEXTURES.playerResponseOperativePrototypeSheet;
 const FACING_NAMES = ["down", "left", "right", "up"];
-const MOTION_NAMES = ["idle", "forward", "backward", "strafeLeft", "strafeRight", "hit"];
+const MOTION_NAMES = [
+  "idle",
+  "forward",
+  "backward",
+  "strafeLeft",
+  "strafeRight",
+  "hit"
+];
 const EXPECTED_STATE_KEYS = FACING_NAMES.flatMap((facing) =>
   MOTION_NAMES.map((motion) => `${facing}-${motion}`)
 );
-const FRAME_SIZE = 64;
 
-function createEventStub() {
+function createEventStub(log = []) {
   const listeners = new Map();
   return {
+    on(event, fn) {
+      log.push(`on:${event}:${fn.name}`);
+      listeners.set(event, [...(listeners.get(event) ?? []), { fn, once: false }]);
+    },
     once(event, fn) {
+      log.push(`once:${event}:${fn.name}`);
       listeners.set(event, [...(listeners.get(event) ?? []), { fn, once: true }]);
     },
     off(event, fn) {
+      log.push(`off:${event}:${fn.name}`);
       listeners.set(event, (listeners.get(event) ?? []).filter((entry) => entry.fn !== fn));
     },
-    emit(event) {
+    emit(event, ...args) {
       for (const entry of [...(listeners.get(event) ?? [])]) {
         if (entry.once) this.off(event, entry.fn);
-        entry.fn();
+        entry.fn(...args);
       }
     },
     count(event) {
       return (listeners.get(event) ?? []).length;
+    },
+    functions(event) {
+      return (listeners.get(event) ?? []).map((entry) => entry.fn);
     }
   };
-}
-
-function createPlayerSprite() {
-  const player = {
-    x: 400,
-    y: 300,
-    active: true,
-    isDying: false,
-    isTinted: false,
-    flipX: false,
-    texture: { key: PROTOTYPE_SHEET },
-    characterId: DEFAULT_CHARACTER_ID,
-    presentationAnimationFamily: "prototype",
-    presentationFacing: "down",
-    scaleX: 1,
-    scaleY: 1,
-    width: FRAME_SIZE,
-    height: FRAME_SIZE,
-    displayOriginX: FRAME_SIZE / 2,
-    displayOriginY: FRAME_SIZE / 2,
-    anims: {
-      currentAnim: { key: `${DEFAULT_CHARACTER_ID}-prototype-idle-down` },
-      progress: 0.5,
-      getProgress() {
-        return this.progress;
-      },
-      setProgress(value) {
-        this.progress = value;
-      },
-      stop() {
-        this.currentAnim = null;
-      }
-    },
-    played: [],
-    setFlipX(value) {
-      this.flipX = value;
-      return this;
-    },
-    play(key) {
-      this.played.push(key);
-      this.anims.currentAnim = { key };
-      return this;
-    },
-    setTexture(key) {
-      this.texture.key = key;
-      return this;
-    },
-    setScale(value) {
-      this.scaleX = value;
-      this.scaleY = value;
-      return this;
-    }
-  };
-  player.body = {
-    sourceWidth: 24,
-    sourceHeight: 24,
-    width: 24,
-    height: 24,
-    x: 0,
-    y: 0,
-    isCircle: false,
-    radius: 0,
-    offset: {
-      x: 32,
-      y: 32,
-      set(x, y) {
-        this.x = x;
-        this.y = y;
-      }
-    },
-    position: { x: 0, y: 0 },
-    velocity: {
-      x: 0,
-      y: 0,
-      lengthSq() {
-        return this.x * this.x + this.y * this.y;
-      }
-    },
-    updateFromGameObject() {
-      this.width = this.sourceWidth * Math.abs(player.scaleX);
-      this.height = this.sourceHeight * Math.abs(player.scaleY);
-      this.position.x = player.x + player.scaleX * (this.offset.x - player.displayOriginX);
-      this.position.y = player.y + player.scaleY * (this.offset.y - player.displayOriginY);
-      this.x = this.position.x;
-      this.y = this.position.y;
-    }
-  };
-  player.body.updateFromGameObject();
-  return player;
-}
-
-function createScene() {
-  const warnings = [];
-  const existing = new Set();
-  const scene = {
-    playerFacingAngle: 0.7,
-    elapsedSurvivalMs: 12_000,
-    isPaused: false,
-    physics: { isPaused: false },
-    rng: { seed: 1234, calls: 0 },
-    events: createEventStub(),
-    textures: {
-      exists: (key) => [LEGACY_SHEET, PROTOTYPE_SHEET].includes(key),
-      get: (key) => ({ frameTotal: key === LEGACY_SHEET ? 49 : 29 })
-    },
-    anims: {
-      exists: (key) => existing.has(key),
-      remove: (key) => existing.delete(key),
-      generateFrameNumbers: (sheetKey, range) => ({ sheetKey, ...range }),
-      create: (config) => {
-        existing.add(config.key);
-      }
-    },
-    console: {
-      warn: (message) => warnings.push(message)
-    }
-  };
-  registerOpeningCharacterAnimations(scene);
-  return { scene, warnings };
 }
 
 function createFixture() {
-  const { scene, warnings } = createScene();
-  const player = createPlayerSprite();
-  scene.player = player;
-  return { scene, player, warnings };
-}
-
-function gameplaySnapshot(scene, player, storageDump) {
-  return {
-    playerFacingAngle: scene.playerFacingAngle,
-    elapsedSurvivalMs: scene.elapsedSurvivalMs,
-    isPaused: scene.isPaused,
-    physicsPaused: scene.physics.isPaused,
-    rng: { ...scene.rng },
-    mathRandom: Math.random,
-    velocityX: player.body.velocity.x,
-    velocityY: player.body.velocity.y,
-    hitDeadline: player.presentationHitUntilMs ?? null,
-    storage: storageDump
+  const calls = [];
+  const controllerState = {
+    mode: "legacy",
+    fallback: false,
+    previewMode: null,
+    destroyed: false
   };
-}
-
-function expectedForState(state) {
-  const { facing, motion } = state;
-  if (facing === "down" && motion !== "hit") {
-    return {
-      textureKey: PROTOTYPE_SHEET,
-      scale: 1,
-      flipX: false,
-      animationKey: `${DEFAULT_CHARACTER_ID}-prototype-${motion}-down`
-    };
-  }
-  const mapped = motion === "hit" ? "hit" : motion === "idle" ? "idle" : "move";
-  return {
-    textureKey: LEGACY_SHEET,
-    scale: 1.2,
-    flipX: facing === "right",
-    animationKey: `${DEFAULT_CHARACTER_ID}-legacy-${mapped}-${facing}`
-  };
-}
-
-function bodySnapshotOf(player) {
-  return {
-    x: player.body.x,
-    y: player.body.y,
-    width: player.body.width,
-    height: player.body.height,
-    offsetX: player.body.offset.x,
-    offsetY: player.body.offset.y
-  };
-}
-
-test("visual states cover the exact 24 facing and motion grid with self-consistent input", () => {
-  assert.deepEqual(Object.keys(PLAYER_CHARACTER_VISUAL_STATES), EXPECTED_STATE_KEYS);
-  assert.equal(Object.isFrozen(PLAYER_CHARACTER_VISUAL_STATES), true);
-
-  for (const [name, state] of Object.entries(PLAYER_CHARACTER_VISUAL_STATES)) {
-    assert.equal(Object.isFrozen(state), true, `${name} is frozen`);
-    assert.equal(Object.isFrozen(state.velocity), true, `${name} velocity is frozen`);
-    assert.equal(`${state.facing}-${state.motion}`, name);
-    if (state.motion === "hit") {
-      assert.deepEqual(
-        { x: state.velocity.x, y: state.velocity.y },
-        { x: 0, y: 0 },
-        `${name} carries the hit flag instead of velocity`
-      );
-      continue;
+  const playerPresentation = {
+    setPreviewOverride(value) {
+      calls.push(["setPreviewOverride", value]);
+      controllerState.previewMode = value?.mode ?? null;
+      return true;
+    },
+    update(snapshot, delta) {
+      calls.push(["update", snapshot, delta]);
+      return true;
+    },
+    snapshot() {
+      calls.push(["snapshot"]);
+      return Object.freeze({ ...controllerState });
     }
-    assert.equal(
-      getPlayerMotion({
-        velocityX: state.velocity.x,
-        velocityY: state.velocity.y,
-        facingAngle: state.angle
-      }),
-      state.motion,
-      `${name} classifies back to its own locomotion`
-    );
+  };
+  const scene = {
+    player: {
+      active: true,
+      isDying: false,
+      isTinted: false,
+      x: 400,
+      y: 300,
+      body: {
+        width: 24,
+        height: 24,
+        velocity: { x: 80, y: -40 }
+      }
+    },
+    playerPresentation,
+    playerFacingAngle: Math.PI / 4,
+    elapsedSurvivalMs: 1200,
+    dashUntilMs: 1400,
+    health: 90,
+    isPaused: false,
+    events: createEventStub(calls),
+    calls
+  };
+  return { scene, playerPresentation, calls, controllerState };
+}
+
+function gameplaySnapshot(scene) {
+  return {
+    player: {
+      x: scene.player.x,
+      y: scene.player.y,
+      active: scene.player.active,
+      isDying: scene.player.isDying,
+      isTinted: scene.player.isTinted,
+      body: scene.player.body,
+      width: scene.player.body.width,
+      height: scene.player.body.height,
+      velocityX: scene.player.body.velocity.x,
+      velocityY: scene.player.body.velocity.y
+    },
+    scene: {
+      playerFacingAngle: scene.playerFacingAngle,
+      elapsedSurvivalMs: scene.elapsedSurvivalMs,
+      dashUntilMs: scene.dashUntilMs,
+      health: scene.health,
+      isPaused: scene.isPaused
+    }
+  };
+}
+
+test("visual states retain the exact 24 facing and motion grid", () => {
+  assert.deepEqual(Object.keys(PLAYER_CHARACTER_VISUAL_STATES), EXPECTED_STATE_KEYS);
+  for (const [name, state] of Object.entries(PLAYER_CHARACTER_VISUAL_STATES)) {
+    assert.equal(Object.isFrozen(state), true, name);
+    assert.equal(Object.isFrozen(state.velocity), true, name);
+    assert.equal(Number.isFinite(state.angle), true, name);
+    assert.equal(Number.isFinite(state.velocity.x), true, name);
+    assert.equal(Number.isFinite(state.velocity.y), true, name);
   }
 });
 
-test("driver creation rejects a player still showing hit tint", () => {
-  const { scene, player } = createFixture();
-  player.isTinted = true;
-  assert.throws(
-    () => createPlayerCharacterVisualStateDriver({ scene }),
-    /hit tint/
-  );
-});
-
-test("applyState drives all 24 states through the approved family mapping without touching gameplay", () => {
-  const storageContent = [["meta", "{" + "\"perks\":[]" + "}"], ["settings", "{" + "\"muted\":false" + "}"]];
-  const { scene, player, warnings } = createFixture();
-  const before = gameplaySnapshot(scene, player, storageContent);
+test("manual states use only the presentation controller contract and never mutate gameplay", () => {
+  const { scene, calls } = createFixture();
+  const before = gameplaySnapshot(scene);
   const driver = createPlayerCharacterVisualStateDriver({ scene });
+
   assert.deepEqual(driver.listStates(), EXPECTED_STATE_KEYS);
-
-  const bodyBefore = bodySnapshotOf(player);
-  const expectedOverrides = new Map();
   for (const name of EXPECTED_STATE_KEYS) {
-    const state = PLAYER_CHARACTER_VISUAL_STATES[name];
-    const expected = expectedForState(state);
-
     const result = driver.applyState(name);
+    const state = PLAYER_CHARACTER_VISUAL_STATES[name];
+    const overrideCall = calls.at(-3);
+    const updateCall = calls.at(-2);
+    const snapshotCall = calls.at(-1);
 
-    assert.equal(Object.isFrozen(result), true, `${name} snapshot is frozen`);
-    assert.deepEqual(Object.keys(result).sort(), ["animationKey", "body", "name", "scaleX", "scaleY", "textureKey"]);
-    assert.equal(result.name, name);
-    assert.equal(result.animationKey, expected.animationKey, `${name} animation`);
-    assert.equal(result.textureKey, expected.textureKey, `${name} texture`);
-    assert.equal(result.scaleX, expected.scale, `${name} scaleX`);
-    assert.equal(result.scaleY, expected.scale, `${name} scaleY`);
-    assert.deepEqual(result.body, bodyBefore, `${name} keeps body width, height and offset`);
-    assert.deepEqual(bodySnapshotOf(player), bodyBefore, `${name} leaves the live body untouched`);
-
-    assert.equal(player.presentationPrototypeEnabled, true, `${name} enables the prototype flag`);
-    expectedOverrides.set(name, {
+    assert.equal(overrideCall[0], "setPreviewOverride", name);
+    assert.deepEqual(overrideCall[1], {
+      mode: "body",
       facingAngle: state.angle,
       velocityX: state.velocity.x,
       velocityY: state.velocity.y,
       hit: state.motion === "hit"
-    });
-    assert.deepEqual(player.presentationSmokeOverride, expectedOverrides.get(name), `${name} override input`);
-    assert.equal(Object.isFrozen(player.presentationSmokeOverride), true);
-    assert.equal(player.flipX, expected.flipX, `${name} flip`);
+    }, name);
+    assert.equal(Object.isFrozen(overrideCall[1]), true, name);
+    assert.equal(updateCall[0], "update", name);
+    assert.equal(Object.isFrozen(updateCall[1]), true, name);
+    assert.equal(updateCall[2], 0, name);
+    assert.deepEqual(snapshotCall, ["snapshot"], name);
+    assert.equal(result.name, name);
+    assert.equal(result.previewMode, "body");
   }
-
-  const downLocomotion = EXPECTED_STATE_KEYS.filter((name) => name.startsWith("down-") && !name.endsWith("-hit"));
-  assert.equal(downLocomotion.length, 5);
-  assert.deepEqual(
-    gameplaySnapshot(scene, player, storageContent),
-    before,
-    "24 states leave facing, velocity, pause, elapsed, hit deadline, RNG and storage untouched"
-  );
-  assert.deepEqual(
-    warnings,
-    [`[character-presentation] Missing, incomplete or failing spritesheet: ${TEXTURES.playerResponseOperativeSheet}; falling back to the previous character presentation.`],
-    "only the absent production sheet warns; prototype and legacy animations cover every state"
-  );
-
-  driver.restore();
-  driver.restore();
-  assert.equal("__SCP_PLAYER_CHARACTER_PROTOTYPE__" in scene, false);
+  assert.deepEqual(gameplaySnapshot(scene), before);
 });
 
-test("restore is idempotent and brings back the original presentation exactly", () => {
-  const { scene, player } = createFixture();
-  const driver = createPlayerCharacterVisualStateDriver({ scene });
-  driver.applyState("up-backward");
-  driver.applyState("right-hit");
-  assert.equal(player.texture.key, LEGACY_SHEET);
-  assert.equal(player.flipX, true);
-  const playsBeforeRestore = player.played.length;
-
-  driver.restore();
-
-  assert.equal(Object.hasOwn(player, "presentationPrototypeEnabled"), false);
-  assert.equal(Object.hasOwn(player, "presentationSmokeOverride"), false);
-  assert.equal(player.presentationAnimationFamily, "prototype");
-  assert.equal(player.presentationFacing, "down");
-  assert.equal(player.texture.key, PROTOTYPE_SHEET);
-  assert.equal(player.scaleX, 1);
-  assert.equal(player.scaleY, 1);
-  assert.equal(player.flipX, false);
-  assert.equal(player.anims.currentAnim.key, `${DEFAULT_CHARACTER_ID}-prototype-idle-down`);
-  assert.equal(player.anims.getProgress(), 0.5);
-  assert.equal(player.played.length, playsBeforeRestore + 1, "restore replays the original animation once");
-  assert.deepEqual(bodySnapshotOf(player), {
-    x: 400,
-    y: 300,
-    width: 24,
-    height: 24,
-    offsetX: 32,
-    offsetY: 32
-  });
-
-  driver.restore();
-  assert.equal(player.played.length, playsBeforeRestore + 1, "a second restore is a no-op");
-  assert.throws(() => driver.applyState("down-idle"), /already restored/);
-  assert.throws(() => driver.applyState("unknown-state"), /already restored/);
-});
-
-test("applyState rejects unknown states and respects the usePrototype flag", () => {
-  const { scene, player } = createFixture();
+test("manual states can explicitly validate legacy and static fallback modes", () => {
+  const { scene, calls } = createFixture();
   const driver = createPlayerCharacterVisualStateDriver({ scene });
 
-  assert.throws(() => driver.applyState("down-teleport"), /unknown player character visual state/);
+  driver.applyState("left-forward", { mode: "legacy" });
+  assert.equal(calls.at(-3)[1].mode, "legacy");
+  driver.applyState("right-hit", { mode: "static" });
+  assert.equal(calls.at(-3)[1].mode, "static");
 
-  driver.applyState("down-idle", { usePrototype: false });
-  assert.equal(player.presentationPrototypeEnabled, false);
-  driver.restore();
+  assert.throws(
+    () => driver.applyState("down-idle", { mode: "unknown" }),
+    /unknown player presentation preview mode/
+  );
+  assert.throws(
+    () => driver.applyState("down-teleport"),
+    /unknown player character visual state/
+  );
 });
 
-test("a throwing syncPresentation restores the presentation before rethrowing", () => {
-  const { scene, player } = createFixture();
-  const failure = new Error("sync exploded");
-  const driver = createPlayerCharacterVisualStateDriver({
-    scene,
-    syncPresentation() {
-      throw failure;
-    }
-  });
-
-  let caught = null;
-  try {
-    driver.applyState("left-forward");
-  } catch (error) {
-    caught = error;
-  }
-
-  assert.equal(caught, failure, "the original error propagates unchanged");
-  assert.equal(Object.hasOwn(player, "presentationPrototypeEnabled"), false, "restore cleared the driver fields first");
-  assert.equal(Object.hasOwn(player, "presentationSmokeOverride"), false);
-  assert.equal(player.texture.key, PROTOTYPE_SHEET);
-  assert.equal(player.anims.currentAnim.key, `${DEFAULT_CHARACTER_ID}-prototype-idle-down`);
-  assert.throws(() => driver.applyState("down-idle"), /already restored/);
-});
-
-test("applyState tolerates offset-only recomputation when the frame geometry changes", () => {
-  // Reproduces the first real-browser smoke failure: the live player spawns on
-  // the legacy 48px frame at scale 1.2, and Phaser's setTexture updates the
-  // frame size and displayOrigin. applyTextureAndScalePreservingBody then
-  // recomputes body.offset to keep the world geometry (x/y/width/height)
-  // stable; the offset itself legitimately changes.
-  const { scene, player } = createFixture();
-  player.texture.key = LEGACY_SHEET;
-  player.presentationAnimationFamily = "legacy";
-  player.scaleX = 1.2;
-  player.scaleY = 1.2;
-  player.anims.currentAnim = { key: `${DEFAULT_CHARACTER_ID}-legacy-idle-down` };
-  player.setTexture = function setTexture(key) {
-    this.texture.key = key;
-    const frameSize = key === PROTOTYPE_SHEET ? FRAME_SIZE : 48;
-    this.width = frameSize;
-    this.height = frameSize;
-    this.displayOriginX = frameSize / 2;
-    this.displayOriginY = frameSize / 2;
-    return this;
+test("driver restores with null and reports rejected controller overrides", () => {
+  const { scene, playerPresentation, calls } = createFixture();
+  const driver = createPlayerCharacterVisualStateDriver({ scene });
+  playerPresentation.setPreviewOverride = (value) => {
+    calls.push(["setPreviewOverride", value]);
+    return value === null;
   };
-  player.setTexture(LEGACY_SHEET);
-  player.body.sourceWidth = 20;
-  player.body.sourceHeight = 20;
-  player.body.offset.set(24, 24);
-  player.body.updateFromGameObject();
-  assert.equal(player.body.x, 400);
-  assert.equal(player.body.width, 24);
-
-  const driver = createPlayerCharacterVisualStateDriver({ scene });
-
-  const prototypeResult = driver.applyState("down-idle");
-  assert.equal(prototypeResult.textureKey, PROTOTYPE_SHEET);
-  assert.deepEqual(prototypeResult.body, {
-    x: 400, y: 300, width: 24, height: 24, offsetX: 32, offsetY: 32
-  }, "prototype frame recomputes the offset but keeps world geometry");
-
-  const legacyResult = driver.applyState("left-forward");
-  assert.equal(legacyResult.textureKey, LEGACY_SHEET);
-  assert.deepEqual(legacyResult.body, {
-    x: 400, y: 300, width: 24, height: 24, offsetX: 24, offsetY: 24
-  }, "legacy frame restores the original offset and keeps world geometry");
-
-  driver.restore();
-});
-
-test("applyState throws and restores when world body geometry changes", () => {
-  const { scene, player } = createFixture();
-  const driver = createPlayerCharacterVisualStateDriver({
-    scene,
-    syncPresentation() {
-      player.body.width = 99;
-    }
-  });
 
   assert.throws(
     () => driver.applyState("down-idle"),
-    /player body width changed in visual state down-idle/
+    /presentation controller rejected preview override/
   );
-  assert.equal(player.body.width, 24, "restore returns the live body to 24px");
-  assert.equal(player.texture.key, PROTOTYPE_SHEET);
-  assert.throws(() => driver.applyState("down-idle"), /already restored/);
+  assert.equal(driver.restore(), true);
+  assert.deepEqual(calls.at(-2), ["setPreviewOverride", null]);
+  assert.equal(calls.at(-1)[0], "update");
+  assert.equal(driver.restore(), true, "restore is safe to repeat");
 });
 
-test("driver never touches RNG or storage even when both throw on access", () => {
+test("driver rejects a false presentation update and live mode cleans itself safely", () => {
+  const manualFixture = createFixture();
+  manualFixture.playerPresentation.update = (snapshot, delta) => {
+    manualFixture.calls.push(["update", snapshot, delta]);
+    return false;
+  };
+  const driver = createPlayerCharacterVisualStateDriver({
+    scene: manualFixture.scene
+  });
+  assert.throws(
+    () => driver.applyState("down-idle"),
+    /presentation controller rejected preview update/
+  );
+
+  const liveFixture = createFixture();
+  liveFixture.playerPresentation.update = (snapshot, delta) => {
+    liveFixture.calls.push(["update", snapshot, delta]);
+    return false;
+  };
+  const windowRef = {};
+  const bridge = installPlayerCharacterVisualStateBridge(
+    liveFixture.scene,
+    windowRef,
+    { mode: "body" }
+  );
+  assert.equal(liveFixture.scene.events.count("update"), 0);
+  assert.equal(liveFixture.scene.events.count("shutdown"), 0);
+  assert.equal(liveFixture.scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowRef, false);
+  assert.equal(bridge.snapshot().restored, false);
+});
+
+test("body live bridge installs a named update and cleanup removes every owned entry", () => {
+  const { scene, calls } = createFixture();
+  const windowRef = {};
+  const before = gameplaySnapshot(scene);
+
+  const bridge = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+    mode: "body"
+  });
+
+  assert.equal(windowRef.__SCP_PLAYER_PRESENTATION_PREVIEW__, bridge);
+  assert.equal(scene.events.count("update"), 1);
+  assert.equal(scene.events.count("shutdown"), 1);
+  assert.equal(scene.events.count("destroy"), 1);
+  assert.equal(scene.events.functions("update")[0].name, "onUpdate");
+
+  scene.player.body.velocity.x = -20;
+  scene.player.body.velocity.y = 60;
+  scene.playerFacingAngle = Math.PI / 2;
+  scene.player.isTinted = true;
+  const gameplayBeforeUpdate = gameplaySnapshot(scene);
+  scene.events.emit("update", 0, 17);
+
+  const overrideCall = calls.findLast((entry) => entry[0] === "setPreviewOverride");
+  const updateCall = calls.findLast((entry) => entry[0] === "update");
+  assert.deepEqual(overrideCall[1], {
+    mode: "body",
+    facingAngle: Math.PI / 2,
+    velocityX: -20,
+    velocityY: 60,
+    hit: true
+  });
+  assert.equal(Object.isFrozen(overrideCall[1]), true);
+  assert.equal(updateCall[2], 17);
+  assert.equal(Object.isFrozen(updateCall[1]), true);
+
+  const updateListener = scene.events.functions("update")[0];
+  scene.events.emit("shutdown");
+  const nullIndex = calls.findIndex(
+    (entry) => entry[0] === "setPreviewOverride" && entry[1] === null
+  );
+  const updateOffIndex = calls.findIndex(
+    (entry) => entry === `off:update:${updateListener.name}`
+  );
+  assert.ok(nullIndex >= 0 && nullIndex < updateOffIndex, "normal legacy restoration happens before listener removal");
+  assert.equal(scene.events.count("update"), 0);
+  assert.equal(scene.events.count("shutdown"), 0);
+  assert.equal(scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowRef, false);
+  assert.deepEqual(gameplaySnapshot(scene), gameplayBeforeUpdate, "bridge writes no gameplay state");
+  assert.equal(before.player.body, gameplayBeforeUpdate.player.body);
+});
+
+test("two-direction bridge stays live, presentation-only and fully removable", () => {
+  const { scene, calls } = createFixture();
+  const windowRef = {};
+  const before = gameplaySnapshot(scene);
+  const bridge = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+    mode: "two-direction"
+  });
+
+  assert.equal(scene.events.count("update"), 1);
+  scene.player.body.velocity.x = 0;
+  scene.player.body.velocity.y = -80;
+  const gameplayBeforeUpdate = gameplaySnapshot(scene);
+  scene.events.emit("update", 0, 16);
+  const override = calls.findLast(
+    (entry) => entry[0] === "setPreviewOverride"
+  )[1];
+  assert.equal(override.mode, "two-direction");
+  assert.equal(override.velocityX, 0);
+  assert.equal(override.velocityY, -80);
+  assert.deepEqual(gameplaySnapshot(scene), gameplayBeforeUpdate);
+  assert.equal(before.player.body, gameplayBeforeUpdate.player.body);
+
+  assert.equal(bridge.cleanup(), true);
+  assert.equal(scene.events.count("update"), 0);
+  assert.equal(scene.events.count("shutdown"), 0);
+  assert.equal(scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowRef, false);
+});
+
+test("states installs no live update while legacy and static install development-only live fallback", () => {
+  for (const mode of ["states", "legacy", "static"]) {
+    const { scene, calls } = createFixture();
+    const windowRef = {};
+    const bridge = installPlayerCharacterVisualStateBridge(scene, windowRef, { mode });
+    assert.equal(scene.events.count("update"), mode === "states" ? 0 : 1, mode);
+    if (mode === "states") {
+      assert.equal(
+        calls.some((entry) => entry[0] === "setPreviewOverride"),
+        false,
+        "states waits for an explicit manual selection"
+      );
+    } else {
+      const override = calls.find((entry) => entry[0] === "setPreviewOverride")[1];
+      assert.equal(override.mode, mode);
+    }
+    bridge.cleanup();
+    assert.equal(scene.events.count("update"), 0, mode);
+  }
+});
+
+test("three real shutdown-create cycles leave every old Scene listener-free", () => {
+  const windowRef = {};
+  const cycles = [];
+
+  for (let index = 0; index < 3; index += 1) {
+    const fixture = createFixture();
+    const bridge = installPlayerCharacterVisualStateBridge(fixture.scene, windowRef, {
+      mode: "body"
+    });
+    cycles.push({ ...fixture, bridge });
+    assert.equal(fixture.scene.events.count("update"), 1, `cycle ${index + 1}`);
+    assert.equal(fixture.scene.events.count("shutdown"), 1, `cycle ${index + 1}`);
+    assert.equal(fixture.scene.events.count("destroy"), 1, `cycle ${index + 1}`);
+    assert.equal(windowRef.__SCP_PLAYER_PRESENTATION_PREVIEW__, bridge);
+
+    fixture.scene.events.emit("shutdown");
+    assert.equal(fixture.scene.events.count("update"), 0, `cycle ${index + 1}`);
+    assert.equal(fixture.scene.events.count("shutdown"), 0, `cycle ${index + 1}`);
+    assert.equal(fixture.scene.events.count("destroy"), 0, `cycle ${index + 1}`);
+    assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowRef, false);
+
+    const callsAfterShutdown = fixture.calls.length;
+    fixture.scene.events.emit("update", 0, 16);
+    assert.equal(
+      fixture.calls.length,
+      callsAfterShutdown,
+      `old Scene ${index + 1} has no live update callback`
+    );
+  }
+  assert.ok(cycles.every(({ bridge }) => bridge.snapshot().restored));
+});
+
+test("a rejected live override cleans the dev bridge without escaping into the scene update", () => {
+  const { scene, playerPresentation } = createFixture();
+  const windowRef = {};
+  const bridge = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+    mode: "body"
+  });
+  playerPresentation.setPreviewOverride = () => false;
+
+  assert.doesNotThrow(() => scene.events.emit("update", 0, 16));
+  assert.equal(scene.events.count("update"), 0);
+  assert.equal(scene.events.count("shutdown"), 0);
+  assert.equal(scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowRef, false);
+  assert.equal(bridge.snapshot().restored, false);
+});
+
+test("throwing preview restoration never escapes update or lifecycle cleanup", () => {
+  const liveFixture = createFixture();
+  const liveWindow = {};
+  const liveBridge = installPlayerCharacterVisualStateBridge(liveFixture.scene, liveWindow, {
+    mode: "body"
+  });
+  liveFixture.playerPresentation.setPreviewOverride = () => {
+    throw new Error("preview controller exploded");
+  };
+
+  let restoreResult = null;
+  assert.doesNotThrow(() => {
+    restoreResult = liveBridge.restore();
+  });
+  assert.equal(restoreResult, false);
+  assert.doesNotThrow(() => liveFixture.scene.events.emit("update", 0, 16));
+  assert.equal(liveFixture.scene.events.count("update"), 0);
+  assert.equal(liveFixture.scene.events.count("shutdown"), 0);
+  assert.equal(liveFixture.scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in liveWindow, false);
+
+  const lifecycleFixture = createFixture();
+  const lifecycleWindow = {};
+  installPlayerCharacterVisualStateBridge(
+    lifecycleFixture.scene,
+    lifecycleWindow,
+    { mode: "states" }
+  );
+  lifecycleFixture.playerPresentation.setPreviewOverride = () => {
+    throw new Error("restore exploded");
+  };
+
+  assert.doesNotThrow(() => lifecycleFixture.scene.events.emit("shutdown"));
+  assert.equal(lifecycleFixture.scene.events.count("update"), 0);
+  assert.equal(lifecycleFixture.scene.events.count("shutdown"), 0);
+  assert.equal(lifecycleFixture.scene.events.count("destroy"), 0);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in lifecycleWindow, false);
+});
+
+test("cleanup isolates every release step and retries only because work remains", () => {
+  const fixture = createFixture();
+  const windowTarget = {};
+  let deleteAttempts = 0;
+  const windowRef = new Proxy(windowTarget, {
+    deleteProperty(target, property) {
+      deleteAttempts += 1;
+      if (deleteAttempts === 1) {
+        throw new Error("global delete failed");
+      }
+      return Reflect.deleteProperty(target, property);
+    }
+  });
+  const bridge = installPlayerCharacterVisualStateBridge(
+    fixture.scene,
+    windowRef,
+    { mode: "body" }
+  );
+  const originalOff = fixture.scene.events.off.bind(fixture.scene.events);
+  let updateOffAttempts = 0;
+  fixture.scene.events.off = (event, fn) => {
+    if (event === "update") {
+      updateOffAttempts += 1;
+      if (updateOffAttempts === 1) {
+        throw new Error("update off failed");
+      }
+    }
+    return originalOff(event, fn);
+  };
+
+  assert.doesNotThrow(() => bridge.cleanup());
+  assert.equal(fixture.scene.events.count("update"), 1, "only the failed detach remains");
+  assert.equal(fixture.scene.events.count("shutdown"), 0);
+  assert.equal(fixture.scene.events.count("destroy"), 0);
+  assert.equal(deleteAttempts, 1, "global deletion is attempted despite an earlier off failure");
+  assert.equal(windowRef.__SCP_PLAYER_PRESENTATION_PREVIEW__, bridge);
+
+  assert.doesNotThrow(() => bridge.cleanup());
+  assert.equal(fixture.scene.events.count("update"), 0);
+  assert.equal(fixture.scene.events.count("shutdown"), 0);
+  assert.equal(fixture.scene.events.count("destroy"), 0);
+  assert.equal(deleteAttempts, 2);
+  assert.equal("__SCP_PLAYER_PRESENTATION_PREVIEW__" in windowTarget, false);
+});
+
+test("a throwing previous bridge cannot block a replacement installation", () => {
+  const fixture = createFixture();
+  const priorCalls = [];
+  const windowRef = {
+    __SCP_PLAYER_PRESENTATION_PREVIEW__: {
+      cleanup() {
+        priorCalls.push("cleanup");
+        throw new Error("old cleanup failed");
+      },
+      restore() {
+        priorCalls.push("restore");
+        throw new Error("old restore failed");
+      }
+    }
+  };
+  let bridge = null;
+
+  assert.doesNotThrow(() => {
+    bridge = installPlayerCharacterVisualStateBridge(
+      fixture.scene,
+      windowRef,
+      { mode: "states" }
+    );
+  });
+  assert.deepEqual(priorCalls, ["cleanup", "restore"]);
+  assert.equal(windowRef.__SCP_PLAYER_PRESENTATION_PREVIEW__, bridge);
+  bridge.cleanup();
+});
+
+test("reinstall cleans an older bridge before publishing its replacement", () => {
+  const { scene, calls } = createFixture();
+  const windowRef = {};
+  const first = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+    mode: "body"
+  });
+  const marker = calls.length;
+  const second = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+    mode: "static"
+  });
+
+  assert.equal(first.snapshot().restored, true);
+  assert.equal(windowRef.__SCP_PLAYER_PRESENTATION_PREVIEW__, second);
+  const reinstallCalls = calls.slice(marker);
+  assert.deepEqual(
+    reinstallCalls.find((entry) => entry[0] === "setPreviewOverride"),
+    ["setPreviewOverride", null],
+    "the old override is restored before the replacement is installed"
+  );
+  second.cleanup();
+});
+
+test("RNG and storage remain unreachable through manual and live preview paths", () => {
   const originalRandom = Math.random;
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Math.random = () => {
-    throw new Error("RNG access is forbidden in the visual state driver");
+    throw new Error("RNG access is forbidden");
   };
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     get() {
-      throw new Error("localStorage access is forbidden in the visual state driver");
+      throw new Error("storage access is forbidden");
     }
   });
 
   try {
-    const { scene, player } = createFixture();
-    const driver = createPlayerCharacterVisualStateDriver({ scene });
-    for (const name of EXPECTED_STATE_KEYS) {
-      const expected = expectedForState(PLAYER_CHARACTER_VISUAL_STATES[name]);
-      const result = driver.applyState(name);
-      assert.equal(result.textureKey, expected.textureKey, name);
-      assert.equal(result.scaleX, expected.scale, name);
-    }
-    driver.restore();
-    assert.equal(player.texture.key, PROTOTYPE_SHEET);
+    const { scene } = createFixture();
+    const windowRef = {};
+    const bridge = installPlayerCharacterVisualStateBridge(scene, windowRef, {
+      mode: "two-direction"
+    });
+    bridge.applyState("up-backward");
+    scene.events.emit("update", 0, 16);
+    bridge.cleanup();
   } finally {
     Math.random = originalRandom;
     if (originalDescriptor) {
@@ -478,57 +552,24 @@ test("driver never touches RNG or storage even when both throw on access", () =>
   }
 });
 
-test("bridge installs a single global entry and cleans paired listeners on shutdown or destroy", () => {
-  const { scene } = createFixture();
-  const windowRef = {};
-
-  const driver = installPlayerCharacterVisualStateBridge(scene, windowRef);
-  assert.equal(windowRef.__SCP_PLAYER_CHARACTER_PROTOTYPE__, driver);
-  assert.equal(scene.events.count("shutdown"), 1);
-  assert.equal(scene.events.count("destroy"), 1);
-
-  scene.events.emit("shutdown");
-  assert.equal("__SCP_PLAYER_CHARACTER_PROTOTYPE__" in windowRef, false);
-  assert.equal(scene.events.count("shutdown"), 0);
-  assert.equal(scene.events.count("destroy"), 0);
-  assert.throws(() => driver.applyState("down-idle"), /already restored/);
-
-  const second = installPlayerCharacterVisualStateBridge(scene, windowRef);
-  assert.equal(windowRef.__SCP_PLAYER_CHARACTER_PROTOTYPE__, second);
-  assert.equal(scene.events.count("shutdown"), 1, "restart keeps at most one shutdown listener");
-  assert.equal(scene.events.count("destroy"), 1, "restart keeps at most one destroy listener");
-
-  scene.events.emit("destroy");
-  assert.equal(scene.events.count("shutdown"), 0);
-  assert.equal(scene.events.count("destroy"), 0);
-  assert.equal("__SCP_PLAYER_CHARACTER_PROTOTYPE__" in windowRef, false);
-});
-
-test("bridge restores a previous global entry before replacing it", () => {
-  const { scene } = createFixture();
-  const calls = [];
-  const windowRef = {
-    __SCP_PLAYER_CHARACTER_PROTOTYPE__: {
-      restore: () => calls.push("restore")
-    }
-  };
-
-  const driver = installPlayerCharacterVisualStateBridge(scene, windowRef);
-
-  assert.deepEqual(calls, ["restore"]);
-  assert.equal(windowRef.__SCP_PLAYER_CHARACTER_PROTOTYPE__, driver);
-  scene.events.emit("shutdown");
-});
-
-test("driver source never writes gameplay, RNG, timer or pause state", async () => {
+test("driver source is limited to the approved presentation API and contains no gameplay writes", async () => {
   const source = await readFile(
     new URL("../src/art/playerCharacterVisualStateDriver.js", import.meta.url),
     "utf8"
   );
+  assert.match(source, /\.setPreviewOverride\(/);
+  assert.match(source, /\.update\(/);
+  assert.match(source, /\.snapshot\(/);
+  assert.deepEqual(
+    new Set([...source.matchAll(/playerPresentation\.([A-Za-z]+)/g)].map((match) => match[1])),
+    new Set(["setPreviewOverride", "update", "snapshot"])
+  );
+  assert.doesNotMatch(source, /presentationPrototypeEnabled|presentationSmokeOverride/);
+  assert.doesNotMatch(source, /syncCharacterPresentation|applyTextureAndScalePreservingBody/);
   assert.doesNotMatch(source, /Math\.random|Phaser\.Math\.RND|localStorage/);
   assert.doesNotMatch(source, /triggerVictory|triggerGameOver|saveMetaProgress/);
-  assert.doesNotMatch(source, /playerFacingAngle\s*=|\.body\.setVelocity|\.velocity\.(?:x|y)\s*=/);
-  assert.doesNotMatch(source, /elapsedSurvivalMs\s*=|presentationHitUntilMs\s*=/);
+  assert.doesNotMatch(source, /\.body\.setVelocity|\.velocity\.(?:x|y)\s*=/);
+  assert.doesNotMatch(source, /playerFacingAngle\s*=|elapsedSurvivalMs\s*=|presentationHitUntilMs\s*=/);
   assert.doesNotMatch(source, /\.pause\(|\.resume\(|isPaused\s*=/);
   assert.equal(Object.keys(PLAYER_CHARACTER_VISUAL_STATES).length, 24);
 });

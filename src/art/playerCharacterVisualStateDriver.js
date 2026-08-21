@@ -1,5 +1,4 @@
-import { syncCharacterPresentation } from "./characterPresentation.js";
-import { applyTextureAndScalePreservingBody } from "./presentationRules.js";
+import { createPlayerPresentationSnapshot } from "./playerPresentationModel.js";
 
 const FACING_ANGLES = Object.freeze({
   down: Math.PI / 2,
@@ -8,9 +7,24 @@ const FACING_ANGLES = Object.freeze({
   up: -Math.PI / 2
 });
 const MOTIONS = Object.freeze([
-  "idle", "forward", "backward", "strafeLeft", "strafeRight", "hit"
+  "idle",
+  "forward",
+  "backward",
+  "strafeLeft",
+  "strafeRight",
+  "hit"
 ]);
 const SPEED = 80;
+const PREVIEW_MODES = Object.freeze(new Set([
+  "body",
+  "legacy",
+  "static",
+  "sample-a",
+  "sample-b",
+  "two-direction"
+]));
+const BRIDGE_MODES = Object.freeze(new Set(["states", ...PREVIEW_MODES]));
+const GLOBAL_ENTRY = "__SCP_PLAYER_PRESENTATION_PREVIEW__";
 const clean = (value) => Math.abs(value) < 1e-9 ? 0 : value;
 
 function velocityFor(angle, motion) {
@@ -24,140 +38,249 @@ function velocityFor(angle, motion) {
     strafeRight: right,
     hit: [0, 0]
   }[motion];
-  return Object.freeze({ x: clean(units[0] * SPEED), y: clean(units[1] * SPEED) });
-}
-
-export const PLAYER_CHARACTER_VISUAL_STATES = Object.freeze(Object.fromEntries(
-  Object.entries(FACING_ANGLES).flatMap(([facing, angle]) => MOTIONS.map((motion) => [
-    `${facing}-${motion}`,
-    Object.freeze({ facing, motion, angle, velocity: velocityFor(angle, motion) })
-  ]))
-));
-
-function bodySnapshot(body) {
   return Object.freeze({
-    x: body.x, y: body.y, width: body.width, height: body.height,
-    offsetX: body.offset?.x ?? 0, offsetY: body.offset?.y ?? 0
+    x: clean(units[0] * SPEED),
+    y: clean(units[1] * SPEED)
   });
 }
 
-export function createPlayerCharacterVisualStateDriver({
-  scene,
-  syncPresentation = syncCharacterPresentation
+export const PLAYER_CHARACTER_VISUAL_STATES = Object.freeze(Object.fromEntries(
+  Object.entries(FACING_ANGLES).flatMap(([facing, angle]) =>
+    MOTIONS.map((motion) => [
+      `${facing}-${motion}`,
+      Object.freeze({
+        facing,
+        motion,
+        angle,
+        velocity: velocityFor(angle, motion)
+      })
+    ])
+  )
+));
+
+function createOverride(mode, {
+  facingAngle,
+  velocityX,
+  velocityY,
+  hit
 }) {
-  if (!scene?.player?.body || !scene.player.anims) {
-    throw new Error("player character prototype requires an active player sprite");
+  return Object.freeze({
+    mode,
+    facingAngle,
+    velocityX,
+    velocityY,
+    hit
+  });
+}
+
+export function createPlayerCharacterVisualStateDriver({ scene }) {
+  const playerPresentation = scene?.playerPresentation;
+  if (
+    !playerPresentation
+    || typeof playerPresentation.setPreviewOverride !== "function"
+    || typeof playerPresentation.update !== "function"
+    || typeof playerPresentation.snapshot !== "function"
+  ) {
+    throw new Error("player presentation preview requires an active presentation controller");
   }
-  const player = scene.player;
-  if (player.isTinted) {
-    throw new Error("wait for player hit tint to clear before starting character prototype review");
-  }
-  const original = {
-    hasPrototypeEnabled: Object.hasOwn(player, "presentationPrototypeEnabled"),
-    prototypeEnabled: player.presentationPrototypeEnabled,
-    hasOverride: Object.hasOwn(player, "presentationSmokeOverride"),
-    override: player.presentationSmokeOverride,
-    animationFamily: player.presentationAnimationFamily,
-    presentationFacing: player.presentationFacing,
-    textureKey: player.texture?.key ?? null,
-    scale: player.scaleX,
-    flipX: player.flipX,
-    animationKey: player.anims.currentAnim?.key ?? null,
-    animationProgress: player.anims.getProgress?.() ?? 0
-  };
   let restored = false;
 
-  function restorePresentation() {
-    if (original.hasPrototypeEnabled) {
-      player.presentationPrototypeEnabled = original.prototypeEnabled;
-    } else {
-      delete player.presentationPrototypeEnabled;
+  function updatePresentation(
+    override,
+    delta = 0,
+    snapshot = createPlayerPresentationSnapshot(scene)
+  ) {
+    if (restored) {
+      throw new Error("player presentation preview driver already restored");
     }
-    if (original.hasOverride) {
-      player.presentationSmokeOverride = original.override;
-    } else {
-      delete player.presentationSmokeOverride;
+    if (playerPresentation.setPreviewOverride(override) !== true) {
+      throw new Error("presentation controller rejected preview override");
     }
-    player.presentationAnimationFamily = original.animationFamily;
-    player.presentationFacing = original.presentationFacing;
-    if (original.textureKey) {
-      applyTextureAndScalePreservingBody(player, original.textureKey, original.scale);
+    if (
+      playerPresentation.update(
+        snapshot,
+        Number.isFinite(delta) ? delta : 0
+      ) !== true
+    ) {
+      restore();
+      throw new Error("presentation controller rejected preview update");
     }
-    player.setFlipX?.(original.flipX);
-    if (original.animationKey) {
-      player.play(original.animationKey, true);
-      player.anims.setProgress?.(original.animationProgress);
-    } else {
-      player.anims.stop?.();
+  }
+
+  function applyState(name, { mode = "body" } = {}) {
+    if (!PREVIEW_MODES.has(mode)) {
+      throw new Error(`unknown player presentation preview mode: ${mode}`);
     }
+    const state = PLAYER_CHARACTER_VISUAL_STATES[name];
+    if (!state) {
+      throw new Error(`unknown player character visual state: ${name}`);
+    }
+    updatePresentation(createOverride(mode, {
+      facingAngle: state.angle,
+      velocityX: state.velocity.x,
+      velocityY: state.velocity.y,
+      hit: state.motion === "hit"
+    }));
+    return Object.freeze({
+      name,
+      ...playerPresentation.snapshot()
+    });
+  }
+
+  function applyLiveState(mode, delta = 0) {
+    if (!PREVIEW_MODES.has(mode)) {
+      throw new Error(`unknown player presentation preview mode: ${mode}`);
+    }
+    const snapshot = createPlayerPresentationSnapshot(scene);
+    updatePresentation(createOverride(mode, {
+      facingAngle: snapshot.facingAngle,
+      velocityX: snapshot.velocityX,
+      velocityY: snapshot.velocityY,
+      hit: scene?.player?.isTinted === true
+    }), delta, snapshot);
+    return playerPresentation.snapshot();
   }
 
   function restore() {
-    if (restored) return;
+    if (restored) {
+      return true;
+    }
+    try {
+      if (playerPresentation.setPreviewOverride(null) !== true) {
+        return false;
+      }
+      if (
+        playerPresentation.update(
+          createPlayerPresentationSnapshot(scene),
+          0
+        ) !== true
+      ) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
     restored = true;
-    restorePresentation();
+    return true;
   }
 
-  function applyState(name, { usePrototype = true } = {}) {
-    if (restored) throw new Error("player character prototype driver already restored");
-    const state = PLAYER_CHARACTER_VISUAL_STATES[name];
-    if (!state) throw new Error(`unknown player character visual state: ${name}`);
-    const beforeBody = bodySnapshot(player.body);
-    try {
-      const override = Object.freeze({
-        facingAngle: state.angle,
-        velocityX: state.velocity.x,
-        velocityY: state.velocity.y,
-        hit: state.motion === "hit"
-      });
-      player.presentationPrototypeEnabled = usePrototype;
-      player.presentationSmokeOverride = override;
-      syncPresentation(scene, override);
-      const body = bodySnapshot(player.body);
-      // World geometry (x/y/width/height) is the gameplay-relevant invariant.
-      // applyTextureAndScalePreservingBody legitimately recomputes body.offset
-      // from the new frame's displayOrigin to keep that world geometry stable,
-      // so offsets are reported in the snapshot but excluded from this guard.
-      for (const field of ["x", "y", "width", "height"]) {
-        if (body[field] !== beforeBody[field]) {
-          throw new Error(`player body ${field} changed in visual state ${name}`);
-        }
-      }
-      return Object.freeze({
-        name,
-        animationKey: player.anims.currentAnim?.key ?? null,
-        textureKey: player.texture?.key ?? null,
-        scaleX: player.scaleX,
-        scaleY: player.scaleY,
-        body
-      });
-    } catch (error) {
-      restore();
-      throw error;
-    }
+  function snapshot() {
+    return Object.freeze({
+      ...playerPresentation.snapshot(),
+      restored
+    });
   }
 
   return Object.freeze({
     listStates: () => Object.keys(PLAYER_CHARACTER_VISUAL_STATES),
     applyState,
-    restore
+    applyLiveState,
+    restore,
+    snapshot
   });
 }
 
-export function installPlayerCharacterVisualStateBridge(scene, windowRef = window) {
+export function installPlayerCharacterVisualStateBridge(
+  scene,
+  windowRef = window,
+  { mode = "states" } = {}
+) {
+  if (!BRIDGE_MODES.has(mode)) {
+    throw new Error(`unknown player presentation bridge mode: ${mode}`);
+  }
+
+  const previous = windowRef[GLOBAL_ENTRY];
+  for (const method of ["cleanup", "restore"]) {
+    try {
+      previous?.[method]?.();
+    } catch {
+      // A stale development bridge cannot block the current Scene install.
+    }
+  }
+
   const driver = createPlayerCharacterVisualStateDriver({ scene });
-  windowRef.__SCP_PLAYER_CHARACTER_PROTOTYPE__?.restore?.();
-  Object.defineProperty(windowRef, "__SCP_PLAYER_CHARACTER_PROTOTYPE__", {
-    configurable: true,
-    value: driver
+  let cleanupComplete = false;
+  let bridge = null;
+
+  function attemptCleanup(action) {
+    try {
+      action();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function restoreSafely() {
+    try {
+      return driver.restore() === true;
+    } catch {
+      return false;
+    }
+  }
+
+  function onUpdate(_time, delta) {
+    try {
+      const mainUpdateOwnsDelta = (
+        scene?.isMissionActive === true
+        && scene?.isGameOver !== true
+        && scene?.isPaused !== true
+        && scene?.isLevelUpActive !== true
+      );
+      driver.applyLiveState(mode, mainUpdateOwnsDelta ? 0 : delta);
+    } catch {
+      // A development preview must never escape into the gameplay update.
+      cleanup();
+    }
+  }
+
+  function cleanup() {
+    if (cleanupComplete) return true;
+    const restored = restoreSafely();
+    const updateDetached = attemptCleanup(
+      () => scene.events.off("update", onUpdate)
+    );
+    const shutdownDetached = attemptCleanup(
+      () => scene.events.off("shutdown", cleanup)
+    );
+    const destroyDetached = attemptCleanup(
+      () => scene.events.off("destroy", cleanup)
+    );
+    const globalDetached = attemptCleanup(() => {
+      if (windowRef[GLOBAL_ENTRY] === bridge) {
+        delete windowRef[GLOBAL_ENTRY];
+      }
+    });
+    cleanupComplete = (
+      restored
+      && updateDetached
+      && shutdownDetached
+      && destroyDetached
+      && globalDetached
+    );
+    return cleanupComplete;
+  }
+
+  bridge = Object.freeze({
+    listStates: driver.listStates,
+    applyState: driver.applyState,
+    restore: restoreSafely,
+    snapshot: driver.snapshot,
+    cleanup
   });
-  const cleanup = () => {
-    driver.restore();
-    delete windowRef.__SCP_PLAYER_CHARACTER_PROTOTYPE__;
-    scene.events.off("shutdown", cleanup);
-    scene.events.off("destroy", cleanup);
-  };
+  Object.defineProperty(windowRef, GLOBAL_ENTRY, {
+    configurable: true,
+    value: bridge
+  });
+
+  if (mode !== "states") {
+    scene.events.on("update", onUpdate);
+  }
   scene.events.once("shutdown", cleanup);
   scene.events.once("destroy", cleanup);
-  return driver;
+
+  if (mode !== "states") {
+    onUpdate(0, 0);
+  }
+  return bridge;
 }

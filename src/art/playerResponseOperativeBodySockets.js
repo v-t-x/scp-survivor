@@ -1,0 +1,32 @@
+export const BODY_SOCKET_SCHEMA_VERSION = 1;
+export const BODY_SOCKET_FRAME_COUNT = 28;
+export const PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS = Object.freeze([
+  Object.freeze({ index: 0, gripX: 19, gripY: 38, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 1, gripX: 20, gripY: 38, supportX: 43, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 2, gripX: 18, gripY: 40, supportX: 45, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 3, gripX: 20, gripY: 38, supportX: 44, supportY: 40, equipmentLayer: "front" }),
+  Object.freeze({ index: 4, gripX: 19, gripY: 40, supportX: 45, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 5, gripX: 18, gripY: 38, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 6, gripX: 19, gripY: 38, supportX: 43, supportY: 40, equipmentLayer: "front" }),
+  Object.freeze({ index: 7, gripX: 19, gripY: 38, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 8, gripX: 20, gripY: 40, supportX: 43, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 9, gripX: 18, gripY: 38, supportX: 45, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 10, gripX: 20, gripY: 38, supportX: 44, supportY: 40, equipmentLayer: "front" }),
+  Object.freeze({ index: 11, gripX: 19, gripY: 38, supportX: 45, supportY: 38, equipmentLayer: "behind" }),
+  Object.freeze({ index: 12, gripX: 18, gripY: 40, supportX: 44, supportY: 38, equipmentLayer: "behind" }),
+  Object.freeze({ index: 13, gripX: 19, gripY: 38, supportX: 43, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 14, gripX: 19, gripY: 40, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 15, gripX: 20, gripY: 40, supportX: 43, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 16, gripX: 18, gripY: 40, supportX: 45, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 17, gripX: 20, gripY: 38, supportX: 44, supportY: 40, equipmentLayer: "behind" }),
+  Object.freeze({ index: 18, gripX: 19, gripY: 38, supportX: 45, supportY: 40, equipmentLayer: "behind" }),
+  Object.freeze({ index: 19, gripX: 18, gripY: 38, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 20, gripX: 19, gripY: 38, supportX: 43, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 21, gripX: 19, gripY: 40, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 22, gripX: 20, gripY: 36, supportX: 43, supportY: 40, equipmentLayer: "front" }),
+  Object.freeze({ index: 23, gripX: 18, gripY: 38, supportX: 45, supportY: 38, equipmentLayer: "behind" }),
+  Object.freeze({ index: 24, gripX: 20, gripY: 38, supportX: 44, supportY: 38, equipmentLayer: "behind" }),
+  Object.freeze({ index: 25, gripX: 19, gripY: 40, supportX: 45, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 26, gripX: 18, gripY: 40, supportX: 44, supportY: 38, equipmentLayer: "front" }),
+  Object.freeze({ index: 27, gripX: 19, gripY: 40, supportX: 43, supportY: 38, equipmentLayer: "front" })
+]);
