@@ -68,11 +68,16 @@ function pathsOverlap(left, right) {
 }
 
 async function rejectPublicOutputOverlap(outputDir, publicDir) {
+  const lexicalOutputDir = normalizePathForContainment(outputDir);
+  const lexicalPublicDir = normalizePathForContainment(publicDir);
   const [canonicalOutputDir, canonicalPublicDir] = await Promise.all([
     resolvePathThroughExistingAncestor(outputDir),
     resolvePathThroughExistingAncestor(publicDir)
   ]);
-  if (pathsOverlap(canonicalOutputDir, canonicalPublicDir)) {
+  if (
+    pathsOverlap(lexicalOutputDir, lexicalPublicDir)
+    || pathsOverlap(canonicalOutputDir, canonicalPublicDir)
+  ) {
     throw new Error("refusing to build into an output directory that overlaps the public source directory");
   }
 }

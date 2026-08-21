@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,16 +47,20 @@ const REQUIRED_RUNTIME_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/tesla-containment-emitter-icon.png"
 ];
 
+async function initializeTemporaryViteProject(root) {
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(
+    path.join(root, "index.html"),
+    '<!doctype html><html><body><script type="module" src="/src/main.js"></script></body></html>'
+  );
+  await writeFile(path.join(root, "src", "main.js"), 'document.body.dataset.task = "asset-boundary";');
+}
+
 async function withTemporaryViteProject(prefix, run) {
   const root = await mkdtemp(path.join(tmpdir(), prefix));
   const publicDir = path.join(root, "public");
   try {
-    await mkdir(path.join(root, "src"), { recursive: true });
-    await writeFile(
-      path.join(root, "index.html"),
-      '<!doctype html><html><body><script type="module" src="/src/main.js"></script></body></html>'
-    );
-    await writeFile(path.join(root, "src", "main.js"), 'document.body.dataset.task = "asset-boundary";');
+    await initializeTemporaryViteProject(root);
     await run({ root, publicDir });
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -196,6 +200,55 @@ test("real Vite build rejects an ancestor output before emptyOutDir mutates the 
   await withTemporaryViteProject("scp-vite-public-ancestor-", ({ root, publicDir }) => (
     assertViteRejectsBeforePublicMutation({ root, publicDir, build: { outDir: "." } })
   ));
+});
+
+test("real Vite build rejects a root ancestor before deleting a public junction", async () => {
+  const parent = await mkdtemp(path.join(tmpdir(), "scp-vite-public-junction-root-"));
+  const root = path.join(parent, "project");
+  const publicDir = path.join(root, "public");
+  const publicTarget = path.join(parent, "public-target");
+  try {
+    await initializeTemporaryViteProject(root);
+    const sentinel = path.join(publicTarget, "task-1-public-junction-sentinel.txt");
+    await mkdir(publicTarget, { recursive: true });
+    await writeFile(sentinel, PUBLIC_SENTINEL_BYTES);
+    await symlink(publicTarget, publicDir, "junction");
+
+    const publicFilesBeforeBuild = await listRelativeFiles(publicDir);
+    const targetFilesBeforeBuild = await listRelativeFiles(publicTarget);
+    assert.equal((await lstat(publicDir)).isSymbolicLink(), true);
+
+    const outcome = await observeViteBuild(root, { outDir: "." });
+    const [publicLinkAfterBuild, sentinelViaPublic, sentinelInTarget, publicFilesAfterBuild, targetFilesAfterBuild] = await Promise.all([
+      lstat(publicDir).catch(() => null),
+      readFile(path.join(publicDir, path.basename(sentinel))).catch(() => null),
+      readFile(sentinel).catch(() => null),
+      listRelativeFiles(publicDir).catch(() => null),
+      listRelativeFiles(publicTarget).catch(() => null)
+    ]);
+
+    assert.deepEqual(
+      {
+        status: outcome.status,
+        publicLinkStillExists: publicLinkAfterBuild?.isSymbolicLink() ?? false,
+        sentinelViaPublic,
+        sentinelInTarget,
+        publicFilesAfterBuild,
+        targetFilesAfterBuild
+      },
+      {
+        status: "rejected",
+        publicLinkStillExists: true,
+        sentinelViaPublic: PUBLIC_SENTINEL_BYTES,
+        sentinelInTarget: PUBLIC_SENTINEL_BYTES,
+        publicFilesAfterBuild: publicFilesBeforeBuild,
+        targetFilesAfterBuild: targetFilesBeforeBuild
+      }
+    );
+    assert.match(outcome.message, /public/i);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
 });
 
 test("real Vite build rejects a single Rollup output directory that targets public", async () => {
