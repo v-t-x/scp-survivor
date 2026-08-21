@@ -23,6 +23,23 @@ export const NON_PRODUCTION_PLAYER_ASSETS = Object.freeze([
   "assets/art/weapons/tesla-containment-emitter-cross-front.png"
 ]);
 
+function normalizePathForContainment(candidate) {
+  const resolved = path.resolve(candidate);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+function isPathWithin(directory, candidate) {
+  const relative = path.relative(
+    normalizePathForContainment(directory),
+    normalizePathForContainment(candidate)
+  );
+  return relative === "" || (
+    relative !== ".."
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative)
+  );
+}
+
 function removeDevelopmentPlayerAssets() {
   return {
     name: "remove-development-player-assets",
@@ -30,7 +47,7 @@ function removeDevelopmentPlayerAssets() {
     async writeBundle(outputOptions) {
       const outDir = path.resolve(outputOptions.dir ?? "dist");
       const publicDir = path.resolve("public");
-      if (path.relative(publicDir, outDir) === "") {
+      if (isPathWithin(publicDir, outDir)) {
         throw new Error("refusing to remove development assets from the public source directory");
       }
       await Promise.all(NON_PRODUCTION_PLAYER_ASSETS.map(async (relativePath) => {

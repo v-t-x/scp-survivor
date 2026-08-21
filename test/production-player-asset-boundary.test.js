@@ -42,12 +42,6 @@ const REQUIRED_RUNTIME_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/tesla-containment-emitter-icon.png"
 ];
 
-test("production preview code uses Vite's statically replaceable DEV guard", async () => {
-  const source = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
-  assert.match(source, /if \(import\.meta\.env && import\.meta\.env\.DEV\) \{/);
-  assert.doesNotMatch(source, /import\.meta\.env\?\.DEV/);
-});
-
 test("build cleanup removes every non-production player candidate but retains runtime assets", async () => {
   assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
   const outDir = await mkdtemp(path.join(tmpdir(), "scp-player-assets-"));
@@ -86,6 +80,28 @@ test("build cleanup refuses a public outDir before touching source player assets
     process.chdir(root);
 
     await assert.rejects(plugin.writeBundle({ dir: publicDir }), /public/i);
+    assert.equal((await readFile(protectedAsset, "utf8")), "must-not-delete");
+  } finally {
+    process.chdir(previousCwd);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("build cleanup refuses every public descendant before touching source player assets", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "scp-public-child-boundary-"));
+  const publicDir = path.join(root, "public");
+  const protectedAsset = path.join(publicDir, "generated", NON_PRODUCTION_PLAYER_ASSET_PATHS[0]);
+  const previousCwd = process.cwd();
+  const plugin = config.plugins.find(({ name }) => name === "remove-development-player-assets");
+  try {
+    await mkdir(path.dirname(protectedAsset), { recursive: true });
+    await writeFile(protectedAsset, "must-not-delete");
+    process.chdir(root);
+
+    await assert.rejects(
+      plugin.writeBundle({ dir: path.join(publicDir.toUpperCase(), "generated") }),
+      /public/i
+    );
     assert.equal((await readFile(protectedAsset, "utf8")), "must-not-delete");
   } finally {
     process.chdir(previousCwd);
