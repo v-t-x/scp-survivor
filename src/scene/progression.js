@@ -10,6 +10,7 @@ import {
 } from "../config/constants.js";
 import { BALANCE } from "../config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
+import { isPlayerUpgradeVisible } from "../config/playerWeaponAvailability.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createTerminalButton } from "../ui/tacticalUi.js";
@@ -760,7 +761,7 @@ export const progressionMixin = {
 
   getLevelUpChoices() {
     const available = UPGRADE_DEFINITIONS.filter(
-      (upgrade) => upgrade.isAvailable?.(this) ?? true
+      (upgrade) => isPlayerUpgradeVisible(upgrade) && (upgrade.isAvailable?.(this) ?? true)
     );
     const shuffled = Phaser.Utils.Array.Shuffle([...available]);
     const choices = [];

@@ -8,6 +8,10 @@ import {
   ENEMY_GRID_STRIDE
 } from "../config/constants.js";
 import { BALANCE } from "../config/balance.js";
+import {
+  isPlayerWeaponAllowed,
+  PLAYER_WEAPON_ALLOWLIST
+} from "../config/playerWeaponAvailability.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
@@ -668,9 +672,8 @@ export const menusMixin = {
     this.weaponSelectUiObjects.push(subtitle);
 
     this.weaponSelectCards = [];
-    const options = [
-      {
-        id: "pistol",
+    const optionMetadata = {
+      pistol: {
         textureKey: TEXTURES.weaponPistolIcon,
         role: "可靠的中远距离单体武器",
         stats: [
@@ -679,33 +682,27 @@ export const menusMixin = {
           { label: "射程", value: `${BALANCE.weapons.pistol.range}` }
         ]
       },
-      {
-        id: "shotgun",
-        textureKey: TEXTURES.weaponBreacherIcon,
-        role: "近距离爆发、击退与控场",
-        stats: [
-          { label: "伤害", value: `${BALANCE.weapons.shotgun.baseDamage}/弹丸` },
-          { label: "弹药", value: "4" },
-          { label: "装填", value: "2000 ms" }
-        ]
-      },
-      {
-        id: "tesla",
+      tesla: {
         textureKey: TEXTURES.weaponTeslaIcon,
-        role: "对密集敌群造成链式伤害",
+        role: "持续锁定目标并传导链式电击",
         stats: [
-          { label: "伤害", value: `${BALANCE.weapons.tesla.baseDamage}` },
-          { label: "冷却", value: `${BALANCE.weapons.tesla.baseCooldownMs} ms` },
+          { label: "每跳伤害", value: `${BALANCE.weapons.tesla.baseDamage}` },
+          { label: "伤害间隔", value: `${BALANCE.weapons.tesla.baseCooldownMs} ms` },
           { label: "链击", value: `${BALANCE.weapons.tesla.baseChainTargets}` }
         ]
       }
-    ];
+    };
+    const options = PLAYER_WEAPON_ALLOWLIST.map((id) => ({
+      id,
+      ...optionMetadata[id]
+    }));
 
     const slotWidth = 228;
     const slotHeight = 316;
-    const startX = GAME_WIDTH / 2 - 270;
+    const slotGap = 270;
+    const startX = GAME_WIDTH / 2 - ((options.length - 1) * slotGap) / 2;
     options.forEach((option, index) => {
-      const slotX = startX + index * 270;
+      const slotX = startX + index * slotGap;
       const slotY = 286;
       const slot = createArmorySlot(this, {
         x: slotX,
@@ -856,7 +853,7 @@ export const menusMixin = {
       entry.slot.setState({ selected, hovered });
     }
 
-    const canStart = !!this.pendingSelectedWeaponId;
+    const canStart = isPlayerWeaponAllowed(this.pendingSelectedWeaponId);
     const terminalState = canStart
       ? this.weaponSelectButtonHovered
         ? "hover"
@@ -1051,8 +1048,8 @@ export const menusMixin = {
 
 
   startMissionWithWeapon(weaponId) {
-    if (!weaponId) {
-      return;
+    if (!isPlayerWeaponAllowed(weaponId)) {
+      return false;
     }
     this.selectedWeaponId = weaponId;
     this.pendingSelectedWeaponId = weaponId;
@@ -1078,6 +1075,7 @@ export const menusMixin = {
     this.updateUI();
 
     this.destroyWeaponSelectionScreen();
+    return true;
   },
 
 

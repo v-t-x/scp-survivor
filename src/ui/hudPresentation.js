@@ -1,8 +1,8 @@
 import { TEXTURES } from "../assets/manifest.js";
+import { isPlayerWeaponAllowed } from "../config/playerWeaponAvailability.js";
 
 const WEAPON_ICONS = Object.freeze({
   pistol: TEXTURES.weaponPistolIcon,
-  shotgun: TEXTURES.weaponBreacherIcon,
   tesla: TEXTURES.weaponTeslaIcon
 });
 
@@ -79,11 +79,13 @@ function getDashPresentation(state) {
 function getWeaponPresentation(state) {
   const weaponId = state.selectedWeaponId;
   const weapon = state.weapon;
-  const elapsedMs = finiteNumber(state.elapsedSurvivalMs);
+  const playerWeaponAllowed = isPlayerWeaponAllowed(weaponId);
   const dash = getDashPresentation(state);
   const base = {
-    iconKey: WEAPON_ICONS[weaponId] ?? null,
-    name: weapon?.name ?? (weaponId ? "未识别武器" : "未装备"),
+    iconKey: playerWeaponAllowed ? WEAPON_ICONS[weaponId] : null,
+    name: playerWeaponAllowed
+      ? weapon?.name ?? "未识别武器"
+      : weaponId ? "未识别武器" : "未装备",
     detail: weaponId ? "状态不可用" : "等待装备",
     statusText: "状态不可用",
     statusRatio: 0,
@@ -93,7 +95,7 @@ function getWeaponPresentation(state) {
     dashRatio: dash.ratio
   };
 
-  if (!weapon || !WEAPON_ICONS[weaponId]) {
+  if (!weapon || !playerWeaponAllowed) {
     return Object.freeze(base);
   }
 
@@ -111,43 +113,16 @@ function getWeaponPresentation(state) {
     });
   }
 
-  if (weaponId === "shotgun") {
-    const shells = finiteNumber(weapon.currentShells);
-    const magazineSize = finiteNumber(weapon.magazineSize);
-    const reloading = weapon.isReloading === true;
-    const reloadRemainingMs = Math.max(
-      0,
-      finiteNumber(weapon.reloadEndAtMs) - elapsedMs
-    );
-    const statusRatio = reloading
-      ? cooldownProgress(reloadRemainingMs, weapon.reloadDurationMs)
-      : ratio(shells, magazineSize);
-    return Object.freeze({
-      ...base,
-      detail: `等级 ${level} · 弹丸 ${Math.max(0, Math.floor(finiteNumber(weapon.pelletCount)))}`,
-      statusText: reloading
-        ? `装填 ${secondsText(reloadRemainingMs)}`
-        : `弹药 ${Math.max(0, Math.floor(shells))} / ${Math.max(0, Math.floor(magazineSize))}`,
-      statusRatio,
-      statusTone: reloading || shells <= 0 ? "warning" : "contained"
-    });
-  }
-
   const cooldownMs = finiteNumber(weapon.cooldownMs);
-  const cooldownRemainingMs = Math.max(
-    0,
-    finiteNumber(weapon.nextAttackAtMs) - elapsedMs
-  );
+  const isChanneling = weapon.isChanneling === true;
   return Object.freeze({
     ...base,
-    detail: `等级 ${level} · 链击 ${Math.max(0, Math.floor(finiteNumber(weapon.chainTargets)))}`,
-    statusText: cooldownRemainingMs > 0
-      ? `放电冷却 ${secondsText(cooldownRemainingMs)}`
-      : "放电 就绪",
-    statusRatio: cooldownRemainingMs <= 0
-      ? 1
-      : cooldownProgress(cooldownRemainingMs, cooldownMs),
-    statusTone: cooldownRemainingMs > 0 ? "warning" : "contained"
+    detail: `等级 ${level} · 每跳 ${finiteNumber(weapon.damage).toFixed(1)} · 链击 ${Math.max(0, Math.floor(finiteNumber(weapon.chainTargets)))}`,
+    statusText: isChanneling
+      ? `持续电击中 · ${cooldownMs.toFixed(0)}ms/跳`
+      : `等待锁定 · ${cooldownMs.toFixed(0)}ms/跳`,
+    statusRatio: isChanneling ? 1 : 0,
+    statusTone: isChanneling ? "warning" : "neutral"
   });
 }
 

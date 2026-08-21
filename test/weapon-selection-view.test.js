@@ -99,3 +99,9 @@ test("weapon selection no longer renders rounded cards", async () => {
   assert.match(source, /createArmorySlot/);
   assert.match(source, /createTerminalButton/);
 });
+
+test("weapon selection is derived from the single player allowlist and does not expose shotgun", async () => {
+  const source = await readFile(menusPath, "utf8");
+  assert.match(source, /PLAYER_WEAPON_ALLOWLIST/);
+  assert.doesNotMatch(source, /id:\s*["']shotgun["']/);
+});

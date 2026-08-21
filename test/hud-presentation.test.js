@@ -145,7 +145,7 @@ test("critical health outranks paused, muted and facility warning system tones",
   assert.equal(view.system.tone, "danger");
 });
 
-test("shotgun presentation reads reload and dash deadlines without changing them", () => {
+test("injected shotgun presentation is neutral and does not expose its legacy icon or text", () => {
   const input = state({
     elapsedSurvivalMs: 1000,
     selectedWeaponId: "shotgun",
@@ -168,18 +168,19 @@ test("shotgun presentation reads reload and dash deadlines without changing them
 
   const view = getHudPresentation(input);
 
-  assert.equal(view.weapon.iconKey, "weapon-breacher-icon");
-  assert.equal(view.weapon.statusText, "装填 1.5秒");
-  assert.equal(view.weapon.statusRatio, 0.25);
-  assert.equal(view.weapon.statusTone, "warning");
-  assert.equal(view.weapon.detail, "等级 2 · 弹丸 6");
+  assert.equal(view.weapon.iconKey, null);
+  assert.equal(view.weapon.name, "未识别武器");
+  assert.equal(view.weapon.statusText, "状态不可用");
+  assert.equal(view.weapon.statusRatio, 0);
+  assert.equal(view.weapon.statusTone, "neutral");
+  assert.equal(view.weapon.detail, "状态不可用");
   assert.equal(view.weapon.dashReady, false);
   assert.equal(view.weapon.dashText, "闪避 冷却 1.1秒");
   assert.equal(view.weapon.dashRatio, 0.5);
   assert.deepEqual(input, before);
 });
 
-test("shotgun ammo ratio is clamped while not reloading", () => {
+test("unknown weapon ids use the same neutral presentation without legacy state details", () => {
   const view = getHudPresentation(state({
     selectedWeaponId: "shotgun",
     weapon: {
@@ -196,12 +197,14 @@ test("shotgun ammo ratio is clamped while not reloading", () => {
     }
   }));
 
-  assert.equal(view.weapon.statusText, "弹药 9 / 4");
-  assert.equal(view.weapon.statusRatio, 1);
-  assert.equal(view.weapon.statusTone, "contained");
+  assert.equal(view.weapon.iconKey, null);
+  assert.equal(view.weapon.name, "未识别武器");
+  assert.equal(view.weapon.statusText, "状态不可用");
+  assert.equal(view.weapon.statusRatio, 0);
+  assert.equal(view.weapon.statusTone, "neutral");
 });
 
-test("Tesla presentation reads its existing attack cooldown", () => {
+test("Tesla presentation reads its live channel state and damage interval", () => {
   const view = getHudPresentation(state({
     elapsedSurvivalMs: 1000,
     selectedWeaponId: "tesla",
@@ -212,15 +215,16 @@ test("Tesla presentation reads its existing attack cooldown", () => {
       damage: 18,
       chainTargets: 4,
       cooldownMs: 1000,
+      isChanneling: true,
       nextAttackAtMs: 1750
     }
   }));
 
   assert.equal(view.weapon.iconKey, "weapon-tesla-icon");
-  assert.equal(view.weapon.statusText, "放电冷却 0.8秒");
-  assert.equal(view.weapon.statusRatio, 0.25);
+  assert.equal(view.weapon.statusText, "持续电击中 · 1000ms/跳");
+  assert.equal(view.weapon.statusRatio, 1);
   assert.equal(view.weapon.statusTone, "warning");
-  assert.equal(view.weapon.detail, "等级 3 · 链击 4");
+  assert.equal(view.weapon.detail, "等级 3 · 每跳 18.0 · 链击 4");
 });
 
 test("power outage expands the facility warning", () => {

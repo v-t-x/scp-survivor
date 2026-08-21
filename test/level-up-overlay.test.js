@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { BALANCE } from "../src/config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../src/config/upgrades.js";
+import { isPlayerUpgradeVisible } from "../src/config/playerWeaponAvailability.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../src/config/meta.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { menusMixin } from "../src/scene/menus.js";
@@ -56,6 +57,7 @@ async function loadProgressionMixin() {
     ENEMY_GRID_STRIDE: 32,
     BALANCE,
     UPGRADE_DEFINITIONS,
+    isPlayerUpgradeVisible,
     META_PERKS,
     loadMetaProgress,
     saveMetaProgress,
@@ -70,6 +72,7 @@ async function loadProgressionMixin() {
     const {
       Phaser, DEBUG_MODE, GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
       ENEMY_GRID_CELL_SIZE, ENEMY_GRID_STRIDE, BALANCE, UPGRADE_DEFINITIONS,
+      isPlayerUpgradeVisible,
       META_PERKS, loadMetaProgress, saveMetaProgress, TEXTURES,
       createTerminalButton, createTerminalCard, createTerminalOverlay,
       UPGRADE_PRESENTATION
@@ -80,6 +83,11 @@ async function loadProgressionMixin() {
 }
 
 const { progressionMixin } = await loadProgressionMixin();
+
+test("level-up choice construction filters player-hidden shotgun upgrades before availability", async () => {
+  const source = await readFile(new URL("../src/scene/progression.js", import.meta.url), "utf8");
+  assert.match(source, /isPlayerUpgradeVisible\(upgrade\)\s*&&\s*\(upgrade\.isAvailable/);
+});
 
 function parseFontSize(value) {
   const parsed = Number.parseFloat(String(value ?? 0));

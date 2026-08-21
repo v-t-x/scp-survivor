@@ -70,17 +70,14 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
     );
   }
 
-  for (const textureName of [
-    "weaponPistolIcon",
-    "weaponBreacherIcon",
-    "weaponTeslaIcon"
-  ]) {
+  for (const textureName of ["weaponPistolIcon", "weaponTeslaIcon"]) {
     assert.match(
       source,
       new RegExp(`textureKey\\s*:\\s*TEXTURES\\.${textureName}`),
       `weapon selection must reference TEXTURES.${textureName}`
     );
   }
+  assert.doesNotMatch(source, /textureKey\s*:\s*TEXTURES\.weaponBreacherIcon/);
 
   assert.match(source, /createArmorySlot\(this,\s*\{/);
   assert.match(source, /textureKey:\s*option\.textureKey/);

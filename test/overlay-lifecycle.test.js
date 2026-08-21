@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { BALANCE } from "../src/config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../src/config/upgrades.js";
+import {
+  isPlayerUpgradeVisible,
+  PLAYER_WEAPON_ALLOWLIST
+} from "../src/config/playerWeaponAvailability.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../src/config/meta.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { HUD_REGIONS } from "../src/art/openingVisualContract.js";
@@ -49,13 +53,15 @@ async function loadHudMixin() {
   const body = source.slice(start).replace(declaration, "const hudMixin =");
   return Function(
     "Phaser", "GAME_WIDTH", "GAME_HEIGHT", "BALANCE", "UPGRADE_DEFINITIONS",
+    "PLAYER_WEAPON_ALLOWLIST", "isPlayerUpgradeVisible",
     "HUD_REGIONS", "TEXTURES", "getHudPresentation", "selectTimelineHudContainers",
     "THEME", "createTacticalHudView", "createStatusLamp", "createTacticalPanel",
     "createTerminalOverlay", "UPGRADE_PRESENTATION", "HUD_DEPTH", "FACILITY_HUD_DEPTH",
     "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH", "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH",
     `${body}\nreturn hudMixin;`
   )(
-    PHASER_STUB, 960, 540, BALANCE, UPGRADE_DEFINITIONS, HUD_REGIONS, TEXTURES,
+    PHASER_STUB, 960, 540, BALANCE, UPGRADE_DEFINITIONS,
+    PLAYER_WEAPON_ALLOWLIST, isPlayerUpgradeVisible, HUD_REGIONS, TEXTURES,
     getHudPresentation, selectTimelineHudContainers, THEME, createTacticalHudView,
     createStatusLamp, createTacticalPanel, createTerminalOverlay, UPGRADE_PRESENTATION,
     45, 58, 150, 82, 92, 72
