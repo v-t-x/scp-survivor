@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILDER = ROOT / "scripts" / "art" / "build_player_character_assets.py"
+APPROVED_A_SAMPLE = ROOT / "public" / "assets" / "art" / "characters" / "player-response-operative-breacher-sample.png"
+BODY_PRODUCTION = ROOT / "public" / "assets" / "art" / "characters" / "player-response-operative-body.png"
 
 FRAME_SIZE = 64
 BASELINE_Y = 56
@@ -32,6 +37,16 @@ RIGHT_COLORS = ((60, 90, 200, 255), (30, 50, 120, 255))
 UP_COLORS = ((200, 180, 60, 255), (130, 110, 30, 255))
 HIT_COLORS = ((255, 0, 255, 255), (180, 0, 180, 255))
 SPARE_COLORS = ((0, 255, 255, 255), (0, 150, 150, 255))
+SOCKET_FRAME_KEYS = (
+    "index",
+    "gripX",
+    "gripY",
+    "supportX",
+    "supportY",
+    "equipmentLayer",
+)
+DIRECTION_ORDER = ("down", "left", "right", "up")
+PROTOTYPE_DIRECTIONS = ("down",)
 
 
 def cell_box(image_width: int, image_height: int, columns: int, rows: int, index: int) -> tuple[int, int, int, int]:
@@ -118,6 +133,15 @@ def opaque_colors(image) -> set[tuple[int, int, int]]:
     return {pixel[:3] for pixel in image.get_flattened_data() if pixel[3] == 255}
 
 
+def load_builder_module():
+    spec = importlib.util.spec_from_file_location("player_character_asset_builder_for_tests", BUILDER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load builder module from {BUILDER}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 class PlayerCharacterAssetBuilderTests(unittest.TestCase):
     def run_builder(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -135,6 +159,7 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
         accent: tuple[int, int, int, int],
         pad_side: str = "left",
         phase: int = 0,
+        variant_offset: int = 0,
         skip_cells: tuple[int, ...] = (),
         overrides: dict[int, tuple[int, int, tuple[int, int, int, int], tuple[int, int, int, int]]] | None = None,
     ) -> None:
@@ -148,7 +173,18 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
                 continue
             width, height, cell_body, cell_accent = overrides.get(index, (10 + index, CONTENT_HEIGHT, body, accent))
             origin_x, origin_y = cell_origin(BOARD_SIZE, BOARD_SIZE, 6, 6, index)
-            draw_subject(pixels, origin_x, origin_y, width, height, cell_body, cell_accent, index, pad_side, phase)
+            draw_subject(
+                pixels,
+                origin_x,
+                origin_y,
+                width,
+                height,
+                cell_body,
+                cell_accent,
+                index + variant_offset,
+                pad_side,
+                phase,
+            )
         image.save(path)
 
     def write_hit_board(self, path: Path) -> None:
@@ -173,10 +209,119 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
         }
         self.write_board(down, *DOWN_COLORS, overrides=spare)
         self.write_board(left, *LEFT_COLORS)
-        self.write_board(right, *RIGHT_COLORS, pad_side="right", phase=1)
+        self.write_board(right, *RIGHT_COLORS, pad_side="right", phase=1, variant_offset=1)
         self.write_board(up, *UP_COLORS)
         self.write_hit_board(hit)
         return (down, hit, left, right, up)
+
+    def write_socket_source(
+        self,
+        path: Path,
+        frame_count: int,
+        mutate=None,
+        directions: tuple[str, ...] | None = None,
+    ) -> dict:
+        if directions is None:
+            directions = PROTOTYPE_DIRECTIONS if frame_count == 28 else DIRECTION_ORDER
+        payload = {
+            "schemaVersion": 1,
+            "frameWidth": FRAME_SIZE,
+            "frameHeight": FRAME_SIZE,
+            "directions": list(directions),
+            "frames": [
+                {
+                    "index": index,
+                    "gripX": 24 + index % 17,
+                    "gripY": 25 + index % 13,
+                    "supportX": 18 + index % 19,
+                    "supportY": 27 + index % 15,
+                    "equipmentLayer": "front" if index % 3 else "behind",
+                }
+                for index in range(frame_count)
+            ],
+        }
+        if mutate is not None:
+            mutate(payload)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return payload
+
+    def expected_socket_module(self, payload: dict) -> bytes:
+        entries = []
+        for frame in payload["frames"]:
+            entries.append(
+                "  Object.freeze({ "
+                f"index: {frame['index']}, "
+                f"gripX: {frame['gripX']}, "
+                f"gripY: {frame['gripY']}, "
+                f"supportX: {frame['supportX']}, "
+                f"supportY: {frame['supportY']}, "
+                f'equipmentLayer: "{frame["equipmentLayer"]}"'
+                " })"
+            )
+        source = (
+            "export const BODY_SOCKET_SCHEMA_VERSION = 1;\n"
+            f"export const BODY_SOCKET_FRAME_COUNT = {len(payload['frames'])};\n"
+            "export const PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS = Object.freeze([\n"
+            + ",\n".join(entries)
+            + "\n]);\n"
+        )
+        return source.encode("utf-8")
+
+    def assert_body_sheet_contract(
+        self,
+        image,
+        frame_count: int,
+        visible_height_range: tuple[int, int] = (44, 50),
+    ) -> None:
+        self.assertEqual(image.width % FRAME_SIZE, 0)
+        self.assertEqual(image.height % FRAME_SIZE, 0)
+        columns = image.width // FRAME_SIZE
+        rows = image.height // FRAME_SIZE
+        self.assertEqual(columns * rows, frame_count)
+        self.assert_binary_alpha_and_palette(image)
+        for index in range(frame_count):
+            frame = crop_frame(image, index % columns, index // columns)
+            bbox = visible_bbox(frame)
+            self.assertIsNotNone(bbox)
+            _, top, _, bottom = bbox
+            self.assertGreaterEqual(bottom - top, visible_height_range[0])
+            self.assertLessEqual(bottom - top, visible_height_range[1])
+            self.assertLessEqual(abs((bottom - 1) - BASELINE_Y), 1)
+
+    def write_cellwise_horizontal_mirror(self, source: Path, output: Path) -> None:
+        from PIL import Image
+
+        source_image = Image.open(source).convert("RGBA")
+        mirrored = Image.new("RGBA", source_image.size, (0, 0, 0, 0))
+        for index in OCCUPIED_CELLS:
+            box = cell_box(source_image.width, source_image.height, 6, 6, index)
+            cell = source_image.crop(box).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            mirrored.alpha_composite(cell, (box[0], box[1]))
+        mirrored.save(output)
+
+    def replace_right_frame_with_recolored_left_shape(
+        self,
+        left_path: Path,
+        right_path: Path,
+        frame_index: int,
+        horizontal_mirror: bool,
+    ) -> None:
+        from PIL import Image
+
+        source_cell_index = OCCUPIED_CELLS[frame_index]
+        left_image = Image.open(left_path).convert("RGBA")
+        right_image = Image.open(right_path).convert("RGBA")
+        box = cell_box(left_image.width, left_image.height, 6, 6, source_cell_index)
+        replacement = left_image.crop(box)
+        if horizontal_mirror:
+            replacement = replacement.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        replacement.putdata([
+            (18, 214, 236, pixel[3]) if pixel[3] else (0, 0, 0, 0)
+            for pixel in replacement.get_flattened_data()
+        ])
+        right_image.paste((0, 0, 0, 0), box)
+        right_image.alpha_composite(replacement, (box[0], box[1]))
+        right_image.save(right_path)
 
     def run_production(self, directory: Path) -> tuple[subprocess.CompletedProcess[str], Path]:
         down, hit, left, right, up = self.write_production_fixtures(directory)
@@ -383,6 +528,520 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
             self.assertNotIn(SPARE_COLORS[1][:3], colors)
             self.assertIn(HIT_COLORS[0][:3], colors)
 
+    def test_body_prototype_writes_28_frames_and_exact_frozen_socket_module_deterministically(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            board = directory / "down_board.png"
+            socket_source = directory / "body_sockets.json"
+            self.write_board(board, *DOWN_COLORS)
+            payload = self.write_socket_source(socket_source, 28)
+
+            png_outputs = (directory / "body_first.png", directory / "body_second.png")
+            socket_outputs = (directory / "body_first.js", directory / "body_second.js")
+            for png_output, socket_output in zip(png_outputs, socket_outputs):
+                result = self.run_builder(
+                    "body-prototype",
+                    "--down-board", str(board),
+                    "--socket-source", str(socket_source),
+                    "--output", str(png_output),
+                    "--socket-output", str(socket_output),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+            self.assertEqual(png_outputs[0].read_bytes(), png_outputs[1].read_bytes())
+            self.assertEqual(socket_outputs[0].read_bytes(), socket_outputs[1].read_bytes())
+            self.assertEqual(socket_outputs[0].read_bytes(), self.expected_socket_module(payload))
+            sheet = Image.open(png_outputs[0]).convert("RGBA")
+            self.assertEqual(sheet.size, (1792, 64))
+            self.assert_body_sheet_contract(sheet, 28, (55, 55))
+
+    def test_body_production_writes_120_frames_and_native_direction_socket_module(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            socket_source = directory / "body_sockets.json"
+            payload = self.write_socket_source(socket_source, 120)
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+            second_png_output = directory / "body_second.png"
+            second_socket_output = directory / "bodySockets_second.js"
+
+            for current_png, current_socket in (
+                (png_output, socket_output),
+                (second_png_output, second_socket_output),
+            ):
+                result = self.run_builder(
+                    "body-production",
+                    "--down-board", str(down),
+                    "--down-hit-board", str(hit),
+                    "--left-board", str(left),
+                    "--right-board", str(right),
+                    "--up-board", str(up),
+                    "--socket-source", str(socket_source),
+                    "--output", str(current_png),
+                    "--socket-output", str(current_socket),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+            sheet = Image.open(png_output).convert("RGBA")
+            self.assertEqual(sheet.size, (1920, 256))
+            self.assert_body_sheet_contract(sheet, 120)
+            for frame_index in range(30):
+                left_frame = crop_frame(sheet, frame_index, 1)
+                right_frame = crop_frame(sheet, frame_index, 2)
+                left_shape = left_frame.getchannel("A")
+                right_shape = right_frame.getchannel("A")
+                self.assertNotEqual(left_shape.tobytes(), right_shape.tobytes())
+                self.assertNotEqual(
+                    left_shape.transpose(Image.Transpose.FLIP_LEFT_RIGHT).tobytes(),
+                    right_shape.tobytes(),
+                )
+            self.assertEqual(socket_output.read_bytes(), self.expected_socket_module(payload))
+            self.assertEqual(png_output.read_bytes(), second_png_output.read_bytes())
+            self.assertEqual(socket_output.read_bytes(), second_socket_output.read_bytes())
+
+    def test_body_commands_reject_invalid_socket_schema_without_changing_either_target(self) -> None:
+        invalid_cases = (
+            ("count", lambda payload: payload["frames"].pop(), "28"),
+            ("index", lambda payload: payload["frames"][5].__setitem__("index", 4), "index"),
+            ("integer", lambda payload: payload["frames"][3].__setitem__("gripX", True), "integer"),
+            ("range", lambda payload: payload["frames"][7].__setitem__("supportY", 64), "0..63"),
+            (
+                "equipment-layer",
+                lambda payload: payload["frames"][9].__setitem__("equipmentLayer", "middle"),
+                "equipmentLayer",
+            ),
+            ("schema-version", lambda payload: payload.__setitem__("schemaVersion", 2), "schemaVersion"),
+            ("frame-width", lambda payload: payload.__setitem__("frameWidth", 32), "frameWidth"),
+            (
+                "directions",
+                lambda payload: payload.__setitem__("directions", list(DIRECTION_ORDER)),
+                "directions",
+            ),
+            (
+                "unexpected-field",
+                lambda payload: payload["frames"][0].__setitem__("damage", 99),
+                "unexpected",
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name, mutate, expected_error in invalid_cases:
+                with self.subTest(name=name):
+                    directory = root / name
+                    directory.mkdir()
+                    board = directory / "down_board.png"
+                    socket_source = directory / "body_sockets.json"
+                    png_output = directory / "body.png"
+                    socket_output = directory / "bodySockets.js"
+                    self.write_board(board, *DOWN_COLORS)
+                    self.write_socket_source(socket_source, 28, mutate)
+                    seeded = self.run_builder(
+                        "prototype",
+                        "--down-board", str(board),
+                        "--output", str(png_output),
+                    )
+                    self.assertEqual(seeded.returncode, 0, seeded.stderr)
+                    socket_output.write_text("export const EXISTING_VALID_SOCKET_MODULE = true;\n", encoding="utf-8")
+                    png_before = png_output.read_bytes()
+                    socket_before = socket_output.read_bytes()
+
+                    result = self.run_builder(
+                        "body-prototype",
+                        "--down-board", str(board),
+                        "--socket-source", str(socket_source),
+                        "--output", str(png_output),
+                        "--socket-output", str(socket_output),
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(expected_error, result.stderr)
+                    self.assertEqual(png_output.read_bytes(), png_before)
+                    self.assertEqual(socket_output.read_bytes(), socket_before)
+
+    def test_body_production_rejects_non_120_socket_count_without_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            socket_source = directory / "body_sockets.json"
+            self.write_socket_source(socket_source, 119)
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+
+            result = self.run_builder(
+                "body-production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--socket-source", str(socket_source),
+                "--output", str(png_output),
+                "--socket-output", str(socket_output),
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("120", result.stderr)
+            self.assertFalse(png_output.exists())
+            self.assertFalse(socket_output.exists())
+
+    def test_body_production_rejects_down_only_socket_directions_without_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            socket_source = directory / "body_sockets.json"
+            self.write_socket_source(
+                socket_source,
+                120,
+                directions=PROTOTYPE_DIRECTIONS,
+            )
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+
+            result = self.run_builder(
+                "body-production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--socket-source", str(socket_source),
+                "--output", str(png_output),
+                "--socket-output", str(socket_output),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(str(list(DIRECTION_ORDER)), result.stderr)
+            self.assertFalse(png_output.exists())
+            self.assertFalse(socket_output.exists())
+
+    def test_body_production_rejects_each_right_frame_as_a_horizontal_left_mirror(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            self.write_cellwise_horizontal_mirror(left, right)
+            socket_source = directory / "body_sockets.json"
+            self.write_socket_source(socket_source, 120)
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+
+            result = self.run_builder(
+                "body-production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--socket-source", str(socket_source),
+                "--output", str(png_output),
+                "--socket-output", str(socket_output),
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("mirror", result.stderr.lower())
+            self.assertFalse(png_output.exists())
+            self.assertFalse(socket_output.exists())
+
+    def test_body_production_rejects_recolored_right_frame_with_same_left_opaque_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            socket_source = directory / "body_sockets.json"
+            self.write_socket_source(socket_source, 120)
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+            seeded = self.run_builder(
+                "production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--output", str(png_output),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            socket_output.write_text("export const EXISTING_VALID_SOCKET_MODULE = true;\n", encoding="utf-8")
+            png_before = png_output.read_bytes()
+            socket_before = socket_output.read_bytes()
+            rejected_frame_index = 7
+            self.replace_right_frame_with_recolored_left_shape(
+                left,
+                right,
+                rejected_frame_index,
+                horizontal_mirror=False,
+            )
+
+            result = self.run_builder(
+                "body-production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--socket-source", str(socket_source),
+                "--output", str(png_output),
+                "--socket-output", str(socket_output),
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(f"right frame {rejected_frame_index}", result.stderr)
+            self.assertIn("opaque shape", result.stderr)
+            self.assertEqual(png_output.read_bytes(), png_before)
+            self.assertEqual(socket_output.read_bytes(), socket_before)
+
+    def test_body_production_rejects_recolored_horizontal_mirror_of_one_left_frame(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            socket_source = directory / "body_sockets.json"
+            self.write_socket_source(socket_source, 120)
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+            seeded = self.run_builder(
+                "production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--output", str(png_output),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            socket_output.write_text("export const EXISTING_VALID_SOCKET_MODULE = true;\n", encoding="utf-8")
+            png_before = png_output.read_bytes()
+            socket_before = socket_output.read_bytes()
+            rejected_frame_index = 11
+            self.replace_right_frame_with_recolored_left_shape(
+                left,
+                right,
+                rejected_frame_index,
+                horizontal_mirror=True,
+            )
+
+            result = self.run_builder(
+                "body-production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--socket-source", str(socket_source),
+                "--output", str(png_output),
+                "--socket-output", str(socket_output),
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(f"right frame {rejected_frame_index}", result.stderr)
+            self.assertIn("horizontal mirror", result.stderr)
+            self.assertEqual(png_output.read_bytes(), png_before)
+            self.assertEqual(socket_output.read_bytes(), socket_before)
+
+    def test_socket_overlay_is_a_read_only_audit_output(self) -> None:
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            board = directory / "down_board.png"
+            sheet = directory / "body.png"
+            socket_source = directory / "body_sockets.json"
+            socket_output = directory / "body_sockets.js"
+            overlay = directory / "socket_overlay.png"
+            self.write_board(board, *DOWN_COLORS)
+            self.write_socket_source(socket_source, 28)
+            seeded = self.run_builder(
+                "body-prototype",
+                "--down-board", str(board),
+                "--socket-source", str(socket_source),
+                "--output", str(sheet),
+                "--socket-output", str(socket_output),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            sheet_before = sheet.read_bytes()
+            socket_before = socket_source.read_bytes()
+
+            result = self.run_builder(
+                "socket-overlay",
+                "--sheet", str(sheet),
+                "--socket-source", str(socket_source),
+                "--frame-count", "28",
+                "--output", str(overlay),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(sheet.read_bytes(), sheet_before)
+            self.assertEqual(socket_source.read_bytes(), socket_before)
+            self.assertTrue(overlay.exists())
+            overlay_image = Image.open(overlay).convert("RGBA")
+            self.assertEqual(overlay_image.size, (1792, 64))
+            self.assertNotEqual(overlay_image.tobytes(), Image.open(sheet).convert("RGBA").tobytes())
+            for protected_output in (sheet, socket_source):
+                with self.subTest(protected_output=protected_output.name):
+                    rejected = self.run_builder(
+                        "socket-overlay",
+                        "--sheet", str(sheet),
+                        "--socket-source", str(socket_source),
+                        "--frame-count", "28",
+                        "--output", str(protected_output),
+                    )
+                    self.assertNotEqual(rejected.returncode, 0)
+                    self.assertEqual(sheet.read_bytes(), sheet_before)
+                    self.assertEqual(socket_source.read_bytes(), socket_before)
+
+    def test_socket_overlay_enforces_direction_contract_for_each_sheet_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            board = directory / "down_board.png"
+            prototype_sheet = directory / "prototype.png"
+            prototype_sockets = directory / "prototype_sockets.json"
+            self.write_board(board, *DOWN_COLORS)
+            seeded = self.run_builder(
+                "prototype",
+                "--down-board", str(board),
+                "--output", str(prototype_sheet),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            self.write_socket_source(
+                prototype_sockets,
+                28,
+                directions=DIRECTION_ORDER,
+            )
+
+            prototype_result = self.run_builder(
+                "socket-overlay",
+                "--sheet", str(prototype_sheet),
+                "--socket-source", str(prototype_sockets),
+                "--frame-count", "28",
+                "--output", str(directory / "prototype-overlay.png"),
+            )
+            self.assertNotEqual(prototype_result.returncode, 0)
+            self.assertIn(str(list(PROTOTYPE_DIRECTIONS)), prototype_result.stderr)
+
+            down, hit, left, right, up = self.write_production_fixtures(directory)
+            production_sheet = directory / "production.png"
+            seeded = self.run_builder(
+                "production",
+                "--down-board", str(down),
+                "--down-hit-board", str(hit),
+                "--left-board", str(left),
+                "--right-board", str(right),
+                "--up-board", str(up),
+                "--output", str(production_sheet),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            production_sockets = directory / "production_sockets.json"
+            self.write_socket_source(
+                production_sockets,
+                120,
+                directions=PROTOTYPE_DIRECTIONS,
+            )
+
+            production_result = self.run_builder(
+                "socket-overlay",
+                "--sheet", str(production_sheet),
+                "--socket-source", str(production_sockets),
+                "--frame-count", "120",
+                "--output", str(directory / "production-overlay.png"),
+            )
+            self.assertNotEqual(production_result.returncode, 0)
+            self.assertIn(str(list(DIRECTION_ORDER)), production_result.stderr)
+
+    def test_pair_replace_failure_rolls_back_png_and_js_without_temp_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            board = directory / "down_board.png"
+            socket_source = directory / "body_sockets.json"
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+            self.write_board(board, *DOWN_COLORS)
+            payload = self.write_socket_source(socket_source, 28)
+            seeded = self.run_builder(
+                "prototype",
+                "--down-board", str(board),
+                "--output", str(png_output),
+            )
+            self.assertEqual(seeded.returncode, 0, seeded.stderr)
+            socket_output.write_bytes(self.expected_socket_module(payload))
+            png_before = png_output.read_bytes()
+            socket_before = socket_output.read_bytes()
+
+            self.write_board(board, *UP_COLORS)
+            self.write_socket_source(
+                socket_source,
+                28,
+                lambda value: value["frames"][0].__setitem__("gripX", 63),
+            )
+            builder = load_builder_module()
+            real_replace = Path.replace
+            state = {"socket_attempts": 0}
+
+            def fail_first_socket_replace(path: Path, target: Path):
+                if Path(target) == socket_output:
+                    state["socket_attempts"] += 1
+                    if state["socket_attempts"] == 1:
+                        raise OSError("simulated socket replace failure")
+                return real_replace(path, target)
+
+            with mock.patch.object(Path, "replace", fail_first_socket_replace):
+                with self.assertRaises(SystemExit):
+                    builder.main([
+                        "body-prototype",
+                        "--down-board", str(board),
+                        "--socket-source", str(socket_source),
+                        "--output", str(png_output),
+                        "--socket-output", str(socket_output),
+                    ])
+
+            self.assertEqual(state["socket_attempts"], 1)
+            self.assertEqual(png_output.read_bytes(), png_before)
+            self.assertEqual(socket_output.read_bytes(), socket_before)
+            leftovers = [
+                path.name
+                for path in directory.iterdir()
+                if path.name.startswith(f".{png_output.name}.")
+                or path.name.startswith(f".{socket_output.name}.")
+            ]
+            self.assertEqual(leftovers, [])
+
+    def test_pair_replace_failure_leaves_no_new_png_or_js_when_targets_were_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            board = directory / "down_board.png"
+            socket_source = directory / "body_sockets.json"
+            png_output = directory / "body.png"
+            socket_output = directory / "bodySockets.js"
+            self.write_board(board, *DOWN_COLORS)
+            self.write_socket_source(socket_source, 28)
+            builder = load_builder_module()
+            real_replace = Path.replace
+            state = {"socket_attempts": 0}
+
+            def fail_first_socket_replace(path: Path, target: Path):
+                if Path(target) == socket_output:
+                    state["socket_attempts"] += 1
+                    if state["socket_attempts"] == 1:
+                        raise OSError("simulated socket replace failure")
+                return real_replace(path, target)
+
+            with mock.patch.object(Path, "replace", fail_first_socket_replace):
+                with self.assertRaises(SystemExit):
+                    builder.main([
+                        "body-prototype",
+                        "--down-board", str(board),
+                        "--socket-source", str(socket_source),
+                        "--output", str(png_output),
+                        "--socket-output", str(socket_output),
+                    ])
+
+            self.assertEqual(state["socket_attempts"], 1)
+            self.assertFalse(png_output.exists())
+            self.assertFalse(socket_output.exists())
+            leftovers = [
+                path.name
+                for path in directory.iterdir()
+                if path.name.startswith(f".{png_output.name}.")
+                or path.name.startswith(f".{socket_output.name}.")
+            ]
+            self.assertEqual(leftovers, [])
+
     def test_right_row_is_not_derived_by_mirroring_left(self) -> None:
         from PIL import Image
 
@@ -476,6 +1135,47 @@ class PlayerCharacterAssetBuilderTests(unittest.TestCase):
             short_result = self.run_builder("prototype", "--down-board", str(short_board), "--output", str(short_output))
             self.assertNotEqual(short_result.returncode, 0)
             self.assertFalse(short_output.exists())
+
+    def test_body_production_preserves_selected_a_large_shape_identity(self) -> None:
+        from PIL import Image, ImageChops
+
+        approved = crop_frame(Image.open(APPROVED_A_SAMPLE).convert("RGBA"), 0)
+        candidate = crop_frame(Image.open(BODY_PRODUCTION).convert("RGBA"), 0)
+        approved_box = visible_bbox(approved)
+        candidate_box = visible_bbox(candidate)
+        self.assertIsNotNone(approved_box)
+        self.assertIsNotNone(candidate_box)
+
+        approved_width = approved_box[2] - approved_box[0]
+        approved_height = approved_box[3] - approved_box[1]
+        candidate_width = candidate_box[2] - candidate_box[0]
+        candidate_height = candidate_box[3] - candidate_box[1]
+        self.assertEqual(candidate_width, approved_width)
+        self.assertEqual(candidate_height, approved_height)
+        self.assertEqual(candidate_box[1], approved_box[1])
+        self.assertEqual(candidate_box[3], approved_box[3])
+
+        mirrored_alpha = candidate.getchannel("A").transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        asymmetric_pixels = sum(
+            1
+            for value in ImageChops.difference(candidate.getchannel("A"), mirrored_alpha).get_flattened_data()
+            if value
+        )
+        self.assertGreaterEqual(
+            asymmetric_pixels,
+            100,
+            "the down-facing 3/4 silhouette must retain A's layered, non-iconic shoulder and helmet read",
+        )
+
+        opaque_pixels = [pixel for pixel in candidate.get_flattened_data() if pixel[3] == 255]
+        amber_pixels = [
+            pixel
+            for pixel in opaque_pixels
+            if pixel[0] > 150 and pixel[1] > 70 and pixel[2] < 50
+        ]
+        self.assertGreaterEqual(len(opaque_pixels), 1250)
+        self.assertGreaterEqual(len(amber_pixels), 50)
+        self.assertLessEqual(len(amber_pixels), 100)
 
 
 if __name__ == "__main__":

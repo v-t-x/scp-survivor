@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "directions": [
+    "down"
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 1,
+      "gripX": 20,
+      "gripY": 38,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 2,
+      "gripX": 18,
+      "gripY": 40,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 3,
+      "gripX": 20,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 40,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 4,
+      "gripX": 19,
+      "gripY": 40,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 5,
+      "gripX": 18,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 6,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 43,
+      "supportY": 40,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 7,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 8,
+      "gripX": 20,
+      "gripY": 40,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 9,
+      "gripX": 18,
+      "gripY": 38,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 10,
+      "gripX": 20,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 40,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 11,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 12,
+      "gripX": 18,
+      "gripY": 40,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 13,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 14,
+      "gripX": 19,
+      "gripY": 40,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 15,
+      "gripX": 20,
+      "gripY": 40,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 16,
+      "gripX": 18,
+      "gripY": 40,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 17,
+      "gripX": 20,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 40,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 18,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 45,
+      "supportY": 40,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 19,
+      "gripX": 18,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 20,
+      "gripX": 19,
+      "gripY": 38,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 21,
+      "gripX": 19,
+      "gripY": 40,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 22,
+      "gripX": 20,
+      "gripY": 36,
+      "supportX": 43,
+      "supportY": 40,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 23,
+      "gripX": 18,
+      "gripY": 38,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 24,
+      "gripX": 20,
+      "gripY": 38,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "behind"
+    },
+    {
+      "index": 25,
+      "gripX": 19,
+      "gripY": 40,
+      "supportX": 45,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 26,
+      "gripX": 18,
+      "gripY": 40,
+      "supportX": 44,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    },
+    {
+      "index": 27,
+      "gripX": 19,
+      "gripY": 40,
+      "supportX": 43,
+      "supportY": 38,
+      "equipmentLayer": "front"
+    }
+  ]
+}

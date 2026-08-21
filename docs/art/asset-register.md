@@ -1,9 +1,44 @@
 # 正式素材准入登记表
 
-本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。登记现共计 53 项；被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
+本表记录正式素材的真实生产信息。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。被 manifest 停止 preload 的 `infected-staff` 仍作为历史来源记录保留。
+
+## 2026-08-21 Player Overhaul 稳定化裁决（当前优先）
+
+本节优先于下方 2026-08-16 的旧 admission 文案。以下 SHA-256 均为本次对 `public/` 当前字节实测结果；生产运行时只加载 body、八张 aim/recoil、Tesla power module 和两张 icon。它们均为项目本地确定性 Pillow 产物（body 由 `player-response-operative-breacher-sample.png` 锁定输入复制，其他由 `scripts/art/build_player_equipment_assets.py` 生成）；商业发布复核仍待完成，不能视为最终许可批准。
+
+| Asset | SHA-256 | Dimensions | Current admission |
+|---|---|---|---|
+| player-response-operative-body | `c95e247abac034c6fd770d685f1e45f9fab12279d639e63850c572ef95cc8396` | 320×64, 5×64×64 RGBA | Production runtime body; commercial review pending |
+| foundation-containment-rifle-aim-back | `27a51d1b2b1d3927b40d470a1af36bb7952ac243839f9b5edd334b02d3f20221` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| foundation-containment-rifle-aim-front | `8e19da9ae6ddc9744fe5182fd0b2090a869c43d515fe82c6f817e3dccd4952ad` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| foundation-containment-rifle-aim-recoil-back | `e227746e9b76706e83f344df5843cf44a3bbe947a8bda8581cc252a677e43dc1` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| foundation-containment-rifle-aim-recoil-front | `c9cd760be39cbfbae98fac57dc20a07e957e0566b3386f83431a7b3c385608fa` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| tesla-containment-emitter-aim-back | `8ae12c138bfc6b7e989697f5e052dfe8391c5e7c82f985c75bd881d5f326dc0c` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| tesla-containment-emitter-aim-front | `2e397f6fbfcffe5178bf05ded58451a981e59a082c389626f89163040d1e9505` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| tesla-containment-emitter-aim-recoil-back | `e8bc97731424dfe6e835caac13716f29860b15c3dda50b0d39927dab445c3674` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| tesla-containment-emitter-aim-recoil-front | `fa620bf3213db64d919c3bae30e1ff8d9f6161d4aa1e16523d3f8c063b9043ab` | 320×1024, 80×64×64 RGBA | Production runtime; commercial review pending |
+| tesla-containment-power-module | `16a789991244f941da12a73e9f5dd94d7fb6a6a106d76284fef12e82df17f2bb` | 64×64 RGBA | Production Tesla rig dependency; commercial review pending |
+| foundation-containment-rifle-icon | `63d56425b183ee32f9bfaa2594f5a4151b2f48c32d3b03903b6c0ebef9e19ab7` | 96×96 RGBA | Production compatibility icon; commercial review pending |
+| tesla-containment-emitter-icon | `7593504fbec73cdbdefe9072279803abfffacf3aa09c3008e63f72bc1da86fd1` | 96×96 RGBA | Production compatibility icon; commercial review pending |
+
+`core`、`connector`、`same` 与 `cross` 图均保留在版本控制和审计来源中，但当前一律为 retained historical/reference outputs：不在 production preload，且由构建清理从 `dist` 移除。其本次实测哈希为 rifle core `c896ac4e0712b898f1811c6fdc8215cba75787d79081cc86d51bb5f73da0812b`、Tesla core `4eee76b20b9b2225c021acb540ea18eb9ccb2671ad6ea052afc419bd5b03da4e`；rifle connector back/front `4bd49de4c6b3cff99efec0bb74f909d51e96e7e2402ab3954224c95a54221bd5` / `9988be73249b21b71fdf4f1f7a2aa9f11d8f7ea2f2a04fa3cf099bbb921b47ec`；Tesla connector back/front `cb2ed82bb0fcba4b1f0d8a7aae8559b6d5335b7cb8d78d3c9b791d8c17b3f0d2` / `3564f44c28dea631e461ccd550384911b51cc0facc7ae46fe9866b7d26f7057c`。其余 same/cross 当前哈希沿用紧随其后的历史条目，已复测无变化。
 
 | Asset | Type | Path | Tool/model | Date | Original prompt/source | Human edits | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| player-response-operative-body | spritesheet PNG | `assets/art/characters/player-response-operative-body.png` | Locked A local PNG | 2026-08-16 | `player-response-operative-breacher-sample.png` 的已接受 A identity；输出 SHA-256 `c95e247abac034c6fd770d685f1e45f9fab12279d639e63850c572ef95cc8396` | Byte-identical copy; no pixel edits | Existing project-owned locked A acceptance asset; commercial release recheck remains required | Candidate pending commercial review | Player equipment Task 1 production body | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain locked-A provenance and recheck before commercial release. |
+| foundation-containment-rifle-same-back | spritesheet PNG | `assets/art/weapons/foundation-containment-rifle-same-back.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 已确认 A 步枪后层 `foundation-rifle-back-64.png`；第 0 帧保持确认稿像素，整表 SHA-256 `6c336330db4f71a33335bc9a3619866e72a14852a92a5538900580e289358237` | 以整数位移扩展为 5 帧，未重绘第 0 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production same-pose back layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-A provenance and recheck before commercial release. |
+| foundation-containment-rifle-same-front | spritesheet PNG | `assets/art/weapons/foundation-containment-rifle-same-front.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 已确认 A 步枪、双臂与手部前层 `foundation-rifle-front-64.png`；第 0 帧保持确认稿像素，整表 SHA-256 `c5e5cdc12d3e6be817daab605371ec5b90793fcd96082abc05699259a4bde916` | 以整数位移扩展为 5 帧，未重绘第 0 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production same-pose front layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-A provenance and recheck before commercial release. |
+| foundation-containment-rifle-cross-back | spritesheet PNG | `assets/art/weapons/foundation-containment-rifle-cross-back.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 基于已确认 A 步枪分层制作 body-left/aim-right 反向姿势；整表 SHA-256 `876c4ce19f4b30e2e15e8b45879719bccc964535553700f7de995298fba57c9a` | 重新连接反向持枪后层，并以整数位移扩展为 5 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production cross-pose back layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-A provenance and recheck before commercial release. |
+| foundation-containment-rifle-cross-front | spritesheet PNG | `assets/art/weapons/foundation-containment-rifle-cross-front.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 基于已确认 A 步枪分层制作 body-left/aim-right 反向姿势；整表 SHA-256 `a795067caeb829ccaddc482156ee090014b202b2b9b014d0dc2243bcd3dcff6e` | 仅镜像独立枪体，再按 body-left 重画反向双臂连接并以整数位移扩展为 5 帧；运行时整体镜像得到另一反向组合 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production cross-pose front layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-A provenance and recheck before commercial release. |
+| tesla-containment-emitter-same-back | spritesheet PNG | `assets/art/weapons/tesla-containment-emitter-same-back.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 已确认 Tesla 背包/电缆后层 `tesla-emitter-back-64.png`；第 0 帧保持确认稿像素，整表 SHA-256 `fec436532a441f29adf6acb05d4e5566c411ffcfc701d49106d0d8ed3c2d3b9c` | 以整数位移扩展为 5 帧，未重绘第 0 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production same-pose back layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-Tesla provenance and recheck before commercial release. |
+| tesla-containment-emitter-same-front | spritesheet PNG | `assets/art/weapons/tesla-containment-emitter-same-front.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 已确认 Tesla 线圈、双臂与电弧前层 `tesla-emitter-front-64.png`；第 0 帧保持确认稿像素，整表 SHA-256 `3e5b3e4c0469f0a9dff54891ca5d25ba20529467fff52e2967c11d6b1a75ad12` | 以整数位移扩展为 5 帧，未重绘第 0 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production same-pose front layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-Tesla provenance and recheck before commercial release. |
+| tesla-containment-emitter-cross-back | spritesheet PNG | `assets/art/weapons/tesla-containment-emitter-cross-back.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 基于已确认 Tesla 分层制作 body-left/aim-right 反向姿势；背包保持 body-local，整表 SHA-256 `13165d55fe8dcfe2a66d7d7b265409abffb866784fa199031804bfdce1719ab7` | 保留背包侧别、重走后层电缆并以整数位移扩展为 5 帧 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production cross-pose back layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-Tesla provenance and recheck before commercial release. |
+| tesla-containment-emitter-cross-front | spritesheet PNG | `assets/art/weapons/tesla-containment-emitter-cross-front.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | 基于已确认 Tesla 分层制作 body-left/aim-right 反向姿势；整表 SHA-256 `4f2052cfc5991c1c4a9e21b6e6245f812c789df4172f4f6974d07437e7592ae0` | 仅镜像独立发射器，再按 body-left 重新连接双臂；背包不参与镜像；运行时整体镜像得到另一反向组合 | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 production cross-pose front layer | 320×64, 5×64×64 RGBA, binary alpha | No third-party attribution currently; retain accepted-Tesla provenance and recheck before commercial release. |
+| foundation-containment-rifle-core | PNG | `assets/art/weapons/foundation-containment-rifle-core.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | Reviewed native rifle structure rebuilt as a body-free local +X layer; output SHA-256 `ea10aabbe184aae571e037e2cfaf4fe446651e3ac579bb4c16d3adedf5c8ad45` | Removed body/forearms and mirrored the independent rifle to local +X | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 rollback-only historical layer; not production preload | 64×64 RGBA, binary alpha | No third-party attribution currently; recheck before commercial release. |
+| tesla-containment-emitter-core | PNG | `assets/art/weapons/tesla-containment-emitter-core.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | Reviewed Tesla coil/emitter structure rebuilt as a body-free local +X layer; output SHA-256 `57f185a7f3b342b5ec6fe07995cbef5b2bcc627ff9663835c9171eca3e0bbf76` | Removed static arcs, arms and pack; retained copper, ceramic and blue-white electrical marks | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 rollback-only historical layer; not production preload | 64×64 RGBA, binary alpha | No third-party attribution currently; recheck before commercial release. |
+| tesla-containment-power-module | PNG | `assets/art/weapons/tesla-containment-power-module.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | Reviewed Tesla pack structure rebuilt as an independent left body-local layer; output SHA-256 `b52cd0f1a5ba542cb5c29bece8bb7e5dd410d826fefd4cd6bf6ff68634e5b590` | Removed body and cable pixels | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 rollback-only historical layer; not production preload | 64×64 RGBA, binary alpha | No third-party attribution currently; recheck before commercial release. |
+| foundation-containment-rifle-icon | PNG | `assets/art/weapons/foundation-containment-rifle-icon.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | Derived from the accepted same-pose rifle back/front layers; output SHA-256 `63d56425b183ee32f9bfaa2594f5a4151b2f48c32d3b03903b6c0ebef9e19ab7` | Nearest-neighbor 96px icon rendering | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 compatibility icon | 96×96 RGBA, binary alpha | No third-party attribution currently; recheck before commercial release. |
+| tesla-containment-emitter-icon | PNG | `assets/art/weapons/tesla-containment-emitter-icon.png` | `scripts/art/build_player_equipment_assets.py` local deterministic Pillow builder | 2026-08-16 | Derived from the accepted same-pose Tesla back/front layers; output SHA-256 `7593504fbec73cdbdefe9072279803abfffacf3aa09c3008e63f72bc1da86fd1` | Nearest-neighbor 96px icon rendering | Project-authored deterministic pixel asset | Candidate pending commercial review | Player equipment Task 1 compatibility icon | 96×96 RGBA, binary alpha | No third-party attribution currently; recheck before commercial release. |
 | facility-floor | PNG | `assets/art/facility/floor.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P1](#p1-facility-floor)；无图像输入 | 从生成的重复面板中裁取单元；nearest 缩至 32×32；强制首末行列一致；转 RGBA；无抖动量化到共享 32 色板；保持全不透明 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 | 32×32 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | facility-wall | PNG | `assets/art/facility/wall.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P2](#p2-facility-wall)；无图像输入 | 官方 `remove_chroma_key.py` 去底/去绿边；裁切；nearest 缩放；alpha 二值化；置入 64×64 画布；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 | 64×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
 | facility-door | PNG | `assets/art/facility/door.png` | OpenAI built-in `image_gen`（模型名未由工具暴露） | 2026-07-12 | [P3](#p3-facility-door)；无图像输入 | 首版因正面立面被拒；重生成高俯视浅带门；去色键、裁切、nearest 缩放、alpha 二值化；纵向 nearest 拉伸到 20px 保持小尺寸可读；共享色板量化 | 项目定制生成；未使用第三方图像输入；服务条款与输出权利须在商业发布前复核 | 候选；商业发布前复核 | 静态门禁候选 | 64×64 | 当前无需第三方署名；商业发布前复核 OpenAI 服务条款，若新增要求则补充。 |
@@ -1207,3 +1242,130 @@ Composition/framing: equal scale, full body, stable baseline, generous cell padd
 Constraints: every populated pose differs by real limb articulation after translation alignment; preserve exact hair/head silhouette, respirator/goggles, tactical uniform, identification color and compact held firearm; weapon keeps pointing down; no mirroring, recolor-only, translation-only, bob-only or scale-only variants; no shadow, floor, text, logo, watermark, muzzle flash, blood, extra person, floating weapon or separate shoulder module
 Avoid: chibi, oversized head, 3D, isometric, side-view, smooth painting, soft transparency, duplicated poses
 ```
+
+## 玩家角色 Player Overhaul Body Gate A2
+
+本节记录 2026-07-31 完成的两个 5 帧真实游戏内动态小样，以及 2026-08-03 的项目所有者选择。Body Gate A0 的战术 Q 版比例已接受；静态 A1 路线因游戏内仍像贴图、候选差异不足而失败。A2 因此只比较同场景、同一低饱和灰色 dummy equipment、同一动作顺序下的 A 黑灰突入员和 B 灰白防化员。两套 ImageGen 输出都只作为身份与动作参考，最终小样在原生 64×64 网格中重建，没有直接缩小参考图。
+
+2026-08-03 项目所有者回复“先用A吧”：A 黑灰突入员获准作为 Body Gate B 单方向 28 帧原型的唯一身份参考。该结论不批准普通游戏默认切换、四方向正式表、正式装备或商业发布。B 灰白防化员本轮暂不采用，完整保留在 `.superpowers/sdd/player-overhaul-phase1/gate-a/` 作为可回退对照，不删除。
+
+| Asset | Type | Path | Tool/model | Date | Source / SHA-256 | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| A 黑灰突入员 ImageGen 参考 | PNG | `.superpowers/sdd/player-overhaul-phase1/gate-a/breacher-imagegen-reference.png` | OpenAI ImageGen（工具未暴露具体模型名） | 2026-07-31 | [P72](#p72-body-gate-a2-a-黑灰突入员参考)；SHA-256 `acc24220c3a27f27cefd07bee31b8d610c6b1f08e6152356bb4e93b5be3e1e9c` | 无直接资产化；仅用于观察职业轮廓、头盔、琥珀护目镜和步态 | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 本地参考；不可单独视为正式商业资产 | 仅身份与动作参考 | 生成服务未要求额外署名；商业发布前复核 |
+| B 灰白防化员 ImageGen 参考 | PNG | `.superpowers/sdd/player-overhaul-phase1/gate-a/cbrn-imagegen-reference.png` | OpenAI ImageGen（工具未暴露具体模型名） | 2026-07-31 | [P73](#p73-body-gate-a2-b-灰白防化员参考)；SHA-256 `9dac0e9fb6f647ed228068ab856652e07a85fa8bee2b5eee0fcbed7414fdd364` | 无直接资产化；仅用于观察防化头罩、面罩、黄色警示带和压重步态 | 项目定制生成；无第三方图像输入；商业发布前复核生成服务输出权利条款与项目许可 | 本地参考；不可单独视为正式商业资产 | 本轮暂不采用，保留可回退对照 | 生成服务未要求额外署名；商业发布前复核 |
+| A 黑灰突入员 5 帧动态小样 | PNG | `public/assets/art/characters/player-response-operative-breacher-sample.png` | Pillow 原生像素重建脚本 | 2026-07-31 | A 参考 + `.superpowers/sdd/player-overhaul-phase1/gate-a/build_a2_dynamic_samples.py`；脚本 SHA-256 `8bbdf1b0614f7f6cddb9ed131c6f8e3891804cdc024662e8e6934c67c3ad6346`；输出 SHA-256 `a37d0d906e7656909bdecb63cb8638e9149e3061c135d7846d58f71131fb0640` | 在原生 64×64 网格中以硬边有限色板重建；二值 alpha；帧 0 left-facing idle，帧 1–4 为独立窄步幅移动；baseline y=56；没有前臂、手、武器、枪口、烘焙阴影或抗锯齿光晕 | 项目自制派生小样；参考由项目定制生成；商业发布前复核生成服务条款 | 开发态 Gate 小样；非正式商业资产 | Gate A2 选择通过，仅准入 Gate B 单方向 28 帧 | 320×64（5×64×64） | 无 |
+| B 灰白防化员 5 帧动态小样 | PNG | `public/assets/art/characters/player-response-operative-cbrn-sample.png` | Pillow 原生像素重建脚本 | 2026-07-31 | B 参考 + 同一重建脚本；输出 SHA-256 `93bfb707c4baabbd3aa4fcf1cf198b4060c580d39debe517f29f986d541714dc` | 在原生 64×64 网格中以硬边有限色板重建；二值 alpha；帧 0 left-facing idle，帧 1–4 为独立宽步幅压重移动；baseline y=56；没有前臂、手、武器、枪口、烘焙阴影或抗锯齿光晕 | 项目自制派生小样；参考由项目定制生成；商业发布前复核生成服务条款 | 开发态 Gate 小样；非正式商业资产 | 本轮暂不采用，保留可回退对照 | 320×64（5×64×64） | 无 |
+| A 黑灰突入员 two-direction 质量小样 | PNG + 本地审计证据 | `public/assets/art/characters/player-response-operative-breacher-sample.png`；审计详情见下节 | OpenAI built-in ImageGen 仅动作参考 + Pillow 确定性原生像素 builder | 2026-08-04 | 完整 prompt、两输入/输出、builder/test/socket/PNG/review SHA-256 均登记于下节 | 只把参考中的步态、压重和重心信息重建到固定 5 帧左向原生像素资产；运行时右向仅镜像 body 与当前 frame socket | 项目定制参考 + 项目自制确定性重建；商业发布前仍须复核生成服务条款与项目许可 | 开发态质量 Gate；非正式商业资产 | 仅供 960×540 用户视觉验收；不批准 28/120 帧、正式武器、默认切换或商业发布；原 Gate B 28 帧路线和证据暂停且保留 | 320×64（5×64×64，RGBA，二值 alpha，9 个实际不透明 RGB 色，baseline y=56） | 无；商业发布前复核 |
+
+### 临时接点与实机证据
+
+- A 临时接点（`gripX,gripY / supportX,supportY`）：`21,31 / 36,33`、`20,30 / 35,32`、`22,32 / 37,34`、`20,31 / 34,33`、`22,30 / 36,32`；全部为 `front`。
+- B 临时接点：`18,32 / 41,34`、`17,31 / 40,33`、`19,34 / 42,36`、`17,33 / 39,35`、`19,31 / 41,33`；全部为 `front`。
+- A 6 秒实机 GIF：`.superpowers/sdd/player-overhaul-phase1/gate-a/a2-sample-a-6s.gif`，SHA-256 `7b362e55ae2be2ce088b93ea44a9319725548178b21c0fd18b9ecbbf526eb594`。
+- B 6 秒实机 GIF：`.superpowers/sdd/player-overhaul-phase1/gate-a/a2-sample-b-6s.gif`，SHA-256 `8ccaba8ae823984dcf032f521405503a484819396e23072569234ce02c8aaf70`。
+- 原生场景无标签并排图：`.superpowers/sdd/player-overhaul-phase1/gate-a/a2-ab-unlabeled-960x540-each.png`，SHA-256 `c4f2cbe3bdf4dbbf83236bb1660e52afce58a4fb5690094c3b78d41e3ad50f3f`。
+- A 步态时长 `110/90/110/90ms`，停止反馈 `90ms`、无回摆；B 步态时长 `150/130/150/130ms`，停止反馈 `180ms`、一次 1px 回摆。
+- 两套小样只通过显式开发 URL 使用；普通 URL 仍选择 legacy。dummy equipment 只读取已提交的表现角度，不创建子弹、不定义伤害、不改变目标。
+
+### 2026-08-04 A 黑灰突入员 two-direction 质量小样登记
+
+- ImageGen 输入 1（身份/装备参考）：`.superpowers/sdd/player-overhaul-phase1/gate-a/breacher-imagegen-reference.png`，SHA-256 `acc24220c3a27f27cefd07bee31b8d610c6b1f08e6152356bb4e93b5be3e1e9c`；输入 2（已接受的 64px 轮廓、比例、色块与原生左向可读性）：`public/assets/art/characters/player-response-operative-breacher-sample.png` 的 Gate A 版本，SHA-256 `a37d0d906e7656909bdecb63cb8638e9149e3061c135d7846d58f71131fb0640`。
+- ImageGen 输出：`.superpowers/sdd/player-overhaul-phase1/two-direction-quality-sample/imagegen-motion-reference.png`（1983×793），SHA-256 `ba6900c79f78bc7e0f5eba6457d2bbba798fc8672018bca4517d8699be19a556`。它仅用于动作观察，绝不直接资产化；输出并非原生 64px 可切帧表，比例/细节也高于既接受样片。输出出现的完整前臂和手违反 body-only elbow attachment stumps 约束，明确不采用为最终 builder 的手臂或像素规则。
+- 完整 ImageGen prompt：
+
+```text
+Use case: stylized-concept
+Asset type: motion reference for a 64px top-down game sprite
+Primary request: create one five-pose horizontal motion-reference strip for the exact same adult SCP Foundation black-and-charcoal breacher shown in the references. Pose 1 is a grounded left-facing idle. Poses 2-5 are one complete left-facing run cycle: left-foot contact, compression/passing, right-foot contact, recovery/passing.
+Input images: Image 1 is the exact profession and equipment identity reference; Image 2 is the exact approved 64px silhouette, proportions, palette blocks and native left-facing read that must be preserved.
+Scene/backdrop: perfectly flat solid #ff00ff chroma-key background, no floor.
+Style/medium: crisp hard-edged limited-palette tactical chibi pixel-game animation reference.
+Composition/framing: exactly five equally spaced full-body poses in one horizontal row, identical camera angle and body scale, generous separation, both boots visible.
+Constraints: preserve the same helmet, broad amber visor, charcoal wedge torso, adult tactical proportions and body-only elbow attachment stumps in all five poses. Show clear alternating foot plants, a brief compression pose, restrained shoulder/hip counter-motion and stable head scale. No complete forearms, hands, weapon, muzzle, holster, shadow, effects, labels, grid lines, text or watermark. Do not use #ff00ff in the subject.
+Avoid: identity drift, different characters, front/back views, flattened body, soft gradients, blur, antialiased halo, whole-body bouncing, exaggerated cartoon jumping.
+```
+
+- 可复现文件 SHA-256：builder `scripts/art/build_player_two_direction_asset.py` `bad69681e2184d86b25c1963ef575e126454b213c703f32a761ae277a73cca3f`；质量测试 `scripts/art/test_player_two_direction_asset.py` `e02b6ab17f6ac0db3f7be1866d759e03d0eed236dcc8fafbd43ae5dbd7843a77`；socket JSON `scripts/art/data/player-two-direction-quality-sample-sockets.json` `8562afe584ca899fe9ebb04f8848246bf767dde6c50fc85806790701f6278844`；生成 socket JS `src/art/playerTwoDirectionQualitySampleSockets.js` `d2e5f3758392724eb8f032cf2ece39da9d59fe65e4a0a38116489f4cb2808bcb`；最终 PNG `c95e247abac034c6fd770d685f1e45f9fab12279d639e63850c572ef95cc8396`；最终审查图 1× `quality-sheet-1x.png` 同 PNG hash，nearest 8× `quality-sheet-8x.png` `1dcc924fdbaf9b56ba2026722348ed238ff79471d1e2b48b338d2c833cadfc27`。
+- 资产合同：320×64、5×64×64、RGBA、alpha 仅 `0/255`、全表 9 个实际不透明 RGB 色、baseline `y=56`；frame 0 固定 RGBA SHA-256 `a22cbc0606d41dc59c4c008e9c56e1d5aff96b0d619b2271c15ab553aad7911f`。帧语义为 1 idle + 4 run（左脚接触、压重/交错、右脚接触、恢复/交错）；唯一原生素材为左向，右向运行时镜像 body 与当前 frame socket，无 side-step。
+- 表现合同：two-direction 固定脚点；停止时 frame 2 收势恰为 100ms 后回 idle；武器 aim 独立于 body，后坐仅移动 rig，不移动角色或游戏锚点。缺资产、接点、手臂、测试武器或生命周期任一失败时整包回退 legacy，普通 URL 不泄漏开发预览。
+- 琥珀上限：项目所有者已确认把原 `<=90` 修正为 `<=100`，因为冻结 frame 0 的同一检测谓词已有 100 个琥珀像素；保留 frame 0 hash 和身份不变，否则两个硬约束数学上无法同时满足。
+- Gate 冻结范围：这是开发态质量验收，尚未批准 28/120 帧、正式武器、默认切换或商业发布。原 Gate B 28 帧候选路线及其 rejected/结构证据均暂停、保留且不删除。
+
+### P72 Body Gate A2 A 黑灰突入员参考
+
+```text
+Create a five-pose concept strip for one adult SCP Foundation mobile task force breacher,
+shown left-facing in a true top-down three-quarter game view. Pose 1 is a grounded idle;
+poses 2 through 5 are four clearly different walk-cycle poses. Use the already approved
+restrained tactical-chibi proportion: helmeted head about one third of visible height,
+broad but compact shoulders, short stable legs and practical boots. Identity must read
+from large shapes at tiny game size: dark charcoal and steel-grey armor, angular ballistic
+helmet, one wide horizontal amber visor, compact wedge-shaped shoulder silhouette.
+Body-only modular base in every pose: head, torso, upper arms, hips and legs present;
+both complete forearms, both hands, every firearm, every blade, every weapon, every
+muzzle, every shoulder-mounted device and every weapon-shaped holster absent. Leave
+clean attachment space at both elbow ends. Transparent background, no baked shadow,
+no floor, no text, no labels, no UI, no floating equipment. Serious SCP containment
+tone, crisp hard-edged limited-palette pixel-game concept, no soft gradients, no blur,
+no antialiased halo, no cute eyes, no mascot styling. This is a pose and identity
+reference, not a finished spritesheet.
+```
+
+### P73 Body Gate A2 B 灰白防化员参考
+
+```text
+Create a five-pose concept strip for one adult SCP Foundation CBRN containment operator,
+shown left-facing in a true top-down three-quarter game view. Pose 1 is a grounded idle;
+poses 2 through 5 are four clearly different walk-cycle poses. Use the already approved
+restrained tactical-chibi proportion: large sealed hood about one third of visible height,
+wide protected shoulders, compact wrapped torso, short stable legs and heavy sealed boots.
+Identity must read from large shapes at tiny game size: grey-white sealed suit, round CBRN
+hood, dark respirator faceplate, one broad yellow contamination-warning band, visibly
+wrapped and wider silhouette. Body-only modular base in every pose: head, torso, upper
+arms, hips and legs present; both complete forearms, both hands, every firearm, every
+blade, every weapon, every muzzle, every shoulder-mounted device and every weapon-shaped
+holster absent. Leave clean attachment space at both elbow ends. Transparent background,
+no baked shadow, no floor, no text, no labels, no UI, no floating equipment. Serious SCP
+containment tone, crisp hard-edged limited-palette pixel-game concept, no soft gradients,
+no blur, no antialiased halo, no cute eyes, no mascot styling. This is a pose and identity
+reference, not a finished spritesheet.
+```
+
+## 玩家角色 Player Overhaul Body Gate B（首版失败，重制中）
+
+2026-08-03 按用户已选择的 Gate A2 方案 A（黑灰突入员）进入单方向 28 帧验证。当前候选只用于 `?playerPresentation=body` 开发门；普通游戏仍使用 legacy，未准入 left/right/up、hit、默认角色或正式商用素材。
+
+2026-08-03 项目所有者在原生游戏画面审阅后否决首版 Gate B：首版只继承了黑灰配色和琥珀面罩，没有保持 A 的尖锐头盔、斜楔躯干、前后肩层次与整体体量，人物身份明显漂移且观感弱于 A2 预览。首版结构证据完整保留在 `.superpowers/sdd/player-overhaul-phase1/gate-b/rejected-2026-08-03-identity-drift/`，不得以既有自动测试结果视为美术通过。当前 Gate 已重开，先验证单个 down-facing 身份锚点；未通过前不重建整套、不进入 Task 9。
+
+ImageGen 连续三次使用下列逐字 prompt，但输出出现 backward 行转成背面、strafe 行转成侧面、棋盘背景等违反合同的问题，均被拒绝并仅保留在 `.superpowers/sdd/player-overhaul-phase1/gate-b/rejected-imagegen/`：attempt-1 SHA-256 `d1b1bb36a507e36c03c920265fcbb12162794bd2f1c5346b3645d74e6259a450`、attempt-2 `7043bdca987a0ed3bfc309c4ce74751cef8280ff6f94e224af3c2ce497ac35a0`、attempt-3 `4fc8618cffc9ece28457f5b849c5521f9082e31c19197fc0dd567b0eeb9d5d88`。没有用模糊抠图修补这些失败输出。
+
+```text
+Using the approved body-only SCP Foundation operative as the exact identity reference,
+create one orthographic top-down 3/4-view animation board on a transparent background.
+The operative faces downward in every occupied cell. Keep the same approved restrained
+tactical-chibi proportions, adult identity, profession silhouette, headgear, dominant
+color blocks, identification markings, boots and palette in every frame.
+Body-only modular base in every frame: torso, upper arms, hips and legs are present;
+both forearms, both hands, all weapons, all muzzles, all shoulder devices and all
+weapon-shaped holsters are absent. Preserve clear attachment space at both elbow ends.
+Use a precise 6-column by 6-row grid with equal cells and no grid lines or labels.
+Occupied cells: row 1 columns 1-4 are idle; row 1 columns 5-6 are empty; row 2 has
+six forward-walk poses; row 3 has six backward-walk poses; row 4 has six strafe-left
+poses; row 5 has six strafe-right poses; row 6 is empty. Every occupied pose is unique,
+feet use a consistent baseline, torso size and camera angle never change, and movement
+has grounded weight rather than exaggerated jumping. Crisp hard-edged limited-palette
+pixel-game rendering, transparent background, no shadow, no text, no effects, no blur,
+no antialiased halo and no extra objects.
+```
+
+为继续验证“28 帧、脚底、接点、遮挡和 dummy equipment”这组结构合同，当前候选由本地 Pillow 脚本按 A 的大轮廓与琥珀面罩重建，不冒充被拒的 ImageGen 输出：
+
+| Asset | Path | Processing / SHA-256 | Admission |
+|---|---|---|---|
+| 6×6 down 动作板 | `.superpowers/sdd/player-overhaul-phase1/gate-b/down-board.png` | `build_gate_b_board.py`（SHA-256 `2eac87e9079f40cb84afc28f51acc81b9d5116dadbe1377aa900712720acc74b`）生成；board SHA-256 `b422fed8684d24c6e477e9f8155bfc35f2aecb666b712290a71d412a15a28bb7` | 本地开发证据，不暂存 |
+| 28 帧 body-only 原型 | `public/assets/art/characters/player-response-operative-body-prototype.png` | 6×6 裁帧、64×64 归一化、二值 alpha、≤32 色；SHA-256 `a2c7c9d29982492b718b05a34d6dbc368b134cbd6ae87157e06891838ef479bf` | Gate B 待用户接受；非默认、非 production |
+| 权威接点 JSON | `scripts/art/data/player-response-operative-body-sockets.json` | 从最终归一化 28 帧中的 grip/support 标记逐帧复测，共 17 组不同坐标；SHA-256 `5f307a1e3a20cc26d4d0f9ef32bf1e96b1a5ee8aa066c85a9edb3d55017690f2` | 仅 down、28 项 |
+| 冻结运行时接点模块 | `src/art/playerResponseOperativeBodySockets.js` | 由 builder 原子生成；SHA-256 `3c5b681ea4cc2b7f5de34f061694977206e9ee470296ebb469f833de6aa6cb99` | 随候选整包 fallback |
+| 接点检查图 | `.superpowers/sdd/player-overhaul-phase1/gate-b/body-prototype-socket-overlay.png` | SHA-256 `98c7d56c44f4b9d686a3adf720bde6b06f9806fa6aad8a7fd9c1066ac3397b96` | 本地验收证据，不暂存 |
+
+后处理命令为 `build_player_character_assets.py body-prototype` 与 `socket-overlay --frame-count 28`；builder 当前 SHA-256 `184bc38151c4fc1df5a9f4686e514a7c25013b1e4655fb463c43de7bb0e08c41`。当前候选的许可基础是项目自行编写的程序化像素重建；A 身份参考仍继承 Gate A2 的生成服务条款复核要求。最终准入结论等待用户查看原生 1×28 表、接点图和 960×540 实机截图后确认。

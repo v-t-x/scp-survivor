@@ -5,11 +5,13 @@ import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
-import { SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import { DEVELOPMENT_SPRITESHEET_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
 import { resolveCharacterPresentation } from "../src/art/characterPresentation.js";
 
 const PROTOTYPE_SHEET_KEY = "player-response-operative-prototype-sheet";
 const PROTOTYPE_PATH = "assets/art/characters/player-response-operative-prototype.png";
+const BODY_PROTOTYPE_SHEET_KEY = "player-response-operative-body-prototype-sheet";
+const BODY_PROTOTYPE_PATH = "assets/art/characters/player-response-operative-body-prototype.png";
 const LEGACY_PATH = "assets/art/characters/player-opening-sheet.png";
 const LEGACY_SHEET_KEY = TEXTURES.playerOpeningSheet;
 
@@ -144,13 +146,63 @@ function median(values) {
 test("manifest declares the exact prototype texture key and spritesheet entry", () => {
   assert.equal(TEXTURES.playerResponseOperativePrototypeSheet, PROTOTYPE_SHEET_KEY);
   assert.deepEqual(
-    SPRITESHEET_ASSETS.find(({ key }) => key === TEXTURES.playerResponseOperativePrototypeSheet),
+    DEVELOPMENT_SPRITESHEET_ASSETS.find(({ key }) => key === TEXTURES.playerResponseOperativePrototypeSheet),
     {
       key: PROTOTYPE_SHEET_KEY,
       path: PROTOTYPE_PATH,
       frameConfig: { frameWidth: 64, frameHeight: 64 }
     }
   );
+});
+
+test("manifest declares the exact body prototype texture key and 64px spritesheet entry", () => {
+  assert.equal(TEXTURES.playerResponseOperativeBodyPrototypeSheet, BODY_PROTOTYPE_SHEET_KEY);
+  assert.deepEqual(
+    DEVELOPMENT_SPRITESHEET_ASSETS.find(({ key }) => key === TEXTURES.playerResponseOperativeBodyPrototypeSheet),
+    {
+      key: BODY_PROTOTYPE_SHEET_KEY,
+      path: BODY_PROTOTYPE_PATH,
+      frameConfig: { frameWidth: 64, frameHeight: 64 }
+    }
+  );
+});
+
+test("body prototype is an exact 28-frame native RGBA sheet with binary alpha and limited palette", async () => {
+  const { width, height, pixels } = await loadPng(BODY_PROTOTYPE_PATH);
+  assert.deepEqual([width, height], PROTOTYPE_SHEET_SIZE);
+
+  const colors = new Set();
+  const alphaValues = new Set();
+  for (let offset = 0; offset < pixels.length; offset += 4) {
+    const alpha = pixels[offset + 3];
+    alphaValues.add(alpha);
+    if (alpha === 255) {
+      colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+    }
+  }
+  assert.deepEqual(alphaValues, new Set([0, 255]));
+  assert.ok(colors.size <= 32, `body prototype uses ${colors.size} colors`);
+});
+
+test("body prototype exports one measured socket pair for every frame", async () => {
+  const socketModule = await import("../src/art/playerResponseOperativeBodySockets.js");
+  const sockets = socketModule.PLAYER_RESPONSE_OPERATIVE_BODY_SOCKETS;
+
+  assert.equal(socketModule.BODY_SOCKET_SCHEMA_VERSION, 1);
+  assert.equal(socketModule.BODY_SOCKET_FRAME_COUNT, 28);
+  assert.equal(sockets.length, 28);
+  assert.equal(Object.isFrozen(sockets), true);
+  const coordinatePairs = new Set();
+  sockets.forEach((socket, index) => {
+    assert.equal(socket.index, index);
+    assert.ok(["front", "behind"].includes(socket.equipmentLayer));
+    for (const key of ["gripX", "gripY", "supportX", "supportY"]) {
+      assert.ok(Number.isInteger(socket[key]), `${key} must be an integer at frame ${index}`);
+      assert.ok(socket[key] >= 0 && socket[key] < 64, `${key} must stay inside frame ${index}`);
+    }
+    coordinatePairs.add(`${socket.gripX},${socket.gripY}/${socket.supportX},${socket.supportY}`);
+  });
+  assert.ok(coordinatePairs.size >= 8, "frame sockets must be measured rather than copied once");
 });
 
 test("prototype sheet is an exact 1792x64 8-bit RGBA grid with binary alpha and a limited palette", async () => {
@@ -272,7 +324,7 @@ test("production sheet is not preloaded and ordinary resolution stays on the leg
 
   const scene = {
     textures: {
-      exists: (key) => [LEGACY_SHEET_KEY, PROTOTYPE_SHEET_KEY].includes(key),
+      exists: (key) => [LEGACY_SHEET_KEY, PROTOTYPE_SHEET_KEY, BODY_PROTOTYPE_SHEET_KEY].includes(key),
       get: (key) => ({ frameTotal: key === LEGACY_SHEET_KEY ? 49 : 29 })
     },
     console: { warn() {} }
