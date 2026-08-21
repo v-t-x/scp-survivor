@@ -66,10 +66,10 @@ function rotateLocal(point, pivot, angle, worldPivot) {
   });
 }
 
-function worldPosePivot(footX, footY, aimAngle, recoilPx) {
+function localPosePivot(aimAngle, recoilPx) {
   return Object.freeze({
-    x: footX - Math.cos(aimAngle) * recoilPx,
-    y: footY - (BODY_PIVOT.y - POSE_BODY_LOCAL_PIVOT.y) - Math.sin(aimAngle) * recoilPx
+    x: POSE_BODY_LOCAL_PIVOT.x - Math.cos(aimAngle) * recoilPx,
+    y: POSE_BODY_LOCAL_PIVOT.y - Math.sin(aimAngle) * recoilPx
   });
 }
 
@@ -103,9 +103,15 @@ function resolveDirectionIndex(aimAngle, bodyFacing, previousState = null) {
   return nominal;
 }
 
-function worldAimAngle(directionIndex, bodyFacing) {
-  const localAngle = directionIndex * DIRECTION_STEP;
-  return bodyFacing === "right" ? Math.PI - localAngle : localAngle;
+function isFormalPoseMirrored(bodyFacing) {
+  return bodyFacing === "right";
+}
+
+function mirrorPosePoint(point) {
+  return Object.freeze({
+    x: POSE_BODY_LOCAL_PIVOT.x * 2 - point.x,
+    y: point.y
+  });
 }
 
 function rotateAroundFoot(point, footX, footY, angle) {
@@ -241,7 +247,7 @@ export function createPlayerEquipmentRig(scene, {
     }
 
     try {
-      const flipBody = state.bodyFacing === "right";
+      const flipBody = isFormalPoseMirrored(state.bodyFacing);
       const directionIndex = resolveDirectionIndex(state.aimAngle, state.bodyFacing, lastState);
       const poseFrame = directionIndex * FORMAL_FRAME_COUNT + state.frame;
       const recoilActive = state.recoilPx > 0;
@@ -296,20 +302,21 @@ export function createPlayerEquipmentRig(scene, {
     if (!Number.isFinite(aimAngle) || !Number.isFinite(recoilPx)) return null;
 
     const directionIndex = resolveDirectionIndex(aimAngle, lastState.bodyFacing, lastState);
-    const quantizedWorldAngle = worldAimAngle(directionIndex, lastState.bodyFacing);
+    const localPoseAngle = directionIndex * DIRECTION_STEP;
     const poseRecoilPx = recoilPx > 0 ? definition.recoilPx : 0;
-    const posePivot = worldPosePivot(
-      lastState.footX,
-      lastState.footY,
-      quantizedWorldAngle,
-      poseRecoilPx
-    );
-    const unrotated = rotateLocal(
+    const localActionPoint = rotateLocal(
       definition.actionPoint,
       definition.pivot,
-      quantizedWorldAngle,
-      posePivot
+      localPoseAngle,
+      localPosePivot(localPoseAngle, poseRecoilPx)
     );
+    const renderedActionPoint = isFormalPoseMirrored(lastState.bodyFacing)
+      ? mirrorPosePoint(localActionPoint)
+      : localActionPoint;
+    const unrotated = Object.freeze({
+      x: lastState.footX + renderedActionPoint.x - POSE_BODY_LOCAL_PIVOT.x,
+      y: lastState.footY + renderedActionPoint.y - BODY_PIVOT.y
+    });
     const point = rotateAroundFoot(
       unrotated,
       lastState.footX,

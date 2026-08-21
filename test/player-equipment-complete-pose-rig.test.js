@@ -80,6 +80,49 @@ function byTexture(scene, textureKey) {
   return scene.created.find(({ texture }) => texture.key === textureKey);
 }
 
+function normalizeAngle(angle) {
+  const normalized = angle % (Math.PI * 2);
+  return normalized < 0 ? normalized + Math.PI * 2 : normalized;
+}
+
+function expectedPoseActionPoint(definition, {
+  footX = 100,
+  footY = 200,
+  bodyFacing,
+  aimAngle,
+  recoilPx,
+  bodyRotation = 0
+}) {
+  const directionStep = Math.PI / 8;
+  const localAimAngle = normalizeAngle(
+    bodyFacing === "right" ? Math.PI - aimAngle : aimAngle
+  );
+  const directionIndex = Math.round(localAimAngle / directionStep) % 16;
+  const poseAimAngle = directionIndex * directionStep;
+  const poseRecoilPx = recoilPx > 0 ? definition.recoilPx : 0;
+  const posePivot = {
+    x: 32 - Math.cos(poseAimAngle) * poseRecoilPx,
+    y: 32 - Math.sin(poseAimAngle) * poseRecoilPx
+  };
+  const localX = definition.actionPoint.x - definition.pivot.x;
+  const localY = definition.actionPoint.y - definition.pivot.y;
+  const renderedSocket = {
+    x: posePivot.x + localX * Math.cos(poseAimAngle) - localY * Math.sin(poseAimAngle),
+    y: posePivot.y + localX * Math.sin(poseAimAngle) + localY * Math.cos(poseAimAngle)
+  };
+  if (bodyFacing === "right") {
+    renderedSocket.x = 64 - renderedSocket.x;
+  }
+  const localWorldX = renderedSocket.x - 32;
+  const localWorldY = renderedSocket.y - 56;
+  const cos = Math.cos(bodyRotation);
+  const sin = Math.sin(bodyRotation);
+  return {
+    x: Math.round(footX + localWorldX * cos - localWorldY * sin),
+    y: Math.round(footY + localWorldX * sin + localWorldY * cos)
+  };
+}
+
 test("allocates the four complete-pose atlases instead of a freely rotating core", () => {
   const scene = createScene();
   const definition = getPlayerEquipmentDefinition("pistol");
@@ -162,4 +205,74 @@ test("mirrors the whole Tesla pose and keeps its action point on the same quanti
   render(rig, { bodyFacing: "left", aimAngle: 0, recoilPx: 3 });
   assert.deepEqual(rig.getActionPoint(), { x: 127, y: 174 });
   assert.deepEqual(anchor, before);
+});
+
+test("right-facing complete poses mirror rifle and Tesla action points before world rotation", () => {
+  const cases = [
+    { label: "cardinal aim", aimAngle: 0, recoil: false },
+    { label: "cardinal recoil", aimAngle: Math.PI / 2, recoil: true },
+    { label: "diagonal aim", aimAngle: Math.PI / 4, recoil: false },
+    { label: "diagonal recoil", aimAngle: (Math.PI * 3) / 4, recoil: true }
+  ];
+
+  for (const weaponId of ["pistol", "tesla"]) {
+    const definition = getPlayerEquipmentDefinition(weaponId);
+    for (const current of cases) {
+      const scene = createScene();
+      const rig = createRig(scene, weaponId);
+      const recoilPx = current.recoil ? definition.recoilPx : 0;
+      const state = {
+        footX: 100,
+        footY: 200,
+        frame: 2,
+        bodyFacing: "right",
+        visualAimFacing: "right",
+        aimAngle: current.aimAngle,
+        recoilPx,
+        bodyRotation: 0.11
+      };
+
+      assert.equal(render(rig, state), true, `${weaponId} ${current.label}: rig renders`);
+      assert.deepEqual(
+        rig.getActionPoint(),
+        expectedPoseActionPoint(definition, state),
+        `${weaponId} ${current.label}: action point follows the horizontally mirrored complete pose`
+      );
+    }
+  }
+});
+
+test("left-facing complete poses retain their unmirrored rifle and Tesla action points", () => {
+  const cases = [
+    { label: "cardinal aim", aimAngle: 0, recoil: false },
+    { label: "cardinal recoil", aimAngle: Math.PI / 2, recoil: true },
+    { label: "diagonal aim", aimAngle: Math.PI / 4, recoil: false },
+    { label: "diagonal recoil", aimAngle: (Math.PI * 3) / 4, recoil: true }
+  ];
+
+  for (const weaponId of ["pistol", "tesla"]) {
+    const definition = getPlayerEquipmentDefinition(weaponId);
+    for (const current of cases) {
+      const scene = createScene();
+      const rig = createRig(scene, weaponId);
+      const recoilPx = current.recoil ? definition.recoilPx : 0;
+      const state = {
+        footX: 100,
+        footY: 200,
+        frame: 2,
+        bodyFacing: "left",
+        visualAimFacing: "left",
+        aimAngle: current.aimAngle,
+        recoilPx,
+        bodyRotation: 0.11
+      };
+
+      assert.equal(render(rig, state), true, `${weaponId} ${current.label}: rig renders`);
+      assert.deepEqual(
+        rig.getActionPoint(),
+        expectedPoseActionPoint(definition, state),
+        `${weaponId} ${current.label}: left-facing action point remains unmirrored`
+      );
+    }
+  }
 });
