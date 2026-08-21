@@ -530,6 +530,9 @@ export function createPlayerPresentationController(
       if (nextRig.render(initialState) !== true) {
         throw new Error(`formal equipment initial render failed: ${weaponId}`);
       }
+      if (paused && nextRig.setPaused?.(true) !== true) {
+        throw new Error(`formal equipment pause inheritance failed: ${weaponId}`);
+      }
       visual?.setVisible?.(false);
 
       formalRig = nextRig;

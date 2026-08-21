@@ -2391,6 +2391,8 @@ test("switching pistol to Tesla and back atomically replaces the complete formal
   const firstPistolRig = scene.created.slice(1);
   assert.equal(controller.notifyAttack({ angle: 0, weaponId: "pistol" }), true);
   const pistolTween = scene.tweenCalls[0];
+  controller.setPaused(true);
+  assert.ok(firstPistolRig.every(({ anims }) => anims.paused === true));
 
   assert.equal(controller.update(teslaSnapshot, 0), true);
   assert.equal(controller.snapshot().formalWeaponId, "tesla");
@@ -2398,11 +2400,14 @@ test("switching pistol to Tesla and back atomically replaces the complete formal
   assert.equal(pistolTween.calls.remove, 1, "the old pistol recoil tween is released before Tesla activation");
   const teslaRig = scene.created.slice(1).filter(({ active }) => active);
   assert.equal(teslaRig.length, 6, "only Tesla's body, power module, and complete pose layers survive");
+  assert.ok(teslaRig.every(({ anims }) => anims.paused === true), "a paused controller pauses the replacement Tesla rig");
   const teslaOrigin = controller.getAttackEffectOrigin({ weaponId: "tesla", angle: 0 });
   assert.equal(teslaOrigin?.vfxType, "tesla");
   assert.equal(Number.isFinite(teslaOrigin?.x), true);
   assert.equal(Number.isFinite(teslaOrigin?.y), true);
 
+  controller.setPaused(false);
+  assert.ok(teslaRig.every(({ anims }) => anims.paused === false), "resume reaches the replacement Tesla rig once");
   assert.equal(controller.update(pistolSnapshot, 0), true);
   assert.equal(controller.snapshot().formalWeaponId, "pistol");
   assert.ok(teslaRig.every(({ active }) => active === false), "the old Tesla rig is fully destroyed");
@@ -2437,11 +2442,14 @@ test("a missing Tesla rig leaves complete legacy once and can recover when pisto
   const firstPistolRig = scene.created.slice(1);
   assert.equal(controller.notifyAttack({ angle: 0, weaponId: "pistol" }), true);
   const pistolTween = scene.tweenCalls[0];
+  controller.setPaused(true);
+  assert.ok(firstPistolRig.every(({ anims }) => anims.paused === true));
 
   assert.equal(controller.update(missingTeslaSnapshot, 0), true);
   assert.equal(controller.snapshot().formalRig, false);
   assert.equal(controller.snapshot().mode, "legacy");
   assert.equal(legacy.visible, true, "legacy remains complete when the replacement rig cannot activate");
+  assert.equal(legacy.anims.paused, true, "failed replacement keeps restored legacy paused");
   assert.ok(firstPistolRig.every(({ active }) => active === false), "the old pistol rig is fully destroyed");
   assert.equal(pistolTween.calls.remove, 1, "the old recoil tween is released before legacy restoration");
   const allocationsAfterMissingTesla = scene.created.length;
@@ -2453,6 +2461,9 @@ test("a missing Tesla rig leaves complete legacy once and can recover when pisto
   assert.equal(legacy.visible, false, "a later available weapon can replace the restored legacy visual");
   const replacementPistolRig = scene.created.slice(1).filter(({ active }) => active);
   assert.equal(replacementPistolRig.length, 5, "only the recovered pistol complete pose survives");
+  assert.ok(replacementPistolRig.every(({ anims }) => anims.paused === true), "a paused controller pauses the recovered pistol rig");
+  controller.setPaused(false);
+  assert.ok(replacementPistolRig.every(({ anims }) => anims.paused === false), "resume reaches the recovered pistol rig once");
   assert.equal(controller.getAttackEffectOrigin({ weaponId: "pistol", angle: 0 })?.vfxType, "ballistic");
   assertGameplayStateUnchanged(gameplayBefore, scene, anchor, "missing Tesla switch recovery");
 });
