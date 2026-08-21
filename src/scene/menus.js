@@ -1317,6 +1317,14 @@ export const menusMixin = {
 
 
   freezeForGameOver() {
+    const tesla = this.weapons?.tesla;
+    if (tesla) {
+      try {
+        this.stopTeslaChannel?.(tesla);
+      } catch {
+        // Terminal state must still commit if optional Tesla cleanup fails.
+      }
+    }
     this.pauseGameplaySystems();
     this.clearCombatEntities();
     this.activeStimUntilMs = 0;

@@ -747,6 +747,78 @@ test("PrototypeScene.create resets the presentation failure lock on a reused sce
   assert.equal(scene.levelUpPresentationRetryTimer, null);
 });
 
+test("terminal freeze stops Tesla channel before pausing for failure, victory, and direct terminal teardown", () => {
+  const createTeslaTerminalScene = () => {
+    const scene = createScene();
+    const events = [];
+    const beamLines = [{ x1: 10, y1: 20, x2: 30, y2: 40 }];
+    const target = { active: true };
+    const tesla = {
+      id: "tesla",
+      isChanneling: true,
+      channelTarget: target,
+      channelTargets: [target]
+    };
+    Object.assign(scene, menusMixin, {
+      weapons: { tesla },
+      stopTeslaChannel(weapon) {
+        if (weapon.isChanneling !== true) return false;
+        weapon.isChanneling = false;
+        weapon.channelTarget = null;
+        weapon.channelTargets = [];
+        beamLines.length = 0;
+        events.push("stop");
+        return true;
+      },
+      pauseGameplaySystems() { events.push("pause"); },
+      clearCombatEntities() { events.push("clear"); },
+      clearFacilitySystems() {},
+      destroyLevelUpOverlay() {},
+      hidePauseOverlay() {},
+      hideBuildPanel() {},
+      pickupRadiusIndicator: { clear() {} },
+      awardRunCredits() { return 0; },
+      updateUI() {},
+      showGameOverOverlay() {},
+      showVictoryOverlay() {}
+    });
+    return { scene, tesla, beamLines, events };
+  };
+
+  for (const trigger of ["triggerGameOver", "triggerVictory"]) {
+    const terminal = createTeslaTerminalScene();
+    terminal.scene[trigger]();
+    assert.deepEqual(terminal.events.slice(0, 3), ["stop", "pause", "clear"], `${trigger} stops the beam before terminal pause and combat cleanup`);
+    assert.equal(terminal.beamLines.length, 0, `${trigger} clears the persistent Tesla beam`);
+    assert.equal(terminal.tesla.isChanneling, false, `${trigger} leaves Tesla unable to sustain`);
+    assert.equal(terminal.tesla.channelTarget, null);
+    assert.deepEqual(terminal.tesla.channelTargets, []);
+    const eventCount = terminal.events.length;
+    assert.equal(terminal.scene.stopTeslaChannel(terminal.tesla), false, `${trigger} teardown is idempotent after terminal freeze`);
+    assert.equal(terminal.events.length, eventCount, `${trigger} does not recreate or re-clear an already stopped channel`);
+  }
+
+  const directFreeze = createTeslaTerminalScene();
+  directFreeze.scene.freezeForGameOver();
+  assert.deepEqual(directFreeze.events.slice(0, 3), ["stop", "pause", "clear"]);
+
+  const nonTeslaScene = createScene();
+  const nonTeslaEvents = [];
+  Object.assign(nonTeslaScene, menusMixin, {
+    weapons: { pistol: {} },
+    stopTeslaChannel() { nonTeslaEvents.push("stop"); },
+    pauseGameplaySystems() { nonTeslaEvents.push("pause"); },
+    clearCombatEntities() { nonTeslaEvents.push("clear"); },
+    clearFacilitySystems() {},
+    destroyLevelUpOverlay() {},
+    hidePauseOverlay() {},
+    hideBuildPanel() {},
+    pickupRadiusIndicator: { clear() {} }
+  });
+  assert.doesNotThrow(() => nonTeslaScene.freezeForGameOver());
+  assert.deepEqual(nonTeslaEvents, ["pause", "clear"]);
+});
+
 test("menus teardown and return-to-title destroy terminal and legacy level-up ownership safely", () => {
   const terminalScene = createScene();
   Object.assign(terminalScene, menusMixin, {
