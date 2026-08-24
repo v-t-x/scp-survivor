@@ -63,6 +63,9 @@ export const weaponsMixin = {
         range: BALANCE.weapons.tesla.range,
         chainTargets: BALANCE.weapons.tesla.baseChainTargets,
         chainSearchRadius: BALANCE.weapons.tesla.baseChainSearchRadius,
+        channelTarget: null,
+        channelTargets: [],
+        isChanneling: false,
         nextAttackAtMs: 0
       }
     };
@@ -87,6 +90,13 @@ export const weaponsMixin = {
         continue;
       }
 
+      // Tesla owns a persistent lock and visual channel. It therefore updates
+      // every frame while its damage remains bounded by nextAttackAtMs.
+      if (weapon.id === "tesla") {
+        this.updateTeslaChannel(weapon);
+        continue;
+      }
+
       if (weapon.id === "shotgun") {
         this.updateBreacherReloadState(weapon);
       }
@@ -100,8 +110,6 @@ export const weaponsMixin = {
         didAttack = this.attackWithPistol(weapon);
       } else if (weapon.id === "shotgun") {
         didAttack = this.attackWithShotgun(weapon);
-      } else if (weapon.id === "tesla") {
-        didAttack = this.attackWithTesla(weapon);
       }
 
       weapon.nextAttackAtMs =
@@ -331,7 +339,8 @@ export const weaponsMixin = {
       committedBullets
     );
     if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
+      // Shot direction feeds muzzle VFX only; movement owns the body facing
+      // (user-approved contract change, 2026-07-28).
       this.emitAttackPresentation?.({
         weaponId: "pistol",
         originX: this.player.x,
@@ -339,7 +348,7 @@ export const weaponsMixin = {
         angle: committedPresentationAngle,
         shotCount: committedBullets.length,
         heavy: false
-      }, committedPresentationAngle);
+      }, committedPresentationAngle, committedBullets);
     }
     return true;
   },
@@ -402,10 +411,6 @@ export const weaponsMixin = {
       baseAngle,
       committedBullets
     );
-    if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
-    }
-
     if (weapon.currentShells <= 0) {
       weapon.isReloading = true;
       weapon.reloadEndAtMs = this.elapsedSurvivalMs + weapon.reloadDurationMs;
@@ -420,105 +425,190 @@ export const weaponsMixin = {
         angle: committedPresentationAngle,
         shotCount: committedBullets.length,
         heavy: true
-      }, committedPresentationAngle);
+      }, committedPresentationAngle, committedBullets);
     }
 
     return true;
   },
 
 
-  attackWithTesla(weapon) {
-    const prioritizeBoss = this.bossPhaseActive;
-    const firstTarget = this.findNearestEnemy(
-      weapon.range,
+  isTeslaChannelTargetValid(weapon, target, originX = this.player.x, originY = this.player.y) {
+    return Boolean(
+      target
+      && target.active !== false
+      && target.isDying !== true
+      && Phaser.Math.Distance.Between(originX, originY, target.x, target.y) <= weapon.range
+    );
+  },
+
+
+  resolveTeslaChannelTargets(weapon) {
+    let primary = weapon.channelTarget;
+    if (this.bossPhaseActive) {
+      const prioritized = this.findNearestEnemy(
+        weapon.range,
+        this.player.x,
+        this.player.y,
+        null,
+        true
+      );
+      if (prioritized?.isBoss && this.isTeslaChannelTargetValid(weapon, prioritized)) {
+        primary = prioritized;
+      }
+    }
+
+    if (!this.isTeslaChannelTargetValid(weapon, primary)) {
+      primary = this.findNearestEnemy(
+        weapon.range,
+        this.player.x,
+        this.player.y,
+        null,
+        this.bossPhaseActive
+      );
+    }
+    if (!this.isTeslaChannelTargetValid(weapon, primary)) {
+      weapon.channelTarget = null;
+      weapon.channelTargets = [];
+      return [];
+    }
+
+    weapon.channelTarget = primary;
+    const chainCount = Math.max(1, Math.floor(weapon.chainTargets));
+    if (primary.isBoss) {
+      weapon.channelTargets = Array.from({ length: chainCount }, () => primary);
+      return weapon.channelTargets;
+    }
+
+    const targets = [primary];
+    const hitEnemies = new Set(targets);
+    let currentTarget = primary;
+    while (targets.length < chainCount) {
+      const nextTarget = this.findNearestEnemy(
+        weapon.chainSearchRadius,
+        currentTarget.x,
+        currentTarget.y,
+        hitEnemies
+      );
+      if (!nextTarget || nextTarget.active === false || nextTarget.isDying === true) {
+        break;
+      }
+      targets.push(nextTarget);
+      hitEnemies.add(nextTarget);
+      currentTarget = nextTarget;
+    }
+    weapon.channelTargets = targets;
+    return targets;
+  },
+
+
+  createTeslaChannelSnapshot(weapon, targets, phase) {
+    const firstTarget = targets[0];
+    const angle = Phaser.Math.Angle.Between(
       this.player.x,
       this.player.y,
-      null,
-      prioritizeBoss
+      firstTarget.x,
+      firstTarget.y
     );
-    if (!firstTarget) {
+    let firstOrigin = { x: this.player.x, y: this.player.y };
+    try {
+      const resolved = this.resolvePlayerAttackVisualOrigin?.({
+        weaponId: "tesla",
+        angle,
+        originX: this.player.x,
+        originY: this.player.y
+      });
+      if (Number.isFinite(resolved?.x) && Number.isFinite(resolved?.y)) {
+        firstOrigin = resolved;
+      }
+    } catch {
+      // A visual muzzle lookup cannot change the channel lock or damage tick.
+    }
+
+    const segments = [];
+    let origin = firstOrigin;
+    let previousTarget = null;
+    for (const target of targets) {
+      // Boss overcharge repeats damage on one target; one visible beam is enough.
+      if (target === previousTarget) continue;
+      segments.push(Object.freeze({
+        x1: origin.x,
+        y1: origin.y,
+        x2: target.x,
+        y2: target.y
+      }));
+      origin = target;
+      previousTarget = target;
+    }
+    return Object.freeze({
+      phase,
+      weaponId: "tesla",
+      angle,
+      visualPhase: Math.floor(this.elapsedSurvivalMs / 50),
+      segments: Object.freeze(segments)
+    });
+  },
+
+
+  stopTeslaChannel(weapon) {
+    const wasChanneling = weapon.isChanneling === true;
+    weapon.isChanneling = false;
+    weapon.channelTarget = null;
+    weapon.channelTargets = [];
+    if (!wasChanneling) return false;
+    try {
+      this.emitTeslaChannelPresentation?.(Object.freeze({ phase: "stop" }));
+    } catch {
+      // Presentation teardown cannot affect gameplay state.
+    }
+    return true;
+  },
+
+
+  updateTeslaChannel(weapon) {
+    const wasChanneling = weapon.isChanneling === true;
+    const targets = this.resolveTeslaChannelTargets(weapon);
+    if (targets.length === 0) {
+      this.stopTeslaChannel(weapon);
       return false;
     }
 
-    if (firstTarget.isBoss) {
-      let currentOrigin = { x: this.player.x, y: this.player.y };
-      let currentDamage = weapon.damage;
-      let committedPresentationAngle = null;
-      let committedHitCount = 0;
-      for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
-        this.spawnLightningSegment(
-          currentOrigin.x,
-          currentOrigin.y,
-          firstTarget.x,
-          firstTarget.y
-        );
-        this.damageEnemy(
-          firstTarget,
-          currentDamage,
-          firstTarget.x,
-          firstTarget.y,
-          currentOrigin.x,
-          currentOrigin.y,
-          {
-            sourceWeaponId: "tesla",
-            sourceDistance: Phaser.Math.Distance.Between(
-              currentOrigin.x,
-              currentOrigin.y,
-              firstTarget.x,
-              firstTarget.y
-            )
-          }
-        );
-        committedHitCount += 1;
-        if (chainIndex === 0) {
-          committedPresentationAngle = Phaser.Math.Angle.Between(
-            this.player.x,
-            this.player.y,
-            firstTarget.x,
-            firstTarget.y
-          );
-        }
-        currentOrigin = { x: firstTarget.x, y: firstTarget.y };
-        currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
-      }
-      if (committedPresentationAngle !== null) {
-        this.playerFacingAngle = committedPresentationAngle;
-        this.emitAttackPresentation?.({
-          weaponId: "tesla",
-          originX: this.player.x,
-          originY: this.player.y,
-          angle: committedPresentationAngle,
-          shotCount: committedHitCount,
-          heavy: true
-        });
-      }
-      return true;
+    weapon.isChanneling = true;
+    let committedDamage = false;
+    if (this.elapsedSurvivalMs >= weapon.nextAttackAtMs) {
+      weapon.nextAttackAtMs = this.elapsedSurvivalMs + weapon.cooldownMs;
+      committedDamage = this.attackWithTesla(weapon, targets);
     }
 
-    const hitEnemies = new Set();
+    const snapshot = this.createTeslaChannelSnapshot(
+      weapon,
+      targets,
+      wasChanneling ? "sustain" : "start"
+    );
+    try {
+      this.emitTeslaChannelPresentation?.(snapshot);
+    } catch {
+      // Continuous presentation is a post-commit observer only.
+    }
+    return committedDamage;
+  },
+
+
+  attackWithTesla(weapon, suppliedTargets = null) {
+    const targets = Array.isArray(suppliedTargets)
+      ? suppliedTargets
+      : this.resolveTeslaChannelTargets(weapon);
+    if (targets.length === 0) return false;
+
     let currentOrigin = { x: this.player.x, y: this.player.y };
-    let currentTarget = firstTarget;
     let currentDamage = weapon.damage;
-    let committedPresentationAngle = null;
     let committedHitCount = 0;
-
-    for (let chainIndex = 0; chainIndex < weapon.chainTargets; chainIndex += 1) {
-      if (!currentTarget || hitEnemies.has(currentTarget) || !currentTarget.active) {
-        break;
-      }
-
-      hitEnemies.add(currentTarget);
-      this.spawnLightningSegment(
-        currentOrigin.x,
-        currentOrigin.y,
-        currentTarget.x,
-        currentTarget.y
-      );
+    for (const target of targets) {
+      if (!target || target.active === false || target.isDying === true) break;
       this.damageEnemy(
-        currentTarget,
+        target,
         currentDamage,
-        currentTarget.x,
-        currentTarget.y,
+        target.x,
+        target.y,
         currentOrigin.x,
         currentOrigin.y,
         {
@@ -526,44 +616,24 @@ export const weaponsMixin = {
           sourceDistance: Phaser.Math.Distance.Between(
             currentOrigin.x,
             currentOrigin.y,
-            currentTarget.x,
-            currentTarget.y
-          )
+            target.x,
+            target.y
+          ),
+          suppressHitSound: true
         }
       );
       committedHitCount += 1;
-      if (chainIndex === 0) {
-        committedPresentationAngle = Phaser.Math.Angle.Between(
-          this.player.x,
-          this.player.y,
-          currentTarget.x,
-          currentTarget.y
-        );
-      }
-
-      currentOrigin = { x: currentTarget.x, y: currentTarget.y };
+      currentOrigin = { x: target.x, y: target.y };
       currentDamage *= BALANCE.weapons.tesla.chainDamageFalloff;
-      currentTarget = this.findNearestEnemy(
-        weapon.chainSearchRadius,
-        currentOrigin.x,
-        currentOrigin.y,
-        hitEnemies
-      );
     }
-
-    if (committedPresentationAngle !== null) {
-      this.playerFacingAngle = committedPresentationAngle;
-      this.emitAttackPresentation?.({
-        weaponId: "tesla",
-        originX: this.player.x,
-        originY: this.player.y,
-        angle: committedPresentationAngle,
-        shotCount: committedHitCount,
-        heavy: true
-      });
+    if (committedHitCount > 0) {
+      try {
+        this.playSound?.("enemyHit");
+      } catch {
+        // Audio is presentation-only and cannot roll back or repeat a committed tick.
+      }
     }
-
-    return true;
+    return committedHitCount > 0;
   },
 
 

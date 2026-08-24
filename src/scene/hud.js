@@ -4,6 +4,10 @@ import {
   GAME_HEIGHT
 } from "../config/constants.js";
 import { BALANCE } from "../config/balance.js";
+import {
+  isPlayerUpgradeVisible,
+  PLAYER_WEAPON_ALLOWLIST
+} from "../config/playerWeaponAvailability.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { HUD_REGIONS } from "../art/openingVisualContract.js";
 import { TEXTURES } from "../assets/manifest.js";
@@ -729,10 +733,9 @@ export const hudMixin = {
       addHeading(62, 138, "主武器");
       const weaponIcons = {
         pistol: TEXTURES.weaponPistolIcon,
-        shotgun: TEXTURES.weaponBreacherIcon,
         tesla: TEXTURES.weaponTeslaIcon
       };
-      ["pistol", "shotgun", "tesla"].forEach((weaponId, index) => {
+      PLAYER_WEAPON_ALLOWLIST.forEach((weaponId, index) => {
         addRow({
           id: `weapon:${weaponId}`,
           x: 72,
@@ -756,7 +759,9 @@ export const hudMixin = {
 
       addHeading(342, 138, "武器协议", THEME.text.warning ?? THEME.text.secondary);
       const weaponUpgrades = UPGRADE_DEFINITIONS.filter(
-        (upgrade) => upgrade.kind === "weapon" && upgrade.isMutation !== true
+        (upgrade) => upgrade.kind === "weapon"
+          && upgrade.isMutation !== true
+          && isPlayerUpgradeVisible(upgrade)
       );
       weaponUpgrades.forEach((upgrade, index) => {
         addRow({
@@ -768,7 +773,9 @@ export const hudMixin = {
       });
 
       addHeading(662, 138, "异常突变", THEME.text.critical);
-      const mutations = UPGRADE_DEFINITIONS.filter((upgrade) => upgrade.isMutation === true);
+      const mutations = UPGRADE_DEFINITIONS.filter(
+        (upgrade) => upgrade.isMutation === true && isPlayerUpgradeVisible(upgrade)
+      );
       mutations.forEach((upgrade, index) => {
         addRow({
           id: `upgrade:${upgrade.key}`,
@@ -793,13 +800,15 @@ export const hudMixin = {
         summaryText,
         setVisible: (visible) => terminal.setVisible(visible === true),
         update: () => {
-          for (const weaponId of ["pistol", "shotgun", "tesla"]) {
+          for (const weaponId of PLAYER_WEAPON_ALLOWLIST) {
             rowRefs.get(`weapon:${weaponId}`)?.setText(this.getBuildWeaponLine(weaponId));
           }
-          for (const upgrade of UPGRADE_DEFINITIONS) {
+          for (const upgrade of UPGRADE_DEFINITIONS.filter(isPlayerUpgradeVisible)) {
             rowRefs.get(`upgrade:${upgrade.key}`)?.setText(this.getBuildUpgradeLine(upgrade));
           }
-          summaryText.setText(`行动员 // ${this.selectedWeaponId ?? "未选择"}`);
+          summaryText.setText(
+            `行动员 // ${this.weapons?.[this.selectedWeaponId]?.name ?? "未选择"}`
+          );
         },
         destroy: () => {
           if (destroyed) return;
@@ -889,10 +898,7 @@ export const hudMixin = {
     if (weaponId === "pistol") {
       return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)} / ${weapon.cooldownMs.toFixed(0)}ms`;
     }
-    if (weaponId === "shotgun") {
-      return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)}x${weapon.pelletCount}`;
-    }
-    return `${weapon.name}  Lv ${weapon.currentLevel}  ${weapon.damage.toFixed(1)} / 链${weapon.chainTargets}`;
+    return `${weapon.name}  Lv ${weapon.currentLevel}  每跳${weapon.damage.toFixed(1)} / ${weapon.cooldownMs.toFixed(0)}ms / 链${weapon.chainTargets}`;
   },
 
 
@@ -923,12 +929,20 @@ export const hudMixin = {
 
   getLegacyBuildPanelText() {
     const pistol = this.weapons.pistol;
-    const shotgun = this.weapons.shotgun;
-    const tesla = this.weapons.tesla;
     const attacksPerSecond = (1000 / pistol.cooldownMs).toFixed(2);
-    const upgradeLines = UPGRADE_DEFINITIONS.map(
+    const upgradeLines = UPGRADE_DEFINITIONS.filter(isPlayerUpgradeVisible).map(
       (upgrade) => `${upgrade.name}：Lv ${this.upgradeLevels[upgrade.key]}`
     ).join("\n");
+    const weaponLines = PLAYER_WEAPON_ALLOWLIST.map((weaponId) => {
+      const weapon = this.weapons[weaponId];
+      if (weapon.unlocked === false) {
+        return `- ${weapon.name}：未解锁`;
+      }
+      if (weaponId === "pistol") {
+        return `- ${weapon.name} Lv ${weapon.currentLevel}：伤害 ${weapon.damage.toFixed(1)}，冷却 ${weapon.cooldownMs.toFixed(0)}ms`;
+      }
+      return `- ${weapon.name} Lv ${weapon.currentLevel}：每跳伤害 ${weapon.damage.toFixed(1)}，间隔 ${weapon.cooldownMs.toFixed(0)}ms，链击 ${weapon.chainTargets}`;
+    });
     return [
       `伤害倍率：x${(pistol.damage / BALANCE.weapons.pistol.baseDamage).toFixed(2)}`,
       `攻击冷却：${pistol.cooldownMs.toFixed(0)} ms (${attacksPerSecond}/秒)`,
@@ -939,13 +953,7 @@ export const hudMixin = {
       `拾取范围：${this.pickupRadius.toFixed(0)}`,
       "",
       "武器",
-      `- 手枪 Lv ${pistol.currentLevel}：伤害 ${pistol.damage.toFixed(1)}，冷却 ${pistol.cooldownMs.toFixed(0)}ms`,
-      shotgun.unlocked
-        ? `- 突破器 Lv ${shotgun.currentLevel}：伤害 ${shotgun.damage.toFixed(1)} x ${shotgun.pelletCount}`
-        : "- 突破器：未解锁",
-      tesla.unlocked
-        ? `- 特斯拉 Lv ${tesla.currentLevel}：伤害 ${tesla.damage.toFixed(1)}，链击 ${tesla.chainTargets}`
-        : "- 特斯拉：未解锁",
+      ...weaponLines,
       "",
       "升级等级",
       upgradeLines

@@ -163,7 +163,14 @@ test("scene lifecycle owns a safe controller outside transient effects and destr
   assert.match(main, /createCombatFeedbackController/);
   assert.match(create, /createCombatFeedbackController\(this\)/);
   assert.doesNotMatch(create, /transientEffects\.add\(this\.combatFeedback\)/);
-  assert.match(update, /syncCharacterPresentation\(this\)[\s\S]*combatFeedback\.update\(this\.elapsedSurvivalMs\)/);
+  assert.match(
+    update,
+    /handlePlayerMovement\(\)[\s\S]*createPlayerPresentationSnapshot\(this\)[\s\S]*playerPresentation\?\.update\?\.\(snapshot, delta\)[\s\S]*updateWeapons\(\)[\s\S]*combatFeedback\.update\(this\.elapsedSurvivalMs\)/
+  );
+  assert.doesNotMatch(update, /syncCharacterPresentation\(this\)/);
+  assert.match(teardown, /playerPresentation\.setPaused\?\.\(true\)/);
+  assert.match(teardown, /playerPresentation\.destroy\?\.\(\)/);
+  assert.match(teardown, /this\.playerPresentation\s*=\s*null/);
   assert.match(teardown, /combatFeedback\.setPaused\?\.\(true\)/);
   assert.match(teardown, /combatFeedback\.destroy\?\.\(\)/);
   assert.match(teardown, /this\.combatFeedback\s*=\s*null/);
@@ -190,6 +197,12 @@ test("three pause and resume cycles forward only controller pause state after ga
         assert.equal(scene.spawnEvent.paused, value, "gameplay spawn pause state commits first");
       }
     },
+    playerPresentation: {
+      setPaused(value) {
+        events.push(`player:${value}`);
+        assert.equal(scene.spawnEvent.paused, value, "gameplay spawn pause state commits first");
+      }
+    },
     tweens: { pauseAll() { events.push("tweens:pauseAll"); }, resumeAll() { events.push("tweens:resumeAll"); } }
   };
 
@@ -198,12 +211,18 @@ test("three pause and resume cycles forward only controller pause state after ga
     resumeGameplaySystems.call(scene);
   }
   assert.deepEqual(events, Array.from({ length: 3 }, () => [
-    "physics:pause", "feedback:true", "physics:resume", "feedback:false"
+    "physics:pause", "player:true", "feedback:true",
+    "physics:resume", "player:false", "feedback:false"
   ]).flat());
 
-  scene.combatFeedback.setPaused = () => { throw new Error("presentation pause failed"); };
+  scene.playerPresentation.setPaused = () => { throw new Error("player presentation pause failed"); };
+  scene.combatFeedback.setPaused = (value) => events.push(`feedback-after-failure:${value}`);
   assert.doesNotThrow(() => pauseGameplaySystems.call(scene));
   assert.doesNotThrow(() => resumeGameplaySystems.call(scene));
+  assert.deepEqual(
+    events.filter((event) => event.startsWith("feedback-after-failure:")),
+    ["feedback-after-failure:true", "feedback-after-failure:false"]
+  );
 });
 
 test("clearCombatEntities commits every group clear before untracking each destroyed enemy", async () => {
@@ -250,28 +269,43 @@ test("clearCombatEntities commits every group clear before untracking each destr
   ]);
 });
 
-test("manager teardown freezes and destroys feedback first while isolating every cleanup failure", async () => {
+test("manager teardown clears and destroys player presentation while isolating every cleanup failure", async () => {
   const { teardownManagers } = await loadMainLifecycle();
-  for (const failure of [null, "pause", "feedback", "audio"]) {
+  for (const failure of [null, "player-pause", "player", "feedback-pause", "feedback", "audio"]) {
     const events = [];
     const scene = {
+      playerPresentation: {
+        setPaused(value) { events.push(`player:pause:${value}`); if (failure === "player-pause") throw new Error("player pause failed"); },
+        destroy() { events.push("player:destroy"); if (failure === "player") throw new Error("player destroy failed"); }
+      },
       combatFeedback: {
-        setPaused(value) { events.push(`feedback:pause:${value}`); if (failure === "pause") throw new Error("pause failed"); },
+        setPaused(value) { events.push(`feedback:pause:${value}`); if (failure === "feedback-pause") throw new Error("pause failed"); },
         destroy() { events.push("feedback:destroy"); if (failure === "feedback") throw new Error("feedback failed"); }
       },
       audio: { destroy() { events.push("audio:destroy"); if (failure === "audio") throw new Error("audio failed"); } },
       ui: { destroy() { events.push("ui:destroy"); } }
     };
     assert.doesNotThrow(() => teardownManagers.call(scene));
-    assert.deepEqual(events, ["feedback:pause:true", "feedback:destroy", "audio:destroy", "ui:destroy"]);
-    assert.deepEqual([scene.combatFeedback, scene.audio, scene.ui], [null, null, null]);
+    assert.deepEqual(events, [
+      "player:pause:true",
+      "player:destroy",
+      "feedback:pause:true",
+      "feedback:destroy",
+      "audio:destroy",
+      "ui:destroy"
+    ]);
+    assert.deepEqual(
+      [scene.playerPresentation, scene.combatFeedback, scene.audio, scene.ui],
+      [null, null, null, null]
+    );
     assert.doesNotThrow(() => teardownManagers.call(scene));
-    assert.equal(events.length, 4, "repeated teardown is inert");
+    assert.equal(events.length, 6, "repeated teardown is inert");
   }
 });
 
 test("failure and victory restart loops return managers pools visuals and listeners to baseline", async () => {
   const { createCombatFeedbackController } = await import("../src/art/combatFeedback.js");
+  const { createPlayerPresentationController } = await import("../src/art/playerPresentationController.js");
   const { teardownManagers, installManagerTeardown } = await loadMainLifecycle();
 
   for (const outcome of ["failure", "victory"]) {
@@ -281,6 +315,7 @@ test("failure and victory restart loops return managers pools visuals and listen
     const scene = {
       events,
       teardownManagers,
+      playerPresentation: null,
       combatFeedback: null,
       audio: null,
       ui: null,
@@ -306,7 +341,8 @@ test("failure and victory restart loops return managers pools visuals and listen
       const displayScene = createLifecycleDisplayScene(visuals);
       const resourceBaseline = {
         timers: displayScene.timerCount,
-        tweens: displayScene.tweenCount
+        tweens: displayScene.tweenCount,
+        visibleSprites: displayScene.visibleSpriteCount
       };
       const baseController = createCombatFeedbackController(displayScene, {
         poolLimits: { attack: 1, hit: 1, death: 1 }
@@ -329,13 +365,23 @@ test("failure and victory restart loops return managers pools visuals and listen
         }
       };
       const player = createActor();
+      player.visible = true;
+      player.setVisible = function setVisible(value) {
+        this.visible = value;
+        return this;
+      };
       const enemy = createActor();
+      displayScene.player = player;
+      const playerPresentation = createPlayerPresentationController(displayScene, { anchor: player });
+      assert.equal(playerPresentation.snapshot().hasVisual, true);
+      assert.equal(displayScene.visibleSpriteCount, resourceBaseline.visibleSprites + 1);
       controller.trackActor(player, { kind: "player" });
       controller.trackActor(enemy, { kind: "enemy" });
       controller.notifyAttack({ originX: 1, originY: 2, angle: 0, heavy: false });
       controller.notifyHit({ x: 2, y: 3, impactX: 2, impactY: 3, enemyType: "drone", lethal: false });
       controller.notifyDeath({ x: 2, y: 3, enemyType: "drone", isBoss: false });
       controller.update(1);
+      scene.playerPresentation = playerPresentation;
       scene.combatFeedback = controller;
       scene.audio = { destroy() {} };
       scene.ui = { destroy() {} };
@@ -350,15 +396,25 @@ test("failure and victory restart loops return managers pools visuals and listen
       resultOverlay.activateRestart();
 
       assert.equal(restartCount, cycle + 1, `${outcome} must execute one real Scene restart per cycle`);
-      assert.deepEqual([scene.combatFeedback, scene.audio, scene.ui], [null, null, null]);
+      assert.deepEqual(
+        [scene.playerPresentation, scene.combatFeedback, scene.audio, scene.ui],
+        [null, null, null, null]
+      );
       assert.equal(displayScene.timerCount, resourceBaseline.timers, "feedback teardown preserves timer baseline");
       assert.equal(displayScene.tweenCount, resourceBaseline.tweens, "feedback teardown preserves tween baseline");
+      assert.equal(
+        displayScene.visibleSpriteCount,
+        resourceBaseline.visibleSprites,
+        "player presentation teardown preserves visible Sprite baseline"
+      );
+      assert.equal(player.visible, true, "gameplay anchor is restored for restart");
       const cycleVisuals = visuals.slice(firstCycleVisual);
       assert.ok(cycleVisuals.every((visual) => visual.destroyed), `${outcome} cycle ${cycle} releases shadows and pools`);
-      assert.ok(cycleVisuals.every((visual) => (
+      const feedbackVisuals = cycleVisuals.filter((visual) => visual.kind !== "sprite");
+      assert.ok(feedbackVisuals.every((visual) => (
         visual.resourcesAtDestroy.timers === resourceBaseline.timers
         && visual.resourcesAtDestroy.tweens === resourceBaseline.tweens
-      )), `${outcome} cycle ${cycle} stops owned timers and tweens before destroying visuals`);
+      )), `${outcome} cycle ${cycle} stops feedback timers and tweens before destroying its visuals`);
       assert.equal(events.listenerCount(SHUTDOWN), 0);
       assert.equal(events.listenerCount(DESTROY), 1);
     }
@@ -369,29 +425,46 @@ test("failure and victory restart loops return managers pools visuals and listen
 });
 
 function createLifecycleDisplayScene(visuals) {
-  function visual() {
+  function visual(kind = "display", textureKey = null) {
     const target = {
+      kind,
+      active: true,
+      visible: true,
       destroyed: false,
+      texture: textureKey === null ? undefined : { key: textureKey },
       setOrigin() { return this; }, setPosition() { return this; }, setDisplaySize() { return this; },
       setAlpha() { return this; }, setVisible() { return this; }, setTint() { return this; },
-      setRotation() { return this; }, setDepth() { return this; }, clear() { return this; },
+      setRotation() { return this; }, setDepth() { return this; }, setScale() { return this; },
+      setTexture(key) { this.texture = { key }; return this; },
+      setFlipX() { return this; }, clear() { return this; },
       fillStyle() { return this; }, fillRect() { return this; }, lineStyle() { return this; },
       lineBetween() { return this; }, strokeRect() { return this; }, strokeCircle() { return this; },
       destroy() {
+        if (this.destroyed) return;
         this.resourcesAtDestroy = {
           timers: scene.timerCount,
           tweens: scene.tweenCount
         };
+        if (kind === "sprite") scene.visibleSpriteCount -= 1;
+        this.active = false;
+        this.visible = false;
         this.destroyed = true;
       }
     };
+    if (kind === "sprite") scene.visibleSpriteCount += 1;
     visuals.push(target);
     return target;
   }
   const scene = {
     timerCount: 1,
     tweenCount: 1,
-    add: { image: visual, graphics: visual }
+    visibleSpriteCount: 0,
+    textures: { exists() { return false; } },
+    add: {
+      image: () => visual(),
+      graphics: () => visual(),
+      sprite: (_x, _y, key) => visual("sprite", key)
+    }
   };
   scene.time = {
     now: 0,

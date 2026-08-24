@@ -26,9 +26,10 @@ const approvedImageAssets = [
   { key: "facility-contamination-trail", path: "assets/art/facility/contamination-trail.png", size: [64, 64] },
   { key: "player-rect", path: "assets/art/characters/player.png", size: [48, 48] },
   { key: "enemy-scp049", path: "assets/art/characters/scp-049.png", size: [64, 80] },
-  { key: "weapon-pistol-icon", path: "assets/art/weapons/pistol.png", size: [96, 96] },
+  { key: "weapon-pistol-icon", path: "assets/art/weapons/foundation-containment-rifle-icon.png", size: [96, 96] },
   { key: "weapon-breacher-icon", path: "assets/art/weapons/breacher.png", size: [96, 96] },
-  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla.png", size: [96, 96] },
+  { key: "weapon-tesla-icon", path: "assets/art/weapons/tesla-containment-emitter-icon.png", size: [96, 96] },
+  { key: "player-tesla-power-module", path: "assets/art/weapons/tesla-containment-power-module.png", size: [64, 64] },
   { key: "title-facility-backdrop", path: "assets/art/menus/title-facility-backdrop.png", size: [960, 540] },
   { key: "armory-rack-backdrop", path: "assets/art/menus/armory-rack-backdrop.png", size: [960, 540] },
   { key: "upgrade-damage", path: "assets/art/upgrades/damage.png", size: [32, 32] },
@@ -95,12 +96,37 @@ const approvedEnemySheets = [
   { key: "r17-bud", path: "assets/art/enemies/r17-bud.png", size: [128, 32], frame: [32, 32], visibleExtent: 22 }
 ];
 
+const approvedPlayerBodySheets = [
+  {
+    key: "player-response-operative-body-sheet",
+    path: "assets/art/characters/player-response-operative-body.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  }
+];
+
+const approvedPlayerEquipmentSheets = [
+  { key: "player-foundation-rifle-aim-back", path: "assets/art/weapons/foundation-containment-rifle-aim-back.png" },
+  { key: "player-foundation-rifle-aim-front", path: "assets/art/weapons/foundation-containment-rifle-aim-front.png" },
+  { key: "player-foundation-rifle-aim-recoil-back", path: "assets/art/weapons/foundation-containment-rifle-aim-recoil-back.png" },
+  { key: "player-foundation-rifle-aim-recoil-front", path: "assets/art/weapons/foundation-containment-rifle-aim-recoil-front.png" },
+  { key: "player-tesla-emitter-aim-back", path: "assets/art/weapons/tesla-containment-emitter-aim-back.png" },
+  { key: "player-tesla-emitter-aim-front", path: "assets/art/weapons/tesla-containment-emitter-aim-front.png" },
+  { key: "player-tesla-emitter-aim-recoil-back", path: "assets/art/weapons/tesla-containment-emitter-aim-recoil-back.png" },
+  { key: "player-tesla-emitter-aim-recoil-front", path: "assets/art/weapons/tesla-containment-emitter-aim-recoil-front.png" }
+].map(({ key, path }) => ({
+  key,
+  path,
+  frameConfig: { frameWidth: 64, frameHeight: 64 }
+}));
+
 const approvedSpritesheets = [
   ...approvedCharacterSheets.map(({ key, path }) => ({
     key,
     path,
     frameConfig: { frameWidth: 48, frameHeight: 48 }
   })),
+  ...approvedPlayerBodySheets,
+  ...approvedPlayerEquipmentSheets,
   ...approvedEnemySheets.map(({ key, path, frame: [frameWidth, frameHeight] }) => ({
     key,
     path,
@@ -466,6 +492,43 @@ test("character frame gate rejects recoloring without alpha-shape motion", () =>
   );
 });
 
+test("response operative texture keys are declared, unique, with only the production body preloaded", () => {
+  assert.equal(TEXTURES.playerResponseOperativeBodySheet, "player-response-operative-body-sheet");
+  assert.equal(TEXTURES.playerResponseOperativePrototypeSheet, "player-response-operative-prototype-sheet");
+  assert.equal(TEXTURES.playerResponseOperativeBodyPrototypeSheet, "player-response-operative-body-prototype-sheet");
+  assert.equal(TEXTURES.playerResponseOperativeSheet, "player-response-operative-sheet");
+
+  const allTextureValues = Object.values(TEXTURES);
+  assert.equal(
+    new Set(allTextureValues).size,
+    allTextureValues.length,
+    "new character keys must stay unique across every declared texture key"
+  );
+
+  const r17Values = new Set(Object.values(r17TextureKeys));
+  const legacyValues = new Set(Object.values(legacyFallbackTextureKeys));
+  const spritesheetKeys = new Set(SPRITESHEET_ASSETS.map(({ key }) => key));
+  const imageKeys = new Set(IMAGE_ASSETS.map(({ key }) => key));
+  for (const key of [
+    TEXTURES.playerResponseOperativeBodySheet,
+    TEXTURES.playerResponseOperativePrototypeSheet,
+    TEXTURES.playerResponseOperativeBodyPrototypeSheet,
+    TEXTURES.playerResponseOperativeSheet
+  ]) {
+    assert.equal(r17Values.has(key), false, `${key} must not collide with R-17 keys`);
+    assert.equal(legacyValues.has(key), false, `${key} must not collide with legacy fallback keys`);
+    assert.equal(imageKeys.has(key), false, `${key} must not be preloaded as a static image`);
+  }
+  assert.equal(spritesheetKeys.has(TEXTURES.playerResponseOperativeBodySheet), true);
+  assert.equal(spritesheetKeys.has(TEXTURES.playerResponseOperativePrototypeSheet), false);
+  assert.equal(spritesheetKeys.has(TEXTURES.playerResponseOperativeBodyPrototypeSheet), false);
+  assert.equal(
+    spritesheetKeys.has(TEXTURES.playerResponseOperativeSheet),
+    false,
+    "production sheet must not be preloaded before its asset exists"
+  );
+});
+
 test("production manifest declares the approved static vertical slice", () => {
   assert.equal(TEXTURES.weaponPistolIcon, "weapon-pistol-icon");
   assert.equal(TEXTURES.weaponBreacherIcon, "weapon-breacher-icon");
@@ -481,7 +544,7 @@ test("production manifest declares the approved static vertical slice", () => {
   assertApprovedStaticImageAssets(IMAGE_ASSETS);
 });
 
-test("production manifest declares the exact R-17 production spritesheet contract", () => {
+test("production manifest declares the exact approved spritesheet contract", () => {
   assert.equal(TEXTURES.playerOpeningSheet, "player-opening-sheet");
   assert.equal(TEXTURES.infectedOpeningSheet, "infected-opening-sheet");
   for (const [property, key] of Object.entries(r17TextureKeys)) {

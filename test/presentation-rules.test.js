@@ -531,21 +531,39 @@ test("facility presentation reset clears outage tint and alpha", () => {
   assert.equal(activeVisual.tinted, false);
 });
 
-test("opening character integration preserves body configuration contracts", async () => {
-  const [world, enemies, main] = await Promise.all([
+test("opening character integration preserves gameplay consumers and body configuration contracts", async () => {
+  const [world, enemies, main, progression, weapons] = await Promise.all([
     readFile(new URL("../src/scene/world.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8"),
-    readFile(new URL("../src/main.js", import.meta.url), "utf8")
+    readFile(new URL("../src/main.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/scene/progression.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/scene/weapons.js", import.meta.url), "utf8")
   ]);
+  assert.match(world, /this\.player\s*=\s*this\.physics\.add\.sprite\(/);
   assert.match(world, /this\.player\.body\.setSize\(24, 24\)/);
+  assert.match(world, /resolveCharacterPresentation\(this, DEFAULT_CHARACTER_ID\)/);
+  assert.match(world, /this\.player\.characterId = presentation\.characterId;/);
+  assert.match(world, /this\.player\.presentationAnimationFamily = presentation\.animationFamily;/);
+  assert.match(world, /applyDisplayScalePreservingBody\(this\.player, presentation\.displayScale\)/);
+  assert.match(world, /anchor:\s*this\.player/);
+  assert.match(world, /this\.playerPresentation\s*=\s*createPlayerPresentationController/);
+  assert.match(world, /this\.cameras\.main\.startFollow\(this\.player,/);
+  assert.ok((world.match(/this\.physics\.add\.overlap\(\s*this\.player,/g) ?? []).length >= 3);
+  assert.doesNotMatch(world, /CHARACTER_DISPLAY_SCALE\.player/);
   assert.match(enemies, /centerCircularBody\(enemy, config\.bodyRadius\)/);
   assert.match(enemies, /enemy\.body\.setSize\(config\.bodySize, config\.bodySize\)/);
   assert.match(enemies, /centerCircularBody\(boss, 18\)/);
+  assert.match(enemies, /moveToObject\(enemy, this\.player,/);
+  assert.match(progression, /this\.player\.x/);
+  assert.match(progression, /this\.player\.y/);
+  assert.match(weapons, /const px = this\.player\.x;/);
+  assert.match(weapons, /const py = this\.player\.y;/);
   assert.doesNotMatch(`${world}\n${enemies}`, /body\.setOffset/);
-  assert.match(main, /syncCharacterPresentation\(this\)/);
+  assert.match(main, /createPlayerPresentationSnapshot\(this\)/);
+  assert.doesNotMatch(main, /syncCharacterPresentation\(this\)/);
 });
 
-test("player presentation receives attack-facing separately from movement fallback memory", async () => {
+test("player presentation facing is driven by movement while dash fallback memory stays separate", async () => {
   const [main, systems, presentation] = await Promise.all([
     readFile(new URL("../src/main.js", import.meta.url), "utf8"),
     readFile(new URL("../src/scene/systems.js", import.meta.url), "utf8"),
@@ -556,8 +574,12 @@ test("player presentation receives attack-facing separately from movement fallba
     systems.indexOf("  tryStartDash()")
   );
 
+  // Approved contract change (user, 2026-07-28): the body follows movement;
+  // firing never rotates it. Movement therefore owns playerFacingAngle while
+  // the dash fallback memory stays a separate write.
   assert.match(main, /this\.playerMovementFallbackAngle\s*=\s*0/);
-  assert.match(movement, /this\.playerMovementFallbackAngle\s*=\s*Math\.atan2/);
-  assert.doesNotMatch(movement, /this\.playerFacingAngle\s*=/);
+  assert.match(movement, /Math\.atan2\(direction\.y, direction\.x\)/);
+  assert.match(movement, /this\.playerFacingAngle\s*=/);
+  assert.match(movement, /this\.playerMovementFallbackAngle\s*=/);
   assert.match(presentation, /scene\.playerFacingAngle/);
 });

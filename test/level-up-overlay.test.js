@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { BALANCE } from "../src/config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../src/config/upgrades.js";
+import { isPlayerUpgradeVisible } from "../src/config/playerWeaponAvailability.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../src/config/meta.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { menusMixin } from "../src/scene/menus.js";
@@ -56,6 +57,7 @@ async function loadProgressionMixin() {
     ENEMY_GRID_STRIDE: 32,
     BALANCE,
     UPGRADE_DEFINITIONS,
+    isPlayerUpgradeVisible,
     META_PERKS,
     loadMetaProgress,
     saveMetaProgress,
@@ -70,6 +72,7 @@ async function loadProgressionMixin() {
     const {
       Phaser, DEBUG_MODE, GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
       ENEMY_GRID_CELL_SIZE, ENEMY_GRID_STRIDE, BALANCE, UPGRADE_DEFINITIONS,
+      isPlayerUpgradeVisible,
       META_PERKS, loadMetaProgress, saveMetaProgress, TEXTURES,
       createTerminalButton, createTerminalCard, createTerminalOverlay,
       UPGRADE_PRESENTATION
@@ -80,6 +83,11 @@ async function loadProgressionMixin() {
 }
 
 const { progressionMixin } = await loadProgressionMixin();
+
+test("level-up choice construction filters player-hidden shotgun upgrades before availability", async () => {
+  const source = await readFile(new URL("../src/scene/progression.js", import.meta.url), "utf8");
+  assert.match(source, /isPlayerUpgradeVisible\(upgrade\)\s*&&\s*\(upgrade\.isAvailable/);
+});
 
 function parseFontSize(value) {
   const parsed = Number.parseFloat(String(value ?? 0));
@@ -737,6 +745,78 @@ test("PrototypeScene.create resets the presentation failure lock on a reused sce
 
   assert.equal(scene._levelUpPresentationUnavailable, false);
   assert.equal(scene.levelUpPresentationRetryTimer, null);
+});
+
+test("terminal freeze stops Tesla channel before pausing for failure, victory, and direct terminal teardown", () => {
+  const createTeslaTerminalScene = () => {
+    const scene = createScene();
+    const events = [];
+    const beamLines = [{ x1: 10, y1: 20, x2: 30, y2: 40 }];
+    const target = { active: true };
+    const tesla = {
+      id: "tesla",
+      isChanneling: true,
+      channelTarget: target,
+      channelTargets: [target]
+    };
+    Object.assign(scene, menusMixin, {
+      weapons: { tesla },
+      stopTeslaChannel(weapon) {
+        if (weapon.isChanneling !== true) return false;
+        weapon.isChanneling = false;
+        weapon.channelTarget = null;
+        weapon.channelTargets = [];
+        beamLines.length = 0;
+        events.push("stop");
+        return true;
+      },
+      pauseGameplaySystems() { events.push("pause"); },
+      clearCombatEntities() { events.push("clear"); },
+      clearFacilitySystems() {},
+      destroyLevelUpOverlay() {},
+      hidePauseOverlay() {},
+      hideBuildPanel() {},
+      pickupRadiusIndicator: { clear() {} },
+      awardRunCredits() { return 0; },
+      updateUI() {},
+      showGameOverOverlay() {},
+      showVictoryOverlay() {}
+    });
+    return { scene, tesla, beamLines, events };
+  };
+
+  for (const trigger of ["triggerGameOver", "triggerVictory"]) {
+    const terminal = createTeslaTerminalScene();
+    terminal.scene[trigger]();
+    assert.deepEqual(terminal.events.slice(0, 3), ["stop", "pause", "clear"], `${trigger} stops the beam before terminal pause and combat cleanup`);
+    assert.equal(terminal.beamLines.length, 0, `${trigger} clears the persistent Tesla beam`);
+    assert.equal(terminal.tesla.isChanneling, false, `${trigger} leaves Tesla unable to sustain`);
+    assert.equal(terminal.tesla.channelTarget, null);
+    assert.deepEqual(terminal.tesla.channelTargets, []);
+    const eventCount = terminal.events.length;
+    assert.equal(terminal.scene.stopTeslaChannel(terminal.tesla), false, `${trigger} teardown is idempotent after terminal freeze`);
+    assert.equal(terminal.events.length, eventCount, `${trigger} does not recreate or re-clear an already stopped channel`);
+  }
+
+  const directFreeze = createTeslaTerminalScene();
+  directFreeze.scene.freezeForGameOver();
+  assert.deepEqual(directFreeze.events.slice(0, 3), ["stop", "pause", "clear"]);
+
+  const nonTeslaScene = createScene();
+  const nonTeslaEvents = [];
+  Object.assign(nonTeslaScene, menusMixin, {
+    weapons: { pistol: {} },
+    stopTeslaChannel() { nonTeslaEvents.push("stop"); },
+    pauseGameplaySystems() { nonTeslaEvents.push("pause"); },
+    clearCombatEntities() { nonTeslaEvents.push("clear"); },
+    clearFacilitySystems() {},
+    destroyLevelUpOverlay() {},
+    hidePauseOverlay() {},
+    hideBuildPanel() {},
+    pickupRadiusIndicator: { clear() {} }
+  });
+  assert.doesNotThrow(() => nonTeslaScene.freezeForGameOver());
+  assert.deepEqual(nonTeslaEvents, ["pause", "clear"]);
 });
 
 test("menus teardown and return-to-title destroy terminal and legacy level-up ownership safely", () => {

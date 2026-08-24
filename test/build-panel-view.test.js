@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { BALANCE } from "../src/config/balance.js";
 import { UPGRADE_DEFINITIONS } from "../src/config/upgrades.js";
+import { isPlayerUpgradeVisible, PLAYER_WEAPON_ALLOWLIST } from "../src/config/playerWeaponAvailability.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { HUD_REGIONS } from "../src/art/openingVisualContract.js";
 import {
@@ -25,6 +26,7 @@ async function loadHudMixin() {
   const body = source.slice(start).replace(declaration, "const hudMixin =");
   return Function(
     "Phaser", "GAME_WIDTH", "GAME_HEIGHT", "BALANCE", "UPGRADE_DEFINITIONS",
+    "PLAYER_WEAPON_ALLOWLIST", "isPlayerUpgradeVisible",
     "HUD_REGIONS", "TEXTURES", "getHudPresentation", "selectTimelineHudContainers",
     "THEME", "createTacticalHudView", "createStatusLamp", "createTacticalPanel",
     "createTerminalOverlay", "UPGRADE_PRESENTATION", "HUD_DEPTH", "FACILITY_HUD_DEPTH",
@@ -32,6 +34,7 @@ async function loadHudMixin() {
     `${body}\nreturn hudMixin;`
   )(
     { Scenes: { Events: SCENE_EVENTS } }, 960, 540, BALANCE, UPGRADE_DEFINITIONS,
+    PLAYER_WEAPON_ALLOWLIST, isPlayerUpgradeVisible,
     HUD_REGIONS, TEXTURES, getHudPresentation, selectTimelineHudContainers,
     THEME, createTacticalHudView, createStatusLamp, createTacticalPanel,
     createTerminalOverlay, UPGRADE_PRESENTATION, 45, 58, 150, 82, 92, 72
@@ -364,12 +367,14 @@ test("build panel uses one screen-fixed terminal controller and TAB changes visi
   );
   for (const key of [
     TEXTURES.weaponPistolIcon,
-    TEXTURES.weaponBreacherIcon,
     TEXTURES.weaponTeslaIcon,
-    ...Object.values(UPGRADE_PRESENTATION).map(({ textureKey }) => textureKey)
+    ...UPGRADE_DEFINITIONS
+      .filter(isPlayerUpgradeVisible)
+      .map(({ key }) => UPGRADE_PRESENTATION[key].textureKey)
   ]) {
     assert.equal(imageKeys.has(key), true, `expected existing build icon ${key}`);
   }
+  assert.equal(imageKeys.has(TEXTURES.weaponBreacherIcon), false);
 
   scene.toggleBuildPanel();
   assert.equal(scene.buildPanel.visible, true);
@@ -414,6 +419,16 @@ test("build panel updates icon-adjacent levels and short values in place", () =>
     true,
     "every build row remains short"
   );
+});
+
+test("legacy build panel derives its visible weapon rows from the shared player allowlist", async () => {
+  const source = await readFile(new URL("../src/scene/hud.js", import.meta.url), "utf8");
+  const legacyStart = source.indexOf("getLegacyBuildPanelText() {");
+  const legacyEnd = source.indexOf("toggleBuildPanel()", legacyStart);
+  const legacySource = source.slice(legacyStart, legacyEnd);
+
+  assert.match(legacySource, /PLAYER_WEAPON_ALLOWLIST\.map/);
+  assert.doesNotMatch(legacySource, /shotgun/);
 });
 
 test("terminal construction failure rolls back partial objects before extracted legacy fallback", () => {

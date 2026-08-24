@@ -69,6 +69,12 @@ function createController(mode, events, snapshots) {
       snapshots.push(structuredClone(snapshot));
       if (mode === "throw") throw new Error("presentation failed");
       return mode === "real";
+    },
+    notifyTeslaChannel(snapshot) {
+      events.push("notify");
+      snapshots.push(structuredClone(snapshot));
+      if (mode === "throw") throw new Error("presentation failed");
+      return mode === "real";
     }
   };
 }
@@ -136,6 +142,78 @@ test("presentation routing suppresses or retains exactly one legacy muzzle witho
   assert.deepEqual(teslaEvents, ["notify"], "Tesla routes never create a duplicate legacy muzzle");
 });
 
+test("Tesla channel presentation bridge fails closed without mutating its snapshot", async () => {
+  const { emitTeslaChannelPresentation } = await loadEffectsMethods("emitTeslaChannelPresentation");
+  const snapshot = Object.freeze({
+    phase: "sustain",
+    weaponId: "tesla",
+    angle: 0.25,
+    segments: Object.freeze([
+      Object.freeze({ x1: 12, y1: 18, x2: 80, y2: 44 })
+    ])
+  });
+  const before = structuredClone(snapshot);
+  const received = [];
+
+  assert.equal(emitTeslaChannelPresentation.call({
+    combatFeedback: {
+      notifyTeslaChannel(payload) {
+        received.push(payload);
+        return true;
+      }
+    }
+  }, snapshot), true);
+  assert.equal(received[0], snapshot, "the bridge forwards the immutable coordinate snapshot without rewriting it");
+
+  assert.equal(emitTeslaChannelPresentation.call({}, snapshot), false);
+  assert.equal(emitTeslaChannelPresentation.call({
+    combatFeedback: {
+      notifyTeslaChannel() {
+        throw new Error("visual channel failed");
+      }
+    }
+  }, snapshot), false);
+  assert.deepEqual(snapshot, before);
+});
+
+test("visual-origin resolver returns a frozen action-point copy and falls back without mutating inputs or Scene", async () => {
+  const { resolvePlayerAttackVisualOrigin } = await loadEffectsMethods("resolvePlayerAttackVisualOrigin");
+  const payload = { weaponId: "tesla", angle: 0.5, originX: 100, originY: 120 };
+  const before = structuredClone(payload);
+  const queries = [];
+  const validScene = {
+    playerPresentation: {
+      getAttackEffectOrigin(query) {
+        queries.push(structuredClone(query));
+        return { x: 137, y: 91, vfxType: "tesla" };
+      }
+    }
+  };
+  const resolved = resolvePlayerAttackVisualOrigin.call(validScene, payload);
+  assert.deepEqual(resolved, { x: 137, y: 91 });
+  assert.equal(Object.isFrozen(resolved), true);
+  assert.deepEqual(queries, [{ weaponId: "tesla", angle: 0.5 }]);
+  assert.deepEqual(payload, before);
+  assert.equal(Object.hasOwn(validScene, "originX"), false);
+  assert.equal(Object.hasOwn(validScene, "originY"), false);
+
+  const fallbackModes = [
+    ["missing", {}],
+    ["false", { playerPresentation: { getAttackEffectOrigin: () => false } }],
+    ["throw", { playerPresentation: { getAttackEffectOrigin() { throw new Error("query failed"); } } }],
+    ["invalid-x", { playerPresentation: { getAttackEffectOrigin: () => ({ x: Infinity, y: 91 }) } }],
+    ["invalid-y", { playerPresentation: { getAttackEffectOrigin: () => ({ x: 137, y: Number.NaN }) } }]
+  ];
+  for (const [mode, scene] of fallbackModes) {
+    assert.deepEqual(
+      resolvePlayerAttackVisualOrigin.call(scene, payload),
+      { x: 100, y: 120 },
+      `${mode} returns the exact caller-provided gameplay center`
+    );
+  }
+  assert.deepEqual(payload, before, "all fallback routes keep the payload immutable");
+});
+
 test("pistol and breacher notify once after successful projectile commitments and keep mechanics equivalent across presentation outcomes", async () => {
   const { attackWithPistol, attackWithShotgun } = await loadWeaponMethods("attackWithPistol", "attackWithShotgun");
   const { emitAttackPresentation } = await loadEffectsMethods("emitAttackPresentation");
@@ -192,7 +270,7 @@ test("pistol and breacher notify once after successful projectile commitments an
   });
   assertCommittedBeforeNotification(realPistol.events, "bullet");
   assert.equal(realPistol.muzzleCount, 0);
-  assert.equal(realPistol.facing, 0.05);
+  assert.equal(realPistol.facing, Math.PI, "attacks never rotate the player");
   for (const run of pistolRuns.slice(1)) {
     assert.deepEqual(run.bullets, realPistol.bullets, `${run.mode} must not alter pistol projectile commitment`);
     assert.equal(run.facing, realPistol.facing, `${run.mode} must not alter pistol facing`);
@@ -207,7 +285,7 @@ test("pistol and breacher notify once after successful projectile commitments an
   });
   assertCommittedBeforeNotification(realShotgun.events, "bullet");
   assert.equal(realShotgun.muzzleCount, 0);
-  assert.equal(realShotgun.facing, 0.12);
+  assert.equal(realShotgun.facing, Math.PI, "attacks never rotate the player");
   for (const run of shotgunRuns.slice(1)) {
     assert.deepEqual(run.bullets, realShotgun.bullets, `${run.mode} must not alter shotgun pellets`);
     assert.deepEqual(
@@ -220,9 +298,19 @@ test("pistol and breacher notify once after successful projectile commitments an
   }
 });
 
-test("Tesla chain notifies after actual damage without adding a duplicate chain or changing damage and facing", async () => {
-  const { attackWithTesla } = await loadWeaponMethods("attackWithTesla");
-  const { emitAttackPresentation } = await loadEffectsMethods("emitAttackPresentation");
+test("Tesla channel start notifies after committed damage without changing damage or facing", async () => {
+  const methods = await loadWeaponMethods(
+    "isTeslaChannelTargetValid",
+    "resolveTeslaChannelTargets",
+    "createTeslaChannelSnapshot",
+    "stopTeslaChannel",
+    "updateTeslaChannel",
+    "attackWithTesla"
+  );
+  const { emitTeslaChannelPresentation, resolvePlayerAttackVisualOrigin } = await loadEffectsMethods(
+    "emitTeslaChannelPresentation",
+    "resolvePlayerAttackVisualOrigin"
+  );
   const runs = [];
   for (const mode of ["real", "noop", "missing", "throw"]) {
     const events = [];
@@ -235,38 +323,142 @@ test("Tesla chain notifies after actual damage without adding a duplicate chain 
     const scene = {
       player: { x: 100, y: 100 },
       playerFacingAngle: Math.PI,
+      elapsedSurvivalMs: 1_000,
       bossPhaseActive: false,
       combatFeedback: createController(mode, events, snapshots),
-      emitAttackPresentation(snapshot, fallbackDirection) {
-        return emitAttackPresentation.call(this, snapshot, fallbackDirection);
+      playerPresentation: {
+        getAttackEffectOrigin() {
+          events.push("origin");
+          return { x: 132, y: 92, vfxType: "tesla" };
+        }
       },
-      spawnMuzzleFlash() { events.push("muzzle"); },
+      emitTeslaChannelPresentation(snapshot) {
+        return emitTeslaChannelPresentation.call(this, snapshot);
+      },
+      resolvePlayerAttackVisualOrigin(payload) {
+        return resolvePlayerAttackVisualOrigin.call(this, payload);
+      },
       findNearestEnemy(range, x, y, ignored) {
         return candidates.find((candidate) => !ignored?.has(candidate)) ?? null;
       },
-      spawnLightningSegment() { events.push("lightning"); },
-      damageEnemy(enemy, amount) { events.push("damage"); damage.push([enemy.x, enemy.y, amount]); }
+      playSound() {},
+      damageEnemy(enemy, amount, impactX, impactY, sourceX, sourceY, metadata) {
+        events.push("damage");
+        damage.push({
+          target: [enemy.x, enemy.y],
+          amount,
+          impact: [impactX, impactY],
+          source: [sourceX, sourceY],
+          metadata: structuredClone(metadata)
+        });
+      }
     };
-    assert.equal(attackWithTesla.call(scene, { range: 300, damage: 10, chainTargets: 2, chainSearchRadius: 150 }), true);
+    Object.assign(scene, methods);
+    const weapon = {
+      range: 300,
+      damage: 10,
+      chainTargets: 2,
+      chainSearchRadius: 150,
+      cooldownMs: 300,
+      nextAttackAtMs: 0,
+      channelTarget: null,
+      channelTargets: [],
+      isChanneling: false
+    };
+    assert.equal(methods.updateTeslaChannel.call(scene, weapon), true);
     runs.push({ mode, events, snapshots, damage, facing: scene.playerFacingAngle });
   }
 
   const real = runs[0];
-  assert.deepEqual(real.damage, [[200, 100, 10], [200, 200, 8]]);
-  assert.equal(real.events.filter((event) => event === "lightning").length, 2, "presentation must not add another Tesla chain");
+  assert.deepEqual(
+    real.events,
+    ["damage", "damage", "origin", "notify"],
+    "the persistent visual channel is emitted only after the first damage tick commits"
+  );
+  assert.deepEqual(real.damage, [
+    {
+      target: [200, 100], amount: 10, impact: [200, 100], source: [100, 100],
+      metadata: { sourceWeaponId: "tesla", sourceDistance: 100, suppressHitSound: true }
+    },
+    {
+      target: [200, 200], amount: 8, impact: [200, 200], source: [200, 100],
+      metadata: { sourceWeaponId: "tesla", sourceDistance: 100, suppressHitSound: true }
+    }
+  ], "damage geometry remains rooted at gameplay currentOrigin rather than the action point");
   assertCommittedBeforeNotification(real.events, "damage");
-  assertSnapshot(real.snapshots[0], {
-    weaponId: "tesla", originX: 100, originY: 100, angle: 0, shotCount: 2, heavy: true
+  assert.deepEqual(real.snapshots[0], {
+    phase: "start",
+    weaponId: "tesla",
+    angle: 0,
+    visualPhase: 20,
+    segments: [
+      { x1: 132, y1: 92, x2: 200, y2: 100 },
+      { x1: 200, y1: 100, x2: 200, y2: 200 }
+    ]
   });
-  assert.equal(real.facing, 0);
-  assert.equal(real.events.filter((event) => event === "muzzle").length, 0);
+  assert.equal(real.facing, Math.PI, "attacks never rotate the player");
   for (const run of runs.slice(1)) {
     assert.deepEqual(run.damage, real.damage, `${run.mode} must not alter Tesla damage count or falloff`);
     assert.equal(run.facing, real.facing, `${run.mode} must not alter Tesla facing`);
-    assert.equal(run.events.filter((event) => event === "lightning").length, 2, `${run.mode} must keep the original lightning count`);
-    assert.equal(run.events.filter((event) => event === "muzzle").length, 0, `${run.mode} must not add a Tesla muzzle`);
     if (run.mode !== "missing") assertCommittedBeforeNotification(run.events, "damage");
   }
+});
+
+test("Tesla Boss overcharge renders one channel but keeps every repeated damage field center-authored", async () => {
+  const methods = await loadWeaponMethods(
+    "isTeslaChannelTargetValid",
+    "resolveTeslaChannelTargets",
+    "createTeslaChannelSnapshot",
+    "stopTeslaChannel",
+    "updateTeslaChannel",
+    "attackWithTesla"
+  );
+  const { emitTeslaChannelPresentation, resolvePlayerAttackVisualOrigin } = await loadEffectsMethods(
+    "emitTeslaChannelPresentation",
+    "resolvePlayerAttackVisualOrigin"
+  );
+  const boss = { x: 220, y: 100, active: true, isBoss: true };
+  const snapshots = [];
+  const damage = [];
+  const scene = {
+    player: { x: 100, y: 100 },
+    bossPhaseActive: true,
+    elapsedSurvivalMs: 1_000,
+    combatFeedback: createController("real", [], snapshots),
+    playerPresentation: {
+      getAttackEffectOrigin: () => ({ x: 134, y: 90, vfxType: "tesla" })
+    },
+    findNearestEnemy: () => boss,
+    resolvePlayerAttackVisualOrigin(payload) {
+      return resolvePlayerAttackVisualOrigin.call(this, payload);
+    },
+    emitTeslaChannelPresentation(snapshot) {
+      return emitTeslaChannelPresentation.call(this, snapshot);
+    },
+    playSound() {},
+    damageEnemy(enemy, amount, impactX, impactY, sourceX, sourceY, metadata) {
+      damage.push({ amount, source: [sourceX, sourceY], sourceDistance: metadata.sourceDistance });
+    }
+  };
+  Object.assign(scene, methods);
+
+  assert.equal(methods.updateTeslaChannel.call(scene, {
+    range: 300,
+    damage: 10,
+    chainTargets: 3,
+    chainSearchRadius: 150,
+    cooldownMs: 300,
+    nextAttackAtMs: 0,
+    channelTarget: null,
+    channelTargets: [],
+    isChanneling: false
+  }), true);
+  assert.deepEqual(snapshots[0].segments, [{ x1: 134, y1: 90, x2: 220, y2: 100 }]);
+  assert.deepEqual(damage, [
+    { amount: 10, source: [100, 100], sourceDistance: 120 },
+    { amount: 8, source: [220, 100], sourceDistance: 0 },
+    { amount: 6.4, source: [220, 100], sourceDistance: 0 }
+  ]);
 });
 
 test("Tesla-field mutation notifies only after real hits and preserves pulse timing for zero-hit ticks", async () => {
@@ -343,20 +535,25 @@ test("isolated weapon seams remain safe when the effects mixin is not installed"
   assert.doesNotThrow(() => {
     attackWithPistol.call(pistol.scene, { range: 300, damage: 4, projectileSpeed: 200 });
   });
-  assert.equal(pistol.scene.playerFacingAngle, 0.05);
+  assert.equal(pistol.scene.playerFacingAngle, Math.PI, "attacks never rotate the player");
 
   const tesla = {
     player: { x: 100, y: 100 },
     playerFacingAngle: Math.PI,
     bossPhaseActive: false,
     findNearestEnemy: () => ({ x: 100, y: 200, active: true }),
-    spawnLightningSegment() {},
+    playSound() {},
     damageEnemy() {}
   };
+  const target = tesla.findNearestEnemy();
   assert.doesNotThrow(() => {
-    attackWithTesla.call(tesla, { range: 300, damage: 9, chainTargets: 1, chainSearchRadius: 80 });
+    attackWithTesla.call(
+      tesla,
+      { range: 300, damage: 9, chainTargets: 1, chainSearchRadius: 80 },
+      [target]
+    );
   });
-  assert.equal(tesla.playerFacingAngle, Math.PI / 2);
+  assert.equal(tesla.playerFacingAngle, Math.PI, "tesla never rotates the player");
 });
 
 test("cooldown, no target, zero allocation, pause, and game-over paths notify zero times", async () => {

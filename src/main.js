@@ -12,8 +12,8 @@ import { hudMixin } from "./scene/hud.js";
 import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
-import { syncCharacterPresentation } from "./art/characterPresentation.js";
 import { createCombatFeedbackController } from "./art/combatFeedback.js";
+import { createPlayerPresentationSnapshot } from "./art/playerPresentationModel.js";
 import {
   DEBUG_MODE,
   GAME_WIDTH,
@@ -152,6 +152,33 @@ class PrototypeScene extends Phaser.Scene {
     this.isPaused = false;
     this.createStartScreen();
     this.updateUI();
+
+    // Explicit development-only player presentation review. The dynamically
+    // loaded bridge owns its update/shutdown/destroy listeners, so restart
+    // cannot leave an anonymous callback behind. Production statically drops
+    // this entire branch and its preview module.
+    if (import.meta.env && import.meta.env.DEV) {
+      const previewMode = new URLSearchParams(window.location.search)
+        .get("playerPresentation");
+      if (
+        [
+          "states",
+          "body",
+          "legacy",
+          "static",
+          "sample-a",
+          "sample-b",
+          "two-direction"
+        ].includes(previewMode)
+      ) {
+        schedulePlayerPresentationPreview(
+          this,
+          window,
+          previewMode,
+          () => import("./art/playerCharacterVisualStateDriver.js")
+        );
+      }
+    }
   }
 
 
@@ -176,6 +203,8 @@ class PrototypeScene extends Phaser.Scene {
       this.updateFacilityEventDirector();
       this.updateMedkitSpawn();
       this.handlePlayerMovement();
+      const snapshot = createPlayerPresentationSnapshot(this);
+      this.playerPresentation?.update?.(snapshot, delta);
       this.updateWeapons();
       this.updateEnemies();
       if (this.bossPhaseActive) {
@@ -186,7 +215,6 @@ class PrototypeScene extends Phaser.Scene {
       this.handleExperienceCollection();
       this.updateSupplyPickups();
       this.updatePickupRadiusIndicator();
-      syncCharacterPresentation(this);
       this.combatFeedback.update(this.elapsedSurvivalMs);
     }
 
@@ -204,6 +232,26 @@ class PrototypeScene extends Phaser.Scene {
   // create() rebuilds this.audio / this.ui, so this prevents a leaked (or
   // duplicate) AudioContext across runs.
   teardownManagers() {
+    // Invalidate a development preview import that has not resolved yet. A
+    // restarted Scene receives a fresh token, so an older promise cannot
+    // replace the new bridge after shutdown.
+    this._playerPresentationPreviewInstallToken = null;
+
+    const playerPresentation = this.playerPresentation;
+    this.playerPresentation = null;
+    if (playerPresentation) {
+      try {
+        playerPresentation.setPaused?.(true);
+      } catch {
+        // Continue to release the visible player even if freezing it fails.
+      }
+      try {
+        playerPresentation.destroy?.();
+      } catch {
+        // Player presentation cleanup cannot strand the remaining managers.
+      }
+    }
+
     const combatFeedback = this.combatFeedback;
     this.combatFeedback = null;
     if (combatFeedback) {
@@ -235,6 +283,36 @@ class PrototypeScene extends Phaser.Scene {
       // References are already cleared, so repeated teardown remains inert.
     }
   }
+}
+
+function schedulePlayerPresentationPreview(
+  scene,
+  windowRef,
+  previewMode,
+  loadBridge,
+  reportError = (error) => console.error("[player-presentation-preview]", error)
+) {
+  const previewInstallToken = {};
+  scene._playerPresentationPreviewInstallToken = previewInstallToken;
+  return Promise.resolve()
+    .then(() => loadBridge())
+    .then(({ installPlayerCharacterVisualStateBridge }) => {
+      if (scene._playerPresentationPreviewInstallToken !== previewInstallToken) {
+        return false;
+      }
+      installPlayerCharacterVisualStateBridge(scene, windowRef, {
+        mode: previewMode
+      });
+      return true;
+    })
+    .catch((error) => {
+      try {
+        reportError(error);
+      } catch {
+        // Development diagnostics cannot turn a skipped preview into gameplay failure.
+      }
+      return false;
+    });
 }
 
 function installManagerTeardown(scene) {

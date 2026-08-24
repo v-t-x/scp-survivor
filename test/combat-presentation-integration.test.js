@@ -16,6 +16,7 @@ import {
   COMBAT_PRESENTATION_DEPTH,
   createCombatFeedbackController
 } from "../src/art/combatFeedback.js";
+import { createPlayerPresentationSnapshot } from "../src/art/playerPresentationModel.js";
 import { createTacticalHudView } from "../src/ui/tacticalHudView.js";
 import { menusMixin } from "../src/scene/menus.js";
 
@@ -497,9 +498,9 @@ async function loadMainUpdate() {
   const source = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
   const update = extractObjectMethod(source, "update");
   return new Function(
-    "syncCharacterPresentation",
+    "createPlayerPresentationSnapshot",
     `"use strict"; return ({${update}}).update;`
-  )((scene) => scene.updateTrace.push("presentation:sync"));
+  )(createPlayerPresentationSnapshot);
 }
 
 function installSceneMethods(scene, presentationLifecycle) {
@@ -883,6 +884,45 @@ test("return-title failure and victory restarts never accumulate subsystem liste
   }
 });
 
+test("combat feedback freezes the formal action point then applies visible recoil through the real Scene display seam", () => {
+  const scene = makeScene();
+  scene.player.active = true;
+  const order = [];
+  scene.playerPresentation = {
+    notifyAttack(payload) {
+      order.push(["recoil", structuredClone(payload)]);
+      return true;
+    },
+    getAttackEffectOrigin(payload) {
+      order.push(["origin", structuredClone(payload)]);
+      assert.equal(order[0][0], "origin", "the muzzle must be frozen before recoil changes the visible pose");
+      return { x: 517, y: 241, vfxType: "ballistic" };
+    }
+  };
+  const controller = createCombatFeedbackController(scene);
+  const payload = {
+    weaponId: "pistol",
+    originX: scene.player.x,
+    originY: scene.player.y,
+    angle: -0.4,
+    shotCount: 1,
+    heavy: false
+  };
+  const before = structuredClone(payload);
+
+  assert.equal(controller.notifyAttack(payload), true);
+  const attackGraphic = scene.created.find(({ type }) => type === "graphics");
+  assert.ok(attackGraphic);
+  assert.deepEqual([attackGraphic.x, attackGraphic.y, attackGraphic.rotation], [517, 241, -0.4]);
+  assert.deepEqual(order, [
+    ["origin", { weaponId: "pistol", angle: -0.4 }],
+    ["recoil", { angle: -0.4, weaponId: "pistol", heavy: false }]
+  ]);
+  assert.deepEqual(payload, before);
+  controller.destroy();
+  assert.equal(attackGraphic.destroyed, true);
+});
+
 test("missing or throwing presentation seams cannot block core pause resume and cleanup", async () => {
   const { pauseGameplaySystems, resumeGameplaySystems } = await loadSystemMethods(
     "pauseGameplaySystems",
@@ -923,7 +963,34 @@ test("missing or throwing presentation seams cannot block core pause resume and 
     isLevelUpActive: false,
     bossPhaseActive: false,
     elapsedSurvivalMs: 0,
+    playerFacingAngle: Math.PI / 4,
+    dashUntilMs: 0,
+    player: {
+      active: true,
+      isDying: false,
+      x: 80,
+      y: 96,
+      body: { velocity: { x: 40, y: -20 } }
+    },
     buildPanel: { visible: false },
+    playerPresentation: {
+      update(snapshot, delta) {
+        assert.equal(Object.isFrozen(snapshot), true);
+        assert.deepEqual(snapshot, {
+          active: true,
+          x: 80,
+          y: 96,
+          velocityX: 40,
+          velocityY: -20,
+          facingAngle: Math.PI / 4,
+          elapsedMs: 16,
+          dashActive: false,
+          selectedWeaponId: null
+        });
+        assert.equal(delta, 16);
+        updateTrace.push("presentation:update");
+      }
+    },
     combatFeedback: {
       update(time) {
         updateTrace.push(`combat:update:${time}`);
@@ -962,6 +1029,7 @@ test("missing or throwing presentation seams cannot block core pause resume and 
     "updateFacilityEventDirector",
     "updateMedkitSpawn",
     "handlePlayerMovement",
+    "presentation:update",
     "updateWeapons",
     "updateEnemies",
     "updatePlayerBullets",
@@ -969,7 +1037,6 @@ test("missing or throwing presentation seams cannot block core pause resume and 
     "handleExperienceCollection",
     "updateSupplyPickups",
     "updatePickupRadiusIndicator",
-    "presentation:sync",
     "combat:update:16",
     "updatePlayerInvulnerabilityVisual",
     "updateFacilityVisualEffects",

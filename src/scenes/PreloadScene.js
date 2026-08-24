@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  DEVELOPMENT_SPRITESHEET_ASSETS,
   IMAGE_ASSETS,
   SPRITESHEET_ASSETS,
   ATLAS_ASSETS,
@@ -32,7 +33,10 @@ export class PreloadScene extends Phaser.Scene {
     for (const asset of IMAGE_ASSETS) {
       this.load.image(asset.key, asset.path);
     }
-    for (const sheet of SPRITESHEET_ASSETS) {
+    const spritesheetAssets = import.meta.env?.DEV === true
+      ? [...SPRITESHEET_ASSETS, ...DEVELOPMENT_SPRITESHEET_ASSETS]
+      : SPRITESHEET_ASSETS;
+    for (const sheet of spritesheetAssets) {
       this.load.spritesheet(sheet.key, sheet.path, sheet.frameConfig);
     }
     for (const atlas of ATLAS_ASSETS) {

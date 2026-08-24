@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "frameCount": 5,
+  "frames": [
+    { "index": 0, "gripX": 21, "gripY": 31, "supportX": 36, "supportY": 33, "equipmentLayer": "front" },
+    { "index": 1, "gripX": 20, "gripY": 30, "supportX": 35, "supportY": 32, "equipmentLayer": "front" },
+    { "index": 2, "gripX": 22, "gripY": 32, "supportX": 37, "supportY": 34, "equipmentLayer": "front" },
+    { "index": 3, "gripX": 20, "gripY": 31, "supportX": 34, "supportY": 33, "equipmentLayer": "front" },
+    { "index": 4, "gripX": 22, "gripY": 30, "supportX": 36, "supportY": 32, "equipmentLayer": "front" }
+  ]
+}

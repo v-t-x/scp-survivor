@@ -190,7 +190,9 @@ export const combatMixin = {
     enemy.health = nextHealth;
     this.flashEnemyOnHit(enemy);
     this.spawnFloatingDamage(enemy.x, enemy.y, damage);
-    this.playSound("enemyHit");
+    if (combatContext.suppressHitSound !== true) {
+      this.playSound("enemyHit");
+    }
 
     if (lethal) {
       if (enemy.isBoss) {
@@ -358,13 +360,25 @@ export const combatMixin = {
 
 
   triggerPlayerDamageFeedback() {
-    this.player.setTint(0xff6666);
+    let handledByPlayerPresentation = false;
+    try {
+      handledByPlayerPresentation = this.playerPresentation?.notifyHit({
+        atMs: this.elapsedSurvivalMs,
+        durationMs: BALANCE.feedback.playerDamageTintMs,
+        tint: 0xff6666
+      }) === true;
+    } catch {
+      // Visible-body feedback failure must not interrupt committed damage.
+    }
+    if (!handledByPlayerPresentation) {
+      this.player.setTint(0xff6666);
+      this.time.delayedCall(BALANCE.feedback.playerDamageTintMs, () => {
+        if (this.player.active) {
+          this.player.clearTint();
+        }
+      });
+    }
     this.cameras.main.shake(85, 0.0035);
     this.playSound("playerDamage");
-    this.time.delayedCall(BALANCE.feedback.playerDamageTintMs, () => {
-      if (this.player.active) {
-        this.player.clearTint();
-      }
-    });
   }
 };

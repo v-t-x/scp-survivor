@@ -15,12 +15,13 @@ import { generateFallbackTextures } from "../assets/fallbackTextureFactory.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createFacilityRoomController } from "../art/facilityRoom.js";
 import {
-  resolveCharacterTexture
+  DEFAULT_CHARACTER_ID,
+  resolveCharacterPresentation
 } from "../art/characterPresentation.js";
 import {
-  applyDisplayScalePreservingBody,
-  CHARACTER_DISPLAY_SCALE
+  applyDisplayScalePreservingBody
 } from "../art/presentationRules.js";
+import { createPlayerPresentationController } from "../art/playerPresentationController.js";
 
 // Domain mixin: world. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const worldMixin = {
@@ -92,25 +93,38 @@ export const worldMixin = {
 
 
   createPlayer() {
-    const playerTexture = resolveCharacterTexture(this, "player", TEXTURES.player);
+    const presentation = resolveCharacterPresentation(this, DEFAULT_CHARACTER_ID);
     this.player = this.physics.add.sprite(
       WORLD_WIDTH / 2,
       WORLD_HEIGHT / 2,
-      playerTexture
+      presentation.textureKey
     );
+    this.player.characterId = presentation.characterId;
+    this.player.presentationAnimationFamily = presentation.animationFamily;
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(24, 24);
-    applyDisplayScalePreservingBody(this.player, CHARACTER_DISPLAY_SCALE.player);
+    applyDisplayScalePreservingBody(this.player, presentation.displayScale);
     this.player.setDepth(6);
     this.combatFeedback.trackActor(this.player, {
       kind: "player",
       radius: 12,
-      offsetY: 3
+      offsetY: 3,
+      widthScale: 1.5,
+      roundPosition: true
     });
     this.player.once("destroy", () => {
       this.combatFeedback?.untrackActor(this.player);
     });
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.playerPresentation = null;
+    try {
+      this.playerPresentation = createPlayerPresentationController(this, {
+        anchor: this.player,
+        characterId: presentation.characterId
+      });
+    } catch {
+      this.player.setVisible?.(true);
+    }
+    this.cameras.main.startFollow(this.player, true, 0.3, 0.3);
   },
 
 

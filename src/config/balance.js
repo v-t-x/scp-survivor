@@ -33,7 +33,7 @@ export const BALANCE = {
   weapons: {
     pistol: {
       id: "pistol",
-      name: "基金会勤务手枪",
+      name: "基金会收容突击步枪",
       permanentlyUnlocked: true,
       unlockCost: 0,
       unlockDescription: "标准配发副武器。",
@@ -61,13 +61,13 @@ export const BALANCE = {
     },
     tesla: {
       id: "tesla",
-      name: "特斯拉发射器",
+      name: "特斯拉收容发射器",
       permanentlyUnlocked: true,
       unlockCost: 0,
-      unlockDescription: "电弧链式放电武器系统。",
-      baseDamage: 18,
-      baseCooldownMs: 1600,
-      minCooldownMs: 520,
+      unlockDescription: "持续锁定目标的链式电击系统。",
+      baseDamage: 6,
+      baseCooldownMs: 300,
+      minCooldownMs: 180,
       range: 320,
       baseChainTargets: 3,
       maxChainTargets: 8,
@@ -88,7 +88,9 @@ export const BALANCE = {
     breacherExplosionDamageMultiplier: 0.6,
     teslaFieldRadius: 130,
     teslaFieldTickMs: 600,
-    teslaFieldDamageMultiplier: 0.45
+    // Field damage is Math.round(base damage * multiplier). With 6-damage
+    // channel ticks, 4 / 3 keeps this historical mutation pulse at 8.
+    teslaFieldDamageMultiplier: 4 / 3
   },
   meta: {
     // Local-storage meta progression: credits earned per run, spent on perks.

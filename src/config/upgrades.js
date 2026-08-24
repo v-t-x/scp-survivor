@@ -18,7 +18,7 @@ export const UPGRADE_DEFINITIONS = [
   {
     key: "attackSpeed",
     name: "攻击速度",
-    description: "当前武器冷却缩短 15%。",
+    description: "当前武器攻击间隔缩短 15%。",
     kind: "weapon",
     isAvailable: (scene) => {
       const weaponId = scene.selectedWeaponId;
@@ -182,7 +182,7 @@ export const UPGRADE_DEFINITIONS = [
   {
     key: "teslaCooldown",
     name: "快速放电",
-    description: "特斯拉冷却缩短 12%。",
+    description: "持续电击的伤害结算间隔缩短 12%。",
     kind: "weapon",
     weaponId: "tesla",
     isAvailable: (scene) =>

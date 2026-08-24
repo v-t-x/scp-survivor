@@ -13,6 +13,12 @@
 export const TEXTURES = {
   player: "player-rect",
   playerOpeningSheet: "player-opening-sheet",
+  playerResponseOperativeBodySheet: "player-response-operative-body-sheet",
+  playerResponseOperativePrototypeSheet: "player-response-operative-prototype-sheet",
+  playerResponseOperativeBodyPrototypeSheet: "player-response-operative-body-prototype-sheet",
+  playerResponseOperativeSheet: "player-response-operative-sheet",
+  playerResponseOperativeBreacherSampleSheet: "player-response-operative-breacher-sample-sheet",
+  playerResponseOperativeCbrnSampleSheet: "player-response-operative-cbrn-sample-sheet",
   enemyInfected: "enemy-infected",
   infectedOpeningSheet: "infected-opening-sheet",
   r17Drifter: "r17-drifter",
@@ -50,6 +56,29 @@ export const TEXTURES = {
   weaponPistolIcon: "weapon-pistol-icon",
   weaponBreacherIcon: "weapon-breacher-icon",
   weaponTeslaIcon: "weapon-tesla-icon",
+  playerFoundationRifleCore: "player-foundation-rifle-core",
+  playerTeslaEmitterCore: "player-tesla-emitter-core",
+  playerTeslaPowerModule: "player-tesla-power-module",
+  playerFoundationRifleConnectorBack: "player-foundation-rifle-connector-back",
+  playerFoundationRifleConnectorFront: "player-foundation-rifle-connector-front",
+  playerTeslaEmitterConnectorBack: "player-tesla-emitter-connector-back",
+  playerTeslaEmitterConnectorFront: "player-tesla-emitter-connector-front",
+  playerFoundationRifleSameBack: "player-foundation-rifle-same-back",
+  playerFoundationRifleSameFront: "player-foundation-rifle-same-front",
+  playerFoundationRifleCrossBack: "player-foundation-rifle-cross-back",
+  playerFoundationRifleCrossFront: "player-foundation-rifle-cross-front",
+  playerTeslaEmitterSameBack: "player-tesla-emitter-same-back",
+  playerTeslaEmitterSameFront: "player-tesla-emitter-same-front",
+  playerTeslaEmitterCrossBack: "player-tesla-emitter-cross-back",
+  playerTeslaEmitterCrossFront: "player-tesla-emitter-cross-front",
+  playerFoundationRifleAimBack: "player-foundation-rifle-aim-back",
+  playerFoundationRifleAimFront: "player-foundation-rifle-aim-front",
+  playerFoundationRifleAimRecoilBack: "player-foundation-rifle-aim-recoil-back",
+  playerFoundationRifleAimRecoilFront: "player-foundation-rifle-aim-recoil-front",
+  playerTeslaEmitterAimBack: "player-tesla-emitter-aim-back",
+  playerTeslaEmitterAimFront: "player-tesla-emitter-aim-front",
+  playerTeslaEmitterAimRecoilBack: "player-tesla-emitter-aim-recoil-back",
+  playerTeslaEmitterAimRecoilFront: "player-tesla-emitter-aim-recoil-front",
   upgradeDamage: "upgrade-damage",
   upgradeAttackSpeed: "upgrade-attack-speed",
   upgradeMoveSpeed: "upgrade-move-speed",
@@ -100,9 +129,10 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.player, path: "assets/art/characters/player.png" },
   { key: TEXTURES.enemyScp049, path: "assets/art/characters/scp-049.png" },
   { key: TEXTURES.armoryRackBackdrop, path: "assets/art/menus/armory-rack-backdrop.png" },
-  { key: TEXTURES.weaponPistolIcon, path: "assets/art/weapons/pistol.png" },
+  { key: TEXTURES.weaponPistolIcon, path: "assets/art/weapons/foundation-containment-rifle-icon.png" },
   { key: TEXTURES.weaponBreacherIcon, path: "assets/art/weapons/breacher.png" },
-  { key: TEXTURES.weaponTeslaIcon, path: "assets/art/weapons/tesla.png" },
+  { key: TEXTURES.weaponTeslaIcon, path: "assets/art/weapons/tesla-containment-emitter-icon.png" },
+  { key: TEXTURES.playerTeslaPowerModule, path: "assets/art/weapons/tesla-containment-power-module.png" },
   { key: TEXTURES.titleFacilityBackdrop, path: "assets/art/menus/title-facility-backdrop.png" },
   { key: TEXTURES.upgradeDamage, path: "assets/art/upgrades/damage.png" },
   { key: TEXTURES.upgradeAttackSpeed, path: "assets/art/upgrades/attack-speed.png" },
@@ -132,6 +162,51 @@ export const SPRITESHEET_ASSETS = [
     key: TEXTURES.playerOpeningSheet,
     path: "assets/art/characters/player-opening-sheet.png",
     frameConfig: { frameWidth: 48, frameHeight: 48 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeBodySheet,
+    path: "assets/art/characters/player-response-operative-body.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerFoundationRifleAimBack,
+    path: "assets/art/weapons/foundation-containment-rifle-aim-back.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerFoundationRifleAimFront,
+    path: "assets/art/weapons/foundation-containment-rifle-aim-front.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerFoundationRifleAimRecoilBack,
+    path: "assets/art/weapons/foundation-containment-rifle-aim-recoil-back.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerFoundationRifleAimRecoilFront,
+    path: "assets/art/weapons/foundation-containment-rifle-aim-recoil-front.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerTeslaEmitterAimBack,
+    path: "assets/art/weapons/tesla-containment-emitter-aim-back.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerTeslaEmitterAimFront,
+    path: "assets/art/weapons/tesla-containment-emitter-aim-front.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerTeslaEmitterAimRecoilBack,
+    path: "assets/art/weapons/tesla-containment-emitter-aim-recoil-back.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerTeslaEmitterAimRecoilFront,
+    path: "assets/art/weapons/tesla-containment-emitter-aim-recoil-front.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
   },
   {
     key: TEXTURES.r17Drifter,
@@ -169,6 +244,32 @@ export const SPRITESHEET_ASSETS = [
     frameConfig: { frameWidth: 32, frameHeight: 32 }
   }
 ];
+
+// Gate-only comparison sheets are loaded by the Vite development server and
+// stay outside the production preload contract until the owner accepts one.
+export const DEVELOPMENT_SPRITESHEET_ASSETS = [
+  {
+    key: TEXTURES.playerResponseOperativePrototypeSheet,
+    path: "assets/art/characters/player-response-operative-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeBodyPrototypeSheet,
+    path: "assets/art/characters/player-response-operative-body-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeBreacherSampleSheet,
+    path: "assets/art/characters/player-response-operative-breacher-sample.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeCbrnSampleSheet,
+    path: "assets/art/characters/player-response-operative-cbrn-sample.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  }
+];
+
 export const ATLAS_ASSETS = [];
 
 // Real audio assets to preload. Empty for now — audio is synthesized at runtime

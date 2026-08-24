@@ -662,9 +662,9 @@ test("update keeps HUD objects stable while swapping the one 48px weapon image t
 
   view.update(presentation());
   view.update(presentation({
-    selectedWeaponId: "shotgun",
+    selectedWeaponId: "unknown",
     weapon: {
-      id: "shotgun",
+      id: "unknown",
       name: "收容突破器",
       currentLevel: 2,
       pelletCount: 6,

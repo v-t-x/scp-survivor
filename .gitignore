@@ -20,3 +20,6 @@ npm-debug.log*
 
 # Internal review notes (kept locally, not for the public repo)
 docs/portfolio-review.md
+.superpowers/brainstorm/
+scripts/art/__pycache__/
+task-*-report.md

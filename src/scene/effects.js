@@ -16,9 +16,22 @@ import { COMBAT_PRESENTATION_DEPTH } from "../art/combatFeedback.js";
 // Domain mixin: effects. Methods are Object.assign'd onto PrototypeScene.prototype.
 export const effectsMixin = {
 
-  emitAttackPresentation(snapshot, fallbackDirection) {
+  resolvePlayerAttackVisualOrigin({ weaponId, angle, originX, originY } = {}) {
+    let resolved = null;
     try {
-      if (this.combatFeedback?.notifyAttack(snapshot) === true) {
+      resolved = this.playerPresentation?.getAttackEffectOrigin?.({ weaponId, angle });
+    } catch {
+      // Visual origin lookup cannot alter or interrupt committed gameplay.
+    }
+    if (Number.isFinite(resolved?.x) && Number.isFinite(resolved?.y)) {
+      return Object.freeze({ x: resolved.x, y: resolved.y });
+    }
+    return Object.freeze({ x: originX, y: originY });
+  },
+
+  emitAttackPresentation(snapshot, fallbackDirection, committedProjectiles) {
+    try {
+      if (this.combatFeedback?.notifyAttack(snapshot, committedProjectiles) === true) {
         return;
       }
     } catch {
@@ -27,6 +40,15 @@ export const effectsMixin = {
 
     if (Number.isFinite(fallbackDirection)) {
       this.spawnMuzzleFlash(fallbackDirection);
+    }
+  },
+
+  emitTeslaChannelPresentation(snapshot) {
+    try {
+      return this.combatFeedback?.notifyTeslaChannel(snapshot) === true;
+    } catch {
+      // A persistent visual channel cannot interrupt targeting or damage ticks.
+      return false;
     }
   },
 
@@ -227,11 +249,20 @@ export const effectsMixin = {
       return;
     }
 
+    let alpha = 1;
     if (this.elapsedSurvivalMs < this.playerInvulnerableUntilMs) {
       const blinkOn = Math.sin(this.elapsedSurvivalMs * 0.04) > 0;
-      this.player.setAlpha(blinkOn ? 1 : 0.35);
-    } else {
-      this.player.setAlpha(1);
+      alpha = blinkOn ? 1 : 0.35;
+    }
+
+    let handledByPlayerPresentation = false;
+    try {
+      handledByPlayerPresentation = this.playerPresentation?.setAlpha(alpha) === true;
+    } catch {
+      // Visible-body feedback failure falls through to the legacy anchor.
+    }
+    if (!handledByPlayerPresentation) {
+      this.player.setAlpha(alpha);
     }
   },
 
