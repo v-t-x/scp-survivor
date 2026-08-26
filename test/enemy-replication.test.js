@@ -365,4 +365,15 @@ test("replication delegates presentation to initializer without duplicate produc
     source,
     /applyEnemyPresentation|ENEMY_PRESENTATION|resolveCharacterTexture|r17-|\.setTexture\(|\.setScale\(|\.play\(/
   );
+
+  const enemies = await readFile(
+    new URL("../src/scene/enemies.js", import.meta.url),
+    "utf8"
+  );
+  const initializer = enemies.slice(
+    enemies.indexOf("  initializeEnemyFromConfig("),
+    enemies.indexOf("  updateEnemies()")
+  );
+  assert.equal((initializer.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
+  assert.doesNotMatch(source, /enemyPresentation|_presentationId/);
 });

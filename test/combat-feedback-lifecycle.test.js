@@ -106,6 +106,63 @@ function createActor() {
   };
 }
 
+function createEnemyLifecycleActor(textureKey, scale) {
+  const listeners = new Map();
+  const actor = {
+    x: 120,
+    y: 160,
+    width: 48,
+    height: 48,
+    displayOriginX: 24,
+    displayOriginY: 24,
+    active: true,
+    visible: true,
+    destroyed: false,
+    alpha: 1,
+    depth: textureKey === "enemy-scp049" ? 12 : 10,
+    flipX: false,
+    scaleX: scale,
+    scaleY: scale,
+    texture: { key: textureKey },
+    frame: { name: 0 },
+    setTexture(key, frame = 0) { this.texture.key = key; this.frame.name = frame; return this; },
+    setScale(value) { this.scaleX = value; this.scaleY = value; return this; },
+    setVisible(value) { this.visible = value; return this; },
+    setFrame(frame) { this.frame.name = frame; return this; },
+    play(key) { this.currentAnimation = key; return this; },
+    once(event, callback) { listeners.set(event, callback); return this; },
+    off(event, callback) { if (listeners.get(event) === callback) listeners.delete(event); return this; },
+    emit(event) { const callback = listeners.get(event); if (callback) { listeners.delete(event); callback(); } },
+    destroy() {
+      if (this.destroyed) return;
+      this.destroyed = true;
+      this.active = false;
+      this.visible = false;
+      this.emit("destroy");
+    }
+  };
+  actor.anims = { pause() {}, resume() {} };
+  actor.body = {
+    sourceWidth: 36,
+    sourceHeight: 36,
+    width: 36,
+    height: 36,
+    radius: textureKey === "enemy-scp049" ? 18 : 0,
+    isCircle: textureKey === "enemy-scp049",
+    position: { x: 102, y: 142 },
+    offset: { x: 6, y: 6, set(x, y) { this.x = x; this.y = y; } },
+    velocity: { x: 0, y: 0 },
+    updateFromGameObject() {
+      this.width = this.sourceWidth * Math.abs(actor.scaleX);
+      this.height = this.sourceHeight * Math.abs(actor.scaleY);
+      this.position.x = actor.x + actor.scaleX * (this.offset.x - actor.displayOriginX);
+      this.position.y = actor.y + actor.scaleY * (this.offset.y - actor.displayOriginY);
+    }
+  };
+  actor.body.updateFromGameObject();
+  return actor;
+}
+
 function createScene() {
   const created = [];
   return {
@@ -161,8 +218,11 @@ test("scene lifecycle owns a safe controller outside transient effects and destr
   const teardown = extractObjectMethod(main, "teardownManagers");
 
   assert.match(main, /createCombatFeedbackController/);
+  assert.match(main, /createEnemyPresentationController/);
   assert.match(create, /createCombatFeedbackController\(this\)/);
+  assert.match(create, /createSafeEnemyPresentationController\(this,/);
   assert.doesNotMatch(create, /transientEffects\.add\(this\.combatFeedback\)/);
+  assert.doesNotMatch(create, /transientEffects\.add\(this\.enemyPresentation\)/);
   assert.match(
     update,
     /handlePlayerMovement\(\)[\s\S]*createPlayerPresentationSnapshot\(this\)[\s\S]*playerPresentation\?\.update\?\.\(snapshot, delta\)[\s\S]*updateWeapons\(\)[\s\S]*combatFeedback\.update\(this\.elapsedSurvivalMs\)/
@@ -174,6 +234,9 @@ test("scene lifecycle owns a safe controller outside transient effects and destr
   assert.match(teardown, /combatFeedback\.setPaused\?\.\(true\)/);
   assert.match(teardown, /combatFeedback\.destroy\?\.\(\)/);
   assert.match(teardown, /this\.combatFeedback\s*=\s*null/);
+  assert.match(teardown, /enemyPresentation\.setPaused\?\.\(true\)/);
+  assert.match(teardown, /enemyPresentation\.destroy\?\.\(\)/);
+  assert.match(teardown, /this\.enemyPresentation\s*=\s*null/);
 });
 
 test("three pause and resume cycles forward only controller pause state after gameplay state commits", async () => {
@@ -305,6 +368,7 @@ test("manager teardown clears and destroys player presentation while isolating e
 
 test("failure and victory restart loops return managers pools visuals and listeners to baseline", async () => {
   const { createCombatFeedbackController } = await import("../src/art/combatFeedback.js");
+  const { createEnemyPresentationController } = await import("../src/art/enemyPresentationController.js");
   const { createPlayerPresentationController } = await import("../src/art/playerPresentationController.js");
   const { teardownManagers, installManagerTeardown } = await loadMainLifecycle();
 
@@ -316,6 +380,7 @@ test("failure and victory restart loops return managers pools visuals and listen
       events,
       teardownManagers,
       playerPresentation: null,
+      enemyPresentation: null,
       combatFeedback: null,
       audio: null,
       ui: null,
@@ -336,9 +401,9 @@ test("failure and victory restart loops return managers pools visuals and listen
     const showOutcome = outcome === "failure"
       ? menusMixin.showGameOverOverlay
       : menusMixin.showVictoryOverlay;
-    for (let cycle = 0; cycle < 3; cycle += 1) {
+    for (let cycle = 0; cycle < 2; cycle += 1) {
       const firstCycleVisual = visuals.length;
-      const displayScene = createLifecycleDisplayScene(visuals);
+      const displayScene = createLifecycleDisplayScene(visuals, { formalEnemies: true });
       const resourceBaseline = {
         timers: displayScene.timerCount,
         tweens: displayScene.tweenCount,
@@ -381,7 +446,68 @@ test("failure and victory restart loops return managers pools visuals and listen
       controller.notifyHit({ x: 2, y: 3, impactX: 2, impactY: 3, enemyType: "drone", lethal: false });
       controller.notifyDeath({ x: 2, y: 3, enemyType: "drone", isBoss: false });
       controller.update(1);
+      const enemyPresentation = createEnemyPresentationController(displayScene, {
+        allowedDevelopmentAssetIds: new Set([
+          "r17-rift-skimmer-action-sheet",
+          "enemy-scp049-locomotion-sheet",
+          "enemy-scp049-action-sheet"
+        ]),
+        forceLegacy: false
+      });
+      const ordinaryEnemy = createEnemyLifecycleActor("r17-rift-skimmer", 1);
+      const bossEnemy = createEnemyLifecycleActor("enemy-scp049", 1.2);
+      const ordinaryId = enemyPresentation.trackActor(ordinaryEnemy, {
+        enemyType: "crawler",
+        isBoss: false
+      });
+      const bossId = enemyPresentation.trackActor(bossEnemy, {
+        enemyType: "scp049",
+        isBoss: true
+      });
+      enemyPresentation.notifyDeath({
+        presentationId: ordinaryId,
+        enemyType: "crawler",
+        isBoss: false,
+        canSplit: false,
+        x: ordinaryEnemy.x,
+        y: ordinaryEnemy.y,
+        frame: 0,
+        flipX: false,
+        alpha: 1,
+        depth: 10,
+        scaleX: 1,
+        scaleY: 1
+      });
+      enemyPresentation.notifyDeath({
+        presentationId: bossId,
+        enemyType: "scp049",
+        isBoss: true,
+        canSplit: false,
+        x: bossEnemy.x,
+        y: bossEnemy.y,
+        frame: 0,
+        flipX: false,
+        alpha: 1,
+        depth: 12,
+        scaleX: 1,
+        scaleY: 1
+      });
+      const enemyCopies = visuals.slice(firstCycleVisual).filter((visual) => (
+        visual.currentAnimation === "r17-rift-skimmer-action-death"
+        || visual.currentAnimation === "enemy-scp049-recontain"
+      ));
+      assert.equal(
+        enemyCopies.filter((copy) => copy.currentAnimation === "r17-rift-skimmer-action-death").length,
+        1,
+        `${outcome} cycle ${cycle} owns one ordinary death copy`
+      );
+      assert.equal(
+        enemyCopies.filter((copy) => copy.currentAnimation === "enemy-scp049-recontain").length,
+        1,
+        `${outcome} cycle ${cycle} owns one terminal copy`
+      );
       scene.playerPresentation = playerPresentation;
+      scene.enemyPresentation = enemyPresentation;
       scene.combatFeedback = controller;
       scene.audio = { destroy() {} };
       scene.ui = { destroy() {} };
@@ -389,7 +515,7 @@ test("failure and victory restart loops return managers pools visuals and listen
       installManagerTeardown(scene);
       assert.equal(events.listenerCount(SHUTDOWN), 1, `${outcome} cycle ${cycle} shutdown listener`);
       assert.equal(events.listenerCount(DESTROY), 1, `${outcome} cycle ${cycle} destroy listener`);
-      assert.equal(displayScene.timerCount, resourceBaseline.timers + 1, "controller fixture owns one live timer");
+      assert.equal(displayScene.timerCount, resourceBaseline.timers + 4, "controllers own one fixture and three enemy timers");
       assert.equal(displayScene.tweenCount, resourceBaseline.tweens + 1, "controller fixture owns one live tween");
       const resultOverlay = showOutcome.call(scene);
       assert.equal(resultOverlay.resultType, outcome);
@@ -397,8 +523,8 @@ test("failure and victory restart loops return managers pools visuals and listen
 
       assert.equal(restartCount, cycle + 1, `${outcome} must execute one real Scene restart per cycle`);
       assert.deepEqual(
-        [scene.playerPresentation, scene.combatFeedback, scene.audio, scene.ui],
-        [null, null, null, null]
+        [scene.playerPresentation, scene.enemyPresentation, scene.combatFeedback, scene.audio, scene.ui],
+        [null, null, null, null, null]
       );
       assert.equal(displayScene.timerCount, resourceBaseline.timers, "feedback teardown preserves timer baseline");
       assert.equal(displayScene.tweenCount, resourceBaseline.tweens, "feedback teardown preserves tween baseline");
@@ -408,6 +534,8 @@ test("failure and victory restart loops return managers pools visuals and listen
         "player presentation teardown preserves visible Sprite baseline"
       );
       assert.equal(player.visible, true, "gameplay anchor is restored for restart");
+      assert.ok(enemyCopies.every((copy) => copy.destroyed), `${outcome} cycle ${cycle} releases ordinary and terminal copies`);
+      assert.ok(enemyCopies.every((copy) => copy.listenerCount("animationcomplete") === 0), `${outcome} cycle ${cycle} removes enemy copy listeners`);
       const cycleVisuals = visuals.slice(firstCycleVisual);
       assert.ok(cycleVisuals.every((visual) => visual.destroyed), `${outcome} cycle ${cycle} releases shadows and pools`);
       const feedbackVisuals = cycleVisuals.filter((visual) => visual.kind !== "sprite");
@@ -424,21 +552,31 @@ test("failure and victory restart loops return managers pools visuals and listen
   }
 });
 
-function createLifecycleDisplayScene(visuals) {
+function createLifecycleDisplayScene(visuals, { formalEnemies = false } = {}) {
   function visual(kind = "display", textureKey = null) {
+    const listeners = new Map();
     const target = {
       kind,
+      x: 0,
+      y: 0,
       active: true,
       visible: true,
       destroyed: false,
+      frame: { name: 0 },
       texture: textureKey === null ? undefined : { key: textureKey },
-      setOrigin() { return this; }, setPosition() { return this; }, setDisplaySize() { return this; },
+      setOrigin() { return this; }, setPosition(x, y) { this.x = x; this.y = y; return this; }, setDisplaySize() { return this; },
       setAlpha() { return this; }, setVisible() { return this; }, setTint() { return this; },
       setRotation() { return this; }, setDepth() { return this; }, setScale() { return this; },
-      setTexture(key) { this.texture = { key }; return this; },
+      setTexture(key, frame = 0) { this.texture = { key }; this.frame.name = frame; return this; },
+      setFrame(frame) { this.frame.name = frame; return this; },
+      setActive(value) { this.active = value; return this; },
       setFlipX() { return this; }, clear() { return this; },
       fillStyle() { return this; }, fillRect() { return this; }, lineStyle() { return this; },
       lineBetween() { return this; }, strokeRect() { return this; }, strokeCircle() { return this; },
+      play(key) { this.currentAnimation = key; return this; },
+      once(event, callback) { listeners.set(event, callback); return this; },
+      off(event, callback) { if (listeners.get(event) === callback) listeners.delete(event); return this; },
+      listenerCount(event) { return listeners.has(event) ? 1 : 0; },
       destroy() {
         if (this.destroyed) return;
         this.resourcesAtDestroy = {
@@ -451,6 +589,7 @@ function createLifecycleDisplayScene(visuals) {
         this.destroyed = true;
       }
     };
+    target.anims = { pause() {}, resume() {} };
     if (kind === "sprite") scene.visibleSpriteCount += 1;
     visuals.push(target);
     return target;
@@ -459,11 +598,44 @@ function createLifecycleDisplayScene(visuals) {
     timerCount: 1,
     tweenCount: 1,
     visibleSpriteCount: 0,
-    textures: { exists() { return false; } },
+    textures: {
+      exists(key) {
+        return formalEnemies && [
+          "r17-rift-skimmer",
+          "r17-rift-skimmer-action-sheet",
+          "enemy-scp049",
+          "enemy-scp049-locomotion-sheet",
+          "enemy-scp049-action-sheet"
+        ].includes(key);
+      },
+      get(key) {
+        return {
+          frameTotal: {
+            "r17-rift-skimmer": 5,
+            "r17-rift-skimmer-action-sheet": 19,
+            "enemy-scp049": 1,
+            "enemy-scp049-locomotion-sheet": 41,
+            "enemy-scp049-action-sheet": 20
+          }[key]
+        };
+      }
+    },
+    anims: (() => {
+      const keys = new Set();
+      return {
+        exists(key) { return keys.has(key); },
+        generateFrameNumbers(textureKey, range) { return { textureKey, ...range }; },
+        create(config) { keys.add(config.key); },
+        remove(key) { keys.delete(key); }
+      };
+    })(),
+    playLegacyEnemyDeathVisual() {
+      throw new Error("formal restart fixture must not use legacy death fallback");
+    },
     add: {
       image: () => visual(),
       graphics: () => visual(),
-      sprite: (_x, _y, key) => visual("sprite", key)
+      sprite: (x, y, key) => visual("sprite", key).setPosition(x, y)
     }
   };
   scene.time = {

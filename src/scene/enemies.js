@@ -329,6 +329,15 @@ export const enemiesMixin = {
     }
 
     applyEnemyPresentation(this, enemy, config.type);
+    enemy._presentationId = 0;
+    try {
+      enemy._presentationId = this.enemyPresentation?.trackActor?.(enemy, {
+        enemyType: config.type,
+        isBoss: false
+      }) ?? 0;
+    } catch {
+      enemy._presentationId = 0;
+    }
     this.combatFeedback?.trackActor(enemy, {
       kind: config.type === "biomassChild" ? "biomassChild" : isElite ? "elite" : "enemy",
       radius: Math.max(enemy.body.width, enemy.body.height) / 2,
@@ -336,6 +345,11 @@ export const enemiesMixin = {
     });
 
     enemy.once("destroy", () => {
+      try {
+        this.enemyPresentation?.untrackActor(enemy);
+      } catch {
+        // Presentation cleanup cannot block the existing actor destroy path.
+      }
       this.combatFeedback?.untrackActor(enemy);
       if (enemy.armorBrokenLabel?.active) {
         enemy.armorBrokenLabel.destroy();
@@ -754,6 +768,15 @@ export const enemiesMixin = {
     boss.setCollideWorldBounds(true);
     // Immovable so its own summoned minions cannot shove it around.
     boss.body.setImmovable(true);
+    boss._presentationId = 0;
+    try {
+      boss._presentationId = this.enemyPresentation?.trackActor?.(boss, {
+        enemyType: "scp049",
+        isBoss: true
+      }) ?? 0;
+    } catch {
+      boss._presentationId = 0;
+    }
     this.combatFeedback.trackActor(boss, {
       kind: "boss",
       radius: 18,
@@ -779,6 +802,11 @@ export const enemiesMixin = {
       boss.bossLabel = null;
     });
     boss.once("destroy", () => {
+      try {
+        this.enemyPresentation?.untrackActor(boss);
+      } catch {
+        // Terminal presentation ownership remains independent from the live actor.
+      }
       this.combatFeedback?.untrackActor(boss);
       if (boss.bossLabel?.active) {
         boss.bossLabel.destroy();
@@ -977,6 +1005,28 @@ export const enemiesMixin = {
     this.time.delayedCall(BALANCE.feedback.deathShrinkMs + 120, () => {
       if (!this.isGameOver) {
         this.triggerVictory();
+      }
+    });
+  },
+
+
+  playLegacyEnemyDeathVisual(enemy, { spawnParticles = false } = {}) {
+    if (!enemy) {
+      return;
+    }
+    if (spawnParticles) {
+      this.spawnDeathParticles(enemy.x, enemy.y, enemy.enemyColor);
+    }
+    this.tweens.add({
+      targets: enemy,
+      scaleX: 0.25,
+      scaleY: 0.25,
+      alpha: 0,
+      duration: BALANCE.feedback.deathShrinkMs,
+      onComplete: () => {
+        if (enemy.active) {
+          enemy.destroy();
+        }
       }
     });
   },

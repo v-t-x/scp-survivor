@@ -1429,13 +1429,22 @@ test("actor tracking is attached after enemy and boss presentation setup", async
   );
 
   const enemyPresentation = initializer.indexOf("applyEnemyPresentation(this, enemy, config.type)");
+  const enemyAnimationTracking = initializer.indexOf("this.enemyPresentation?.trackActor?.(enemy");
   const enemyTracking = initializer.indexOf("this.combatFeedback?.trackActor(enemy");
-  assert.ok(enemyPresentation >= 0 && enemyPresentation < enemyTracking);
+  assert.ok(enemyPresentation >= 0 && enemyPresentation < enemyAnimationTracking);
+  assert.ok(enemyAnimationTracking < enemyTracking);
+  assert.equal((initializer.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
+  assert.match(initializer, /enemy\.once\("destroy"[\s\S]*enemyPresentation\?\.untrackActor\(enemy\)/);
   assert.match(initializer, /enemy\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(enemy\)/);
 
   const bossBody = bossCreation.indexOf("boss.body.setImmovable(true)");
+  const bossAnimationTracking = bossCreation.indexOf("this.enemyPresentation?.trackActor?.(boss");
   const bossTracking = bossCreation.indexOf("this.combatFeedback.trackActor(boss");
+  assert.ok(bossBody >= 0 && bossBody < bossAnimationTracking);
+  assert.ok(bossAnimationTracking < bossTracking);
+  assert.equal((bossCreation.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
   assert.ok(bossBody >= 0 && bossBody < bossTracking);
+  assert.match(bossCreation, /boss\.once\("destroy"[\s\S]*enemyPresentation\?\.untrackActor\(boss\)/);
   assert.match(bossCreation, /boss\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(boss\)/);
 });
 
