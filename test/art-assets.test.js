@@ -152,6 +152,55 @@ const enemyBossCandidateSheets = [
   { property: "enemyScp049ActionSheet", key: "enemy-scp049-action-sheet", path: "assets/art/characters/scp-049-action-sheet.png", frameConfig: { frameWidth: 80, frameHeight: 96 } }
 ];
 
+const gate2CandidateSheets = [
+  {
+    property: "r17RiftSkimmerActionSheet",
+    key: "r17-rift-skimmer-action-sheet",
+    path: "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [864, 48],
+    frameCount: 18,
+    sha256: "7b944216e4b78eaacb1a36d8ae023ac03c343e5fbda523e56fc4ec226065e304",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      pierce: { start: 14, end: 17, fps: 15, repeat: 0 }
+    }
+  },
+  {
+    property: "r17BudActionSheet",
+    key: "r17-bud-action-sheet",
+    path: "assets/art/enemies/r17-bud-action-sheet.png",
+    frameConfig: { frameWidth: 32, frameHeight: 32 },
+    finalSize: [576, 32],
+    frameCount: 18,
+    sha256: "22ff646ce9ee1ddc1b67305c95e5d4fa9c6c862a494976598ac87025e0fa99e6",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      snap: { start: 14, end: 17, fps: 16, repeat: 0 }
+    }
+  },
+  {
+    property: "r17FrameGapActionSheet",
+    key: "r17-frame-gap-action-sheet",
+    path: "assets/art/enemies/r17-frame-gap-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "ff72566e4c612ee6292e6135b0f06f2e7d12aa53fe0219f82b6304ab41bcf9c5",
+    clips: {
+      move: { start: 0, end: 5, fps: 8, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      "phase-out": { start: 14, end: 17, fps: 6, repeat: 0 },
+      "reappear-dash": { start: 18, end: 21, fps: 12.5, repeat: -1 }
+    }
+  }
+];
+
 const r17TextureKeys = {
   r17Drifter: "r17-drifter",
   r17RiftSkimmer: "r17-rift-skimmer",
@@ -592,6 +641,65 @@ test("enemy and Boss candidates append an exact immutable nine-sheet development
   })));
   assert.equal(Object.isFrozen(candidateEntries[0].previewQuery), true);
 });
+
+for (const {
+  property,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  clips
+} of gate2CandidateSheets) {
+  // Break caught: this exact Gate 2 candidate is missing or diverges from its dev-only real-asset contract.
+  test(`Gate 2 candidate ${key} has its exact real action sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual({
+      productionPath: contract[property]?.productionPath,
+      frameWidth: contract[property]?.frameWidth,
+      frameHeight: contract[property]?.frameHeight,
+      frameCount: contract[property]?.frameCount,
+      sheetWidth: contract[property]?.sheetWidth,
+      sheetHeight: contract[property]?.sheetHeight,
+      clips: contract[property]?.clips
+    }, {
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      clips
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${key} SHA-256`
+    );
+  });
+}
 
 // Break caught: a partial candidate promotion leaks into production or the exported Set can be mutated at runtime.
 test("production sheet admission remains an immutable exact-nine transaction", () => {

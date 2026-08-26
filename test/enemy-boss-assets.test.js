@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
@@ -25,6 +26,55 @@ const expected = {
   enemyScp049ActionSheet: ["enemy-scp049-action-sheet", "assets/art/characters/scp-049-action-sheet.png"],
 };
 
+const gate2Expected = {
+  r17RiftSkimmerActionSheet: {
+    productionPath: "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+    frameWidth: 48,
+    frameHeight: 48,
+    frameCount: 18,
+    sheetWidth: 864,
+    sheetHeight: 48,
+    sha256: "7b944216e4b78eaacb1a36d8ae023ac03c343e5fbda523e56fc4ec226065e304",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      pierce: { start: 14, end: 17, fps: 15, repeat: 0 },
+    },
+  },
+  r17BudActionSheet: {
+    productionPath: "assets/art/enemies/r17-bud-action-sheet.png",
+    frameWidth: 32,
+    frameHeight: 32,
+    frameCount: 18,
+    sheetWidth: 576,
+    sheetHeight: 32,
+    sha256: "22ff646ce9ee1ddc1b67305c95e5d4fa9c6c862a494976598ac87025e0fa99e6",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      snap: { start: 14, end: 17, fps: 16, repeat: 0 },
+    },
+  },
+  r17FrameGapActionSheet: {
+    productionPath: "assets/art/enemies/r17-frame-gap-action-sheet.png",
+    frameWidth: 64,
+    frameHeight: 64,
+    frameCount: 22,
+    sheetWidth: 1408,
+    sheetHeight: 64,
+    sha256: "ff72566e4c612ee6292e6135b0f06f2e7d12aa53fe0219f82b6304ab41bcf9c5",
+    clips: {
+      move: { start: 0, end: 5, fps: 8, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      "phase-out": { start: 14, end: 17, fps: 6, repeat: 0 },
+      "reappear-dash": { start: 18, end: 21, fps: 12.5, repeat: -1 },
+    },
+  },
+};
+
 // Break caught: a public action-sheet key/path changes while existing production keys remain in the manifest.
 test("enemy and SCP-049 action contract has the exact nine public key/path mappings", async () => {
   const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
@@ -33,6 +83,31 @@ test("enemy and SCP-049 action contract has the exact nine public key/path mappi
   for (const [id, [textureKey, productionPath]] of Object.entries(expected)) {
     assert.equal(contract[id].textureKey, textureKey, id);
     assert.equal(contract[id].productionPath, productionPath, id);
+  }
+});
+
+// Break caught: a Gate 2 sheet changes canvas/frame geometry or any clip range before assembly.
+test("Gate 2 contract locks exact paths, final dimensions, frame counts and clip ranges", async () => {
+  const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
+  for (const [id, expectedEntry] of Object.entries(gate2Expected)) {
+    const actual = contract[id];
+    const { sha256, ...expectedContract } = expectedEntry;
+    assert.deepEqual({
+      productionPath: actual?.productionPath,
+      frameWidth: actual?.frameWidth,
+      frameHeight: actual?.frameHeight,
+      frameCount: actual?.frameCount,
+      sheetWidth: actual?.sheetWidth,
+      sheetHeight: actual?.sheetHeight,
+      clips: actual?.clips,
+    }, expectedContract, id);
+
+    const buffer = await fs.readFile(path.join(root, "public", expectedEntry.productionPath));
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${id} SHA-256`
+    );
   }
 });
 
