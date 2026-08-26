@@ -4,7 +4,13 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
-import { IMAGE_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import {
+  DEVELOPMENT_SPRITESHEET_ASSETS,
+  IMAGE_ASSETS,
+  PRODUCTION_SPRITESHEET_KEYS,
+  SPRITESHEET_ASSETS,
+  TEXTURES
+} from "../src/assets/manifest.js";
 import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
 
 const approvedImageAssets = [
@@ -132,6 +138,18 @@ const approvedSpritesheets = [
     path,
     frameConfig: { frameWidth, frameHeight }
   }))
+];
+
+const enemyBossCandidateSheets = [
+  { property: "r17DrifterActionSheet", key: "r17-drifter-action-sheet", path: "assets/art/enemies/r17-drifter-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17RiftSkimmerActionSheet", key: "r17-rift-skimmer-action-sheet", path: "assets/art/enemies/r17-rift-skimmer-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17PulseSacActionSheet", key: "r17-pulse-sac-action-sheet", path: "assets/art/enemies/r17-pulse-sac-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17CarapaceGateActionSheet", key: "r17-carapace-gate-action-sheet", path: "assets/art/enemies/r17-carapace-gate-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17FrameGapActionSheet", key: "r17-frame-gap-action-sheet", path: "assets/art/enemies/r17-frame-gap-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17BroodMassActionSheet", key: "r17-brood-mass-action-sheet", path: "assets/art/enemies/r17-brood-mass-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17BudActionSheet", key: "r17-bud-action-sheet", path: "assets/art/enemies/r17-bud-action-sheet.png", frameConfig: { frameWidth: 32, frameHeight: 32 } },
+  { property: "enemyScp049LocomotionSheet", key: "enemy-scp049-locomotion-sheet", path: "assets/art/characters/scp-049-locomotion-sheet.png", frameConfig: { frameWidth: 80, frameHeight: 96 } },
+  { property: "enemyScp049ActionSheet", key: "enemy-scp049-action-sheet", path: "assets/art/characters/scp-049-action-sheet.png", frameConfig: { frameWidth: 80, frameHeight: 96 } }
 ];
 
 const r17TextureKeys = {
@@ -551,6 +569,152 @@ test("production manifest declares the exact approved spritesheet contract", () 
     assert.equal(TEXTURES[property], key);
   }
   assert.deepEqual(SPRITESHEET_ASSETS, approvedSpritesheets);
+});
+
+// Break caught: candidate metadata becomes incomplete, ungated or reordered ahead of existing Player entries.
+test("enemy and Boss candidates append an exact immutable nine-sheet development contract", () => {
+  const playerDevelopmentEntries = DEVELOPMENT_SPRITESHEET_ASSETS.slice(0, 4);
+  assert.deepEqual(playerDevelopmentEntries.map(({ key }) => key), [
+    "player-response-operative-prototype-sheet",
+    "player-response-operative-body-prototype-sheet",
+    "player-response-operative-breacher-sample-sheet",
+    "player-response-operative-cbrn-sample-sheet"
+  ]);
+
+  const candidateEntries = DEVELOPMENT_SPRITESHEET_ASSETS.slice(4);
+  assert.equal(candidateEntries.length, 9);
+  assert.deepEqual(candidateEntries, enemyBossCandidateSheets.map(({ key, path, frameConfig }) => ({
+    key,
+    path,
+    frameConfig,
+    previewQuery: { name: "enemyPresentation", value: "candidate" },
+    candidateId: key
+  })));
+  assert.equal(Object.isFrozen(candidateEntries[0].previewQuery), true);
+});
+
+// Break caught: a partial candidate promotion leaks into production or the exported Set can be mutated at runtime.
+test("production sheet admission remains an immutable exact-nine transaction", () => {
+  assert.equal(PRODUCTION_SPRITESHEET_KEYS instanceof Set, true);
+  assert.deepEqual([...PRODUCTION_SPRITESHEET_KEYS], SPRITESHEET_ASSETS.map(({ key }) => key));
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.add("r17-drifter-action-sheet"), /immutable/i);
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.delete("player-opening-sheet"), /immutable/i);
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.clear(), /immutable/i);
+  assert.throws(() => Set.prototype.add.call(PRODUCTION_SPRITESHEET_KEYS, "bypass"), TypeError);
+  assert.throws(() => Set.prototype.delete.call(PRODUCTION_SPRITESHEET_KEYS, "player-opening-sheet"), TypeError);
+  assert.throws(() => Set.prototype.clear.call(PRODUCTION_SPRITESHEET_KEYS), TypeError);
+
+  const contentsBeforeForEach = [...PRODUCTION_SPRITESHEET_KEYS];
+  const callbackThis = { label: "production-sheet-forEach-this" };
+  const shadowedCallObservations = [];
+  function observeWithShadowedCall(value, key, owner) {
+    shadowedCallObservations.push({
+      ownerIsExportedSet: owner === PRODUCTION_SPRITESHEET_KEYS,
+      preservedThisArg: this === callbackThis,
+      valueEqualsKey: value === key
+    });
+  }
+  observeWithShadowedCall.call = null;
+  let shadowedCallError = null;
+  try {
+    PRODUCTION_SPRITESHEET_KEYS.forEach(observeWithShadowedCall, callbackThis);
+  } catch (error) {
+    shadowedCallError = error?.constructor?.name ?? "unknown";
+  }
+  const shadowedCallContract = {
+    shadowedCallError,
+    invocationCount: shadowedCallObservations.length,
+    observationsAreNative: shadowedCallObservations.every((observation) =>
+      Object.values(observation).every(Boolean)
+    )
+  };
+
+  const observedPairs = [];
+  let callbackOwner = null;
+  let preservedThisArg = true;
+  PRODUCTION_SPRITESHEET_KEYS.forEach(function observeProductionKey(value, key, owner) {
+    observedPairs.push([value, key]);
+    callbackOwner = owner;
+    preservedThisArg &&= this === callbackThis;
+  }, callbackThis);
+  const mutationResults = [
+    ["add", ["__forEach_leak_probe__"]],
+    ["delete", ["player-opening-sheet"]],
+    ["clear", []]
+  ].map(([method, args]) => {
+    try {
+      callbackOwner[method](...args);
+      return "returned";
+    } catch (error) {
+      return error?.constructor?.name ?? "unknown";
+    }
+  });
+  assert.deepEqual({
+    callbackOwnerIsExportedSet: callbackOwner === PRODUCTION_SPRITESHEET_KEYS,
+    preservedThisArg,
+    valuesEqualKeys: observedPairs.every(([value, key]) => value === key),
+    mutationResults,
+    contentsAfterForEach: [...PRODUCTION_SPRITESHEET_KEYS]
+  }, {
+    callbackOwnerIsExportedSet: true,
+    preservedThisArg: true,
+    valuesEqualKeys: true,
+    mutationResults: ["TypeError", "TypeError", "TypeError"],
+    contentsAfterForEach: contentsBeforeForEach
+  });
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.forEach(null), TypeError);
+  const callbackSentinel = new Error("immutable Set forEach callback sentinel");
+  assert.throws(
+    () => PRODUCTION_SPRITESHEET_KEYS.forEach(() => {
+      throw callbackSentinel;
+    }),
+    (error) => error === callbackSentinel
+  );
+  assert.equal(PRODUCTION_SPRITESHEET_KEYS.forEach(() => {}), undefined);
+
+  const valueOfResult = PRODUCTION_SPRITESHEET_KEYS.valueOf();
+  const contentsBeforeValueOfMutations = [...PRODUCTION_SPRITESHEET_KEYS];
+  const valueOfMutationResults = [];
+  for (const [method, args] of [
+    ["add", ["__valueOf_leak_probe__"]],
+    ["delete", [contentsBeforeValueOfMutations[0]]],
+    ["clear", []]
+  ]) {
+    try {
+      valueOfResult[method](...args);
+      valueOfMutationResults.push("returned");
+    } catch (error) {
+      valueOfMutationResults.push(error?.constructor?.name ?? "unknown");
+    }
+  }
+  if (valueOfResult !== PRODUCTION_SPRITESHEET_KEYS) {
+    valueOfResult.clear();
+    contentsBeforeValueOfMutations.forEach((key) => valueOfResult.add(key));
+  }
+  assert.deepEqual({
+    shadowedCallContract,
+    valueOfReturnsExportedSet: valueOfResult === PRODUCTION_SPRITESHEET_KEYS,
+    mutationResults: valueOfMutationResults,
+    contentsAfterValueOf: [...PRODUCTION_SPRITESHEET_KEYS]
+  }, {
+    shadowedCallContract: {
+      shadowedCallError: null,
+      invocationCount: contentsBeforeForEach.length,
+      observationsAreNative: true
+    },
+    valueOfReturnsExportedSet: true,
+    mutationResults: ["TypeError", "TypeError", "TypeError"],
+    contentsAfterValueOf: contentsBeforeValueOfMutations
+  });
+
+  const candidateKeys = enemyBossCandidateSheets.map(({ key }) => key);
+  const currentlyAdmitted = candidateKeys.filter((key) => PRODUCTION_SPRITESHEET_KEYS.has(key));
+  assert.equal(currentlyAdmitted.length, 0);
+
+  const syntheticNineEntryPromotion = new Set([...PRODUCTION_SPRITESHEET_KEYS, ...candidateKeys]);
+  assert.equal(candidateKeys.filter((key) => syntheticNineEntryPromotion.has(key)).length, 9);
+  const syntheticPartialPromotion = new Set([...PRODUCTION_SPRITESHEET_KEYS, ...candidateKeys.slice(0, 8)]);
+  assert.notEqual(candidateKeys.filter((key) => syntheticPartialPromotion.has(key)).length, 9);
 });
 
 test("legacy fallback texture keys remain exact and disjoint from R-17 production keys", () => {

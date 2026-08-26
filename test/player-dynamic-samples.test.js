@@ -402,7 +402,10 @@ test("two-direction preview reuses A's existing sheet with the quality timing an
     1
   );
   assert.deepEqual(
-    DEVELOPMENT_SPRITESHEET_ASSETS.map(({ key }) => key).sort(),
+    DEVELOPMENT_SPRITESHEET_ASSETS
+      .filter(({ previewQuery }) => previewQuery === undefined)
+      .map(({ key }) => key)
+      .sort(),
     [
       TEXTURES.playerResponseOperativePrototypeSheet,
       TEXTURES.playerResponseOperativeBodyPrototypeSheet,

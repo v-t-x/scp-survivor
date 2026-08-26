@@ -3,7 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { IMAGE_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import {
+  DEVELOPMENT_SPRITESHEET_ASSETS,
+  IMAGE_ASSETS,
+  SPRITESHEET_ASSETS,
+  TEXTURES
+} from "../src/assets/manifest.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contractPath = path.join(root, "scripts/art/data/enemy-boss-animation-contracts.json");
@@ -29,6 +34,18 @@ test("enemy and SCP-049 action contract has the exact nine public key/path mappi
     assert.equal(contract[id].textureKey, textureKey, id);
     assert.equal(contract[id].productionPath, productionPath, id);
   }
+});
+
+// Break caught: a candidate key or path is omitted, renamed or admitted to production before Gate 4.
+test("the manifest exposes all nine action sheets only through the gated development contract", () => {
+  const actual = {};
+  for (const [property, [key, assetPath]] of Object.entries(expected)) {
+    assert.equal(TEXTURES[property], key, property);
+    const developmentAsset = DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key);
+    actual[property] = [developmentAsset?.key, developmentAsset?.path];
+    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+  }
+  assert.deepEqual(actual, expected);
 });
 
 test("the new contract preserves all eight legacy fallback identities and their paths", async () => {

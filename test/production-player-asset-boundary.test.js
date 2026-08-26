@@ -6,7 +6,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as viteBuild } from "vite";
 
-import config, { NON_PRODUCTION_PLAYER_ASSETS } from "../vite.config.js";
+import config, * as viteConfigModule from "../vite.config.js";
+
+const { NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_ENEMY_BOSS_ASSETS } = viteConfigModule;
 
 const REPOSITORY_VITE_CONFIG = fileURLToPath(new URL("../vite.config.js", import.meta.url));
 const PUBLIC_SENTINEL_BYTES = Buffer.from("task-1-public-source-sentinel\n", "utf8");
@@ -30,6 +32,18 @@ const NON_PRODUCTION_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/tesla-containment-emitter-same-front.png",
   "assets/art/weapons/tesla-containment-emitter-cross-back.png",
   "assets/art/weapons/tesla-containment-emitter-cross-front.png"
+];
+
+const NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS = [
+  "assets/art/enemies/r17-drifter-action-sheet.png",
+  "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+  "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+  "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+  "assets/art/enemies/r17-frame-gap-action-sheet.png",
+  "assets/art/enemies/r17-brood-mass-action-sheet.png",
+  "assets/art/enemies/r17-bud-action-sheet.png",
+  "assets/art/characters/scp-049-locomotion-sheet.png",
+  "assets/art/characters/scp-049-action-sheet.png"
 ];
 
 const REQUIRED_RUNTIME_PLAYER_ASSET_PATHS = [
@@ -138,6 +152,31 @@ test("build cleanup removes every non-production player candidate but retains ru
       const target = path.join(outDir, relative);
       assert.equal(await readFile(target, "utf8"), relative);
     }
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
+});
+
+// Break caught: the production cleanup omits one enemy/Boss candidate or mutates the frozen Player list.
+test("build cleanup removes the exact enemy and Boss candidate list independently of Player assets", async () => {
+  assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
+  assert.deepEqual(NON_PRODUCTION_ENEMY_BOSS_ASSETS, NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS);
+  const outDir = await mkdtemp(path.join(tmpdir(), "scp-enemy-boss-assets-"));
+  const plugin = config.plugins.find(({ name }) => name === "remove-development-player-assets");
+  assert.ok(plugin);
+  try {
+    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
+      const target = path.join(outDir, relative);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, relative);
+    }
+
+    await plugin.writeBundle({ dir: outDir });
+
+    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
+      await assert.rejects(stat(path.join(outDir, relative)));
+    }
+    assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
   } finally {
     await rm(outDir, { recursive: true, force: true });
   }
@@ -323,5 +362,23 @@ test("real Vite build allows a separate dist and strips non-production player as
       "keep-in-dist"
     );
     await stat(path.join(root, "dist", "index.html"));
+  });
+});
+
+// Break caught: a real Vite build ships gated enemy/Boss PNGs or deletes their public source copies.
+test("real Vite build strips all nine enemy and Boss candidates only from dist", async () => {
+  await withTemporaryViteProject("scp-vite-enemy-boss-dist-", async ({ root, publicDir }) => {
+    for (const relative of NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      const source = path.join(publicDir, relative);
+      await mkdir(path.dirname(source), { recursive: true });
+      await writeFile(source, relative);
+    }
+
+    const outcome = await observeViteBuild(root, { outDir: "dist" });
+    assert.equal(outcome.status, "fulfilled", outcome.message);
+    for (const relative of NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      await assert.rejects(stat(path.join(root, "dist", relative)));
+      assert.equal(await readFile(path.join(publicDir, relative), "utf8"), relative);
+    }
   });
 });
