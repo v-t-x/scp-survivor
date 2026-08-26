@@ -304,6 +304,28 @@ test("overlapping actions preserve the first committed role lock while a role ma
   assert.equal(actor.currentAnimation, "r17-carapace-gate-action-charge", "new role starts after prior lock expires");
 });
 
+// Break caught: a committed frenzy exit leaves the Boss trapped in the prior action role lock.
+test("frenzy exit immediately resumes current-direction SCP-049 locomotion", () => {
+  const scene = createScene();
+  const actor = createActor({ textureKey: "enemy-scp049" });
+  actor.bossState = "frenzy";
+  const controller = controllerFor(scene, [
+    "enemy-scp049-locomotion-sheet",
+    "enemy-scp049-action-sheet"
+  ]);
+  const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+
+  controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-enter", atMs: 100 }));
+  controller.sync(100, 16);
+  assert.equal(actor.currentAnimation, "enemy-scp049-frenzy-enter");
+
+  actor.bossState = "normal";
+  actor.body.velocity.x = -20;
+  controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-exit", atMs: 200 }));
+  controller.sync(200, 16);
+  assert.equal(actor.currentAnimation, "enemy-scp049-left-walk");
+});
+
 // Break caught: Pulse Sac samples the wrong deadline boundary or release timing.
 test("Pulse Sac precharge and committed release use the exact approved frames", () => {
   const scene = createScene();
@@ -319,7 +341,8 @@ test("Pulse Sac precharge and committed release use the exact approved frames", 
     assert.equal(actor.frame.name, frame, `deadline frame at ${elapsed}`);
   }
   actor.nextShotAtMs = 2_000;
-  controller.notifyAction(Object.freeze({ presentationId, action: "shoot-release", atMs: 1_000 }));
+  controller.notifyAction(Object.freeze({ presentationId, action: "shoot-release", shotAtMs: 1_000 }));
+  assert.equal(actor.frame.name, 18, "the committed release immediately replaces observed precharge");
   controller.sync(1_000, 16);
   assert.equal(actor.frame.name, 18);
   controller.sync(1_100, 16);
@@ -353,11 +376,42 @@ test("Pulse Sac release without observed precharge jumps directly through frames
   actor.nextShotAtMs = 5_000;
   const controller = controllerFor(scene, ["r17-pulse-sac-action-sheet"]);
   const presentationId = controller.trackActor(actor, { enemyType: "drone", isBoss: false });
-  controller.notifyAction(Object.freeze({ presentationId, action: "shoot-release", atMs: 1_000 }));
+  controller.notifyAction(Object.freeze({ presentationId, action: "shoot-release", shotAtMs: 1_000 }));
+  assert.equal(actor.frame.name, 18);
   controller.sync(1_000, 16);
   controller.sync(1_100, 16);
   assert.deepEqual(actor.framed.slice(-2), [18, 19]);
   assert.ok(!actor.framed.slice(-2).some((frame) => frame >= 14 && frame <= 17));
+});
+
+// Break caught: presentation clocks write the gameplay shoot deadline or create a projectile from animation work.
+test("Pulse Sac sync and release remain read-only over the gameplay deadline and projectile group", () => {
+  const scene = createScene();
+  scene.enemyProjectiles = {
+    create() {
+      throw new Error("presentation must not create gameplay projectiles");
+    }
+  };
+  const actor = createActor({ textureKey: "enemy-drone" });
+  let deadline = 1_000;
+  let deadlineWrites = 0;
+  Object.defineProperty(actor, "nextShotAtMs", {
+    configurable: true,
+    get() { return deadline; },
+    set(value) { deadlineWrites += 1; deadline = value; }
+  });
+  const controller = controllerFor(scene, ["r17-pulse-sac-action-sheet"]);
+  const presentationId = controller.trackActor(actor, { enemyType: "drone", isBoss: false });
+
+  assert.doesNotThrow(() => controller.sync(600, 16));
+  assert.doesNotThrow(() => controller.notifyAction(Object.freeze({
+    presentationId,
+    action: "shoot-release",
+    shotAtMs: 1_000
+  })));
+  assert.doesNotThrow(() => controller.sync(1_201, 16));
+  assert.equal(deadline, 1_000);
+  assert.equal(deadlineWrites, 0);
 });
 
 // Break caught: splittable biomass and non-splitting clones select the same terminal clip.

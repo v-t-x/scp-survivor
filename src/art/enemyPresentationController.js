@@ -233,10 +233,21 @@ export function createEnemyPresentationController(scene, options = {}) {
     }
   }
 
+  function invalidateActorPresentationId(record) {
+    try {
+      if (record.actor?._presentationId === record.id) {
+        record.actor._presentationId = 0;
+      }
+    } catch {
+      // Ownership invalidation remains best effort for hostile actor wrappers.
+    }
+  }
+
   function untrackActor(actor) {
     const record = records.get(actor);
     if (!record) return;
     destroyHitOverlay(record);
+    invalidateActorPresentationId(record);
     records.delete(actor);
   }
 
@@ -419,13 +430,23 @@ export function createEnemyPresentationController(scene, options = {}) {
     if (destroyed) return;
     const record = getRecordById(records, snapshot?.presentationId);
     if (!record || typeof snapshot?.action !== "string") return;
-    const atMs = Number.isFinite(snapshot.atMs) ? snapshot.atMs : 0;
     if (snapshot.action === "shoot-release" && record.enemyType === "drone") {
+      const atMs = Number.isFinite(snapshot.shotAtMs) ? snapshot.shotAtMs : 0;
       record.releaseAtMs = atMs;
       record.roleClip = null;
       record.hitUntilMs = -1;
+      if (record.mode.family === "formal") {
+        setDisplayFrame(record, 18, "shoot-release");
+      }
       return;
     }
+    if (snapshot.action === "frenzy-exit" && record.isBoss) {
+      record.roleClip = null;
+      record.roleUntilMs = -1;
+      record.hitUntilMs = -1;
+      return;
+    }
+    const atMs = Number.isFinite(snapshot.atMs) ? snapshot.atMs : 0;
     const durationMs = ROLE_DURATIONS_MS[snapshot.action];
     if (!Number.isFinite(durationMs)) return;
     if (isRoleLocked(record, atMs)) return;
@@ -638,7 +659,10 @@ export function createEnemyPresentationController(scene, options = {}) {
     if (destroyed) return;
     destroyed = true;
     paused = true;
-    for (const record of records.values()) destroyHitOverlay(record);
+    for (const record of records.values()) {
+      destroyHitOverlay(record);
+      invalidateActorPresentationId(record);
+    }
     records.clear();
     for (const copy of allocatedR17Copies) {
       removeCopyAnimationListener(copy);

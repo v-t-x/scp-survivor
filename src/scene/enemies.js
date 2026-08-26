@@ -483,6 +483,15 @@ export const enemiesMixin = {
         enemy.chargeUntilMs = this.elapsedSurvivalMs + enemy.chargeDurationMs;
         enemy.nextActionAtMs = this.elapsedSurvivalMs + enemy.chargeCooldownMs;
         this.clearEliteWarning(enemy);
+        try {
+          this.enemyPresentation?.notifyAction?.(Object.freeze({
+            presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+            action: "charge",
+            atMs: this.elapsedSurvivalMs
+          }));
+        } catch {
+          // Charge animation delivery cannot alter committed elite deadlines.
+        }
       }
       return;
     }
@@ -512,6 +521,15 @@ export const enemiesMixin = {
       enemy.warningUntilMs = this.elapsedSurvivalMs + enemy.chargeWarningMs;
       enemy.chargeAngle = enemy.facingAngle;
       this.createChargeWarning(enemy);
+      try {
+        this.enemyPresentation?.notifyAction?.(Object.freeze({
+          presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+          action: "brace",
+          atMs: this.elapsedSurvivalMs
+        }));
+      } catch {
+        // Warning animation delivery cannot alter the committed charge setup.
+      }
     }
   },
 
@@ -526,6 +544,15 @@ export const enemiesMixin = {
         this.clearEliteWarning(enemy);
         enemy.eliteState = "postDash";
         enemy.dashUntilMs = this.elapsedSurvivalMs + enemy.postTeleportDashMs;
+        try {
+          this.enemyPresentation?.notifyAction?.(Object.freeze({
+            presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+            action: "reappear-dash",
+            atMs: this.elapsedSurvivalMs
+          }));
+        } catch {
+          // Reappearance animation delivery cannot alter position or dash state.
+        }
       }
       return;
     }
@@ -557,6 +584,15 @@ export const enemiesMixin = {
       enemy.warningUntilMs = this.elapsedSurvivalMs + enemy.teleportWarningMs;
       enemy.nextActionAtMs = this.elapsedSurvivalMs + enemy.teleportCooldownMs;
       this.createTeleportWarning(enemy, target.x, target.y);
+      try {
+        this.enemyPresentation?.notifyAction?.(Object.freeze({
+          presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+          action: "phase-out",
+          atMs: this.elapsedSurvivalMs
+        }));
+      } catch {
+        // Phase animation delivery cannot alter target or warning deadlines.
+      }
     }
   },
 
@@ -625,6 +661,15 @@ export const enemiesMixin = {
       this.player,
       BALANCE.combat.enemyProjectileSpeed
     );
+    try {
+      this.enemyPresentation?.notifyAction?.(Object.freeze({
+        presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+        action: "shoot-release",
+        shotAtMs: this.elapsedSurvivalMs
+      }));
+    } catch {
+      // Release animation delivery cannot alter a committed projectile.
+    }
   },
 
 
@@ -882,6 +927,15 @@ export const enemiesMixin = {
     boss.body.setVelocity(0, 0);
     this.summonBossMinions(boss, { frenzy: true });
     this.showTopBanner("外科狂乱", "SCP-049 暴露了弱点", 1800);
+    try {
+      this.enemyPresentation?.notifyAction?.(Object.freeze({
+        presentationId: Number.isInteger(boss._presentationId) ? boss._presentationId : 0,
+        action: "frenzy-enter",
+        atMs: this.elapsedSurvivalMs
+      }));
+    } catch {
+      // Frenzy animation delivery cannot alter the committed wave or Boss state.
+    }
   },
 
 
@@ -894,6 +948,15 @@ export const enemiesMixin = {
       hpRatio <= config.enragedHpThreshold ? config.frenzyEnragedMultiplier : 1;
     boss.nextFrenzyAtMs =
       this.elapsedSurvivalMs + config.frenzyCooldownMs * cadenceMultiplier;
+    try {
+      this.enemyPresentation?.notifyAction?.(Object.freeze({
+        presentationId: Number.isInteger(boss._presentationId) ? boss._presentationId : 0,
+        action: "frenzy-exit",
+        atMs: this.elapsedSurvivalMs
+      }));
+    } catch {
+      // Exit animation delivery cannot alter the committed cooldown.
+    }
   },
 
 
@@ -990,7 +1053,7 @@ export const enemiesMixin = {
   },
 
 
-  handleBossDefeat(boss) {
+  handleBossDefeat(boss, afterCommit) {
     if (boss.isDying) {
       return;
     }
@@ -1001,7 +1064,14 @@ export const enemiesMixin = {
     this.killCount += 1;
     this.bossPhaseActive = false;
     this.showTopBanner("收容完成", "SCP-049 已被击败", 2200);
-    this.playEnemyDeathEffect(boss, { spawnParticles: false });
+    this.commitEnemyDeathActor(boss);
+    if (typeof afterCommit === "function") {
+      try {
+        afterCommit();
+      } catch {
+        // Presentation failures cannot cancel the committed victory timer.
+      }
+    }
     this.time.delayedCall(BALANCE.feedback.deathShrinkMs + 120, () => {
       if (!this.isGameOver) {
         this.triggerVictory();

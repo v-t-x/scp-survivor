@@ -7,6 +7,34 @@ import {
   resolveEnemyCloneSpec,
   tryReplicateEnemy
 } from "../src/scene/enemyReplication.js";
+import { BALANCE } from "../src/config/balance.js";
+
+function extractObjectMethod(source, name) {
+  const start = source.search(new RegExp(`^  ${name}\\(`, "m"));
+  assert.ok(start >= 0, `missing ${name}`);
+  const braceStart = source.indexOf(") {", start) + 2;
+  let depth = 0;
+  for (let index = braceStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
+async function loadEnemyMethods(...names) {
+  const source = await readFile(new URL("../src/scene/enemies.js", import.meta.url), "utf8");
+  const methods = names.map((name) => extractObjectMethod(source, name)).join(",");
+  const Phaser = {
+    Math: {
+      Distance: { Between: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1) },
+      Angle: { Between: (x1, y1, x2, y2) => Math.atan2(y2 - y1, x2 - x1) }
+    }
+  };
+  return new Function("Phaser", "BALANCE", `"use strict"; return ({${methods}});`)(Phaser, BALANCE);
+}
 
 const balance = {
   enemy: {
@@ -376,4 +404,299 @@ test("replication delegates presentation to initializer without duplicate produc
   );
   assert.equal((initializer.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
   assert.doesNotMatch(source, /enemyPresentation|_presentationId/);
+});
+
+async function runCommittedDroneShot(mode) {
+  const methods = await loadEnemyMethods("updateDroneBehavior", "fireEnemyProjectile");
+  const projectiles = [];
+  const notifications = [];
+  const enemy = {
+    active: true,
+    isBossMinion: true,
+    _presentationId: 23,
+    x: 100,
+    y: 100,
+    moveSpeed: 40,
+    preferredRangeMin: 50,
+    preferredRangeMax: 150,
+    nextShotAtMs: 1_000,
+    shootCooldownMs: 800,
+    projectileDamage: 13,
+    body: {
+      velocity: { x: 3, y: 4 },
+      setVelocity(x, y) { this.velocity.x = x; this.velocity.y = y; }
+    }
+  };
+  const scene = {
+    ...methods,
+    elapsedSurvivalMs: 1_000,
+    isGameOver: false,
+    isLevelUpActive: false,
+    player: { x: 200, y: 100 },
+    enemyProjectiles: {
+      create(x, y, textureKey) {
+        const projectile = {
+          x,
+          y,
+          textureKey,
+          body: { velocity: { x: 0, y: 0 } },
+          setCircle(radius) { this.radius = radius; }
+        };
+        projectiles.push(projectile);
+        return projectile;
+      }
+    },
+    physics: {
+      moveToObject(actor, _target, speed) {
+        if (actor === enemy) {
+          actor.body.setVelocity(speed, 0);
+        } else {
+          actor.body.velocity.x = speed;
+          actor.body.velocity.y = 0;
+        }
+      }
+    }
+  };
+  const snapshotProjectile = () => {
+    const projectile = projectiles[0];
+    return {
+      x: projectile.x,
+      y: projectile.y,
+      textureKey: projectile.textureKey,
+      body: { velocity: { ...projectile.body.velocity } },
+      radius: projectile.radius,
+      damage: projectile.damage,
+      expireAtMs: projectile.expireAtMs
+    };
+  };
+  if (mode !== "missing") {
+    scene.enemyPresentation = {
+      notifyAction(snapshot) {
+        notifications.push({
+          raw: snapshot,
+          snapshot: structuredClone(snapshot),
+          nextShotAtMs: enemy.nextShotAtMs,
+          projectile: snapshotProjectile()
+        });
+        if (mode === "throw") throw new Error("release presentation failed");
+      }
+    };
+  }
+
+  assert.doesNotThrow(() => methods.updateDroneBehavior.call(scene, enemy));
+  return {
+    gameplay: {
+      nextShotAtMs: enemy.nextShotAtMs,
+      isBossMinion: enemy.isBossMinion,
+      projectile: snapshotProjectile()
+    },
+    notifications
+  };
+}
+
+// Break caught: release fires before deadline/projectile commitment or uses the controller's old atMs schema.
+test("Pulse Sac release is a frozen three-field event after the complete projectile commit", async () => {
+  const missing = await runCommittedDroneShot("missing");
+  const normal = await runCommittedDroneShot("normal");
+  const throwing = await runCommittedDroneShot("throw");
+
+  assert.deepEqual(normal.gameplay, missing.gameplay);
+  assert.deepEqual(throwing.gameplay, missing.gameplay);
+  assert.equal(normal.gameplay.nextShotAtMs, 1_800);
+  assert.equal(normal.gameplay.isBossMinion, true);
+  assert.deepEqual(normal.gameplay.projectile, {
+    x: 100,
+    y: 100,
+    textureKey: "enemy-projectile",
+    body: { velocity: { x: BALANCE.combat.enemyProjectileSpeed, y: 0 } },
+    radius: 5,
+    damage: 13,
+    expireAtMs: 1_000 + BALANCE.combat.enemyProjectileLifetimeMs
+  });
+  for (const run of [normal, throwing]) {
+    assert.equal(run.notifications.length, 1);
+    const [{ raw, snapshot, nextShotAtMs, projectile }] = run.notifications;
+    assert.equal(Object.isFrozen(raw), true);
+    assert.deepEqual(Object.keys(snapshot), ["presentationId", "action", "shotAtMs"]);
+    assert.deepEqual(snapshot, {
+      presentationId: 23,
+      action: "shoot-release",
+      shotAtMs: 1_000
+    });
+    assert.equal(nextShotAtMs, 1_800);
+    assert.deepEqual(projectile, normal.gameplay.projectile);
+  }
+});
+
+function actionRecorder(mode, snapshots, inspect) {
+  if (mode === "missing") return undefined;
+  return {
+    notifyAction(snapshot) {
+      inspect(snapshot.action);
+      snapshots.push({ raw: snapshot, snapshot: structuredClone(snapshot) });
+      if (mode === "throw") throw new Error("action presentation failed");
+    }
+  };
+}
+
+async function runCommittedEnemyActions(mode) {
+  const methods = await loadEnemyMethods(
+    "updateRiotElite",
+    "updateBlinkElite",
+    "enterFrenzy",
+    "exitFrenzy"
+  );
+  const snapshots = [];
+  const inspections = [];
+  const scene = {
+    ...methods,
+    elapsedSurvivalMs: 1_000,
+    player: { x: 200, y: 100 },
+    physics: { moveToObject() {} },
+    createChargeWarning(enemy) { enemy.warningCreated = true; },
+    createTeleportWarning(enemy) { enemy.warningCreated = true; },
+    clearEliteWarning(enemy) { enemy.warningCleared = true; },
+    getBlinkTeleportDestination: () => ({ x: 310, y: 320 }),
+    summonBossMinions(_boss, options) {
+      assert.equal(options.frenzy, true);
+      scene.minions = Array.from({ length: 20 }, (_, index) => ({ index, isBossMinion: true }));
+    },
+    showTopBanner() { scene.bannerCommitted = true; },
+    clearFrenzyTint(boss) { boss.tintCleared = true; }
+  };
+  scene.enemyPresentation = actionRecorder(mode, snapshots, (action) => {
+    if (action === "brace") {
+      inspections.push({ action, state: riotIdle.eliteState, warning: riotIdle.warningCreated });
+    } else if (action === "charge") {
+      inspections.push({
+        action,
+        state: riotWarning.eliteState,
+        chargeUntilMs: riotWarning.chargeUntilMs,
+        nextActionAtMs: riotWarning.nextActionAtMs,
+        warningCleared: riotWarning.warningCleared
+      });
+    } else if (action === "phase-out") {
+      inspections.push({
+        action,
+        state: blinkIdle.eliteState,
+        target: [blinkIdle.teleportTargetX, blinkIdle.teleportTargetY],
+        warningCreated: blinkIdle.warningCreated
+      });
+    } else if (action === "reappear-dash") {
+      inspections.push({
+        action,
+        state: blinkWarning.eliteState,
+        position: [blinkWarning.x, blinkWarning.y],
+        dashUntilMs: blinkWarning.dashUntilMs,
+        warningCleared: blinkWarning.warningCleared
+      });
+    } else if (action === "frenzy-enter") {
+      inspections.push({
+        action,
+        state: boss.bossState,
+        minions: scene.minions.length,
+        ownership: scene.minions.every((minion) => minion.isBossMinion),
+        banner: scene.bannerCommitted
+      });
+    } else if (action === "frenzy-exit") {
+      inspections.push({
+        action,
+        state: boss.bossState,
+        nextFrenzyAtMs: boss.nextFrenzyAtMs,
+        tintCleared: boss.tintCleared
+      });
+    }
+  });
+
+  const baseBody = () => ({
+    velocity: { x: 0, y: 0 },
+    setVelocity(x, y) { this.velocity.x = x; this.velocity.y = y; }
+  });
+  const riotIdle = {
+    _presentationId: 1, x: 100, y: 100, eliteState: "idle", nextActionAtMs: 1_000,
+    moveSpeed: 40, chargeWarningMs: 300, facingAngle: 0, body: baseBody()
+  };
+  const riotWarning = {
+    _presentationId: 2, eliteState: "warning", warningUntilMs: 1_000,
+    chargeDurationMs: 500, chargeCooldownMs: 900, body: baseBody()
+  };
+  const blinkIdle = {
+    _presentationId: 3, x: 100, y: 100, eliteState: "idle", nextActionAtMs: 1_000,
+    moveSpeed: 40, teleportWarningMs: 250, teleportCooldownMs: 800, body: baseBody(),
+    setAlpha(value) { this.alpha = value; }
+  };
+  const blinkWarning = {
+    _presentationId: 4, x: 100, y: 100, eliteState: "teleportWarning", warningUntilMs: 1_000,
+    teleportTargetX: 330, teleportTargetY: 340, postTeleportDashMs: 350, body: baseBody(),
+    setPosition(x, y) { this.x = x; this.y = y; },
+    setAlpha(value) { this.alpha = value; }
+  };
+  const boss = {
+    _presentationId: 5,
+    bossState: "normal",
+    health: 1_000,
+    maxHealth: 2_500,
+    body: baseBody(),
+    setTint(value) { this.tint = value; }
+  };
+
+  assert.doesNotThrow(() => methods.updateRiotElite.call(scene, riotIdle));
+  assert.doesNotThrow(() => methods.updateRiotElite.call(scene, riotWarning));
+  assert.doesNotThrow(() => methods.updateBlinkElite.call(scene, blinkIdle));
+  assert.doesNotThrow(() => methods.updateBlinkElite.call(scene, blinkWarning));
+  assert.doesNotThrow(() => methods.enterFrenzy.call(scene, boss));
+  assert.doesNotThrow(() => methods.exitFrenzy.call(scene, boss));
+
+  return {
+    gameplay: {
+      riotIdle: { state: riotIdle.eliteState, warningUntilMs: riotIdle.warningUntilMs, chargeAngle: riotIdle.chargeAngle },
+      riotWarning: { state: riotWarning.eliteState, chargeUntilMs: riotWarning.chargeUntilMs, nextActionAtMs: riotWarning.nextActionAtMs },
+      blinkIdle: {
+        state: blinkIdle.eliteState,
+        target: [blinkIdle.teleportTargetX, blinkIdle.teleportTargetY],
+        warningUntilMs: blinkIdle.warningUntilMs,
+        nextActionAtMs: blinkIdle.nextActionAtMs
+      },
+      blinkWarning: { state: blinkWarning.eliteState, position: [blinkWarning.x, blinkWarning.y], dashUntilMs: blinkWarning.dashUntilMs },
+      boss: {
+        state: boss.bossState,
+        nextFrenzyAtMs: boss.nextFrenzyAtMs,
+        minionCount: scene.minions.length,
+        minionOwnership: scene.minions.every((minion) => minion.isBossMinion)
+      }
+    },
+    snapshots,
+    inspections
+  };
+}
+
+// Break caught: Riot/Blink/Frenzy notifications run before state/VFX/wave commits or throwing actions alter gameplay.
+test("Riot Blink and Frenzy actions are frozen post-commit void notifications", async () => {
+  const missing = await runCommittedEnemyActions("missing");
+  const normal = await runCommittedEnemyActions("normal");
+  const throwing = await runCommittedEnemyActions("throw");
+  assert.deepEqual(normal.gameplay, missing.gameplay);
+  assert.deepEqual(throwing.gameplay, missing.gameplay);
+  assert.deepEqual(normal.inspections, [
+    { action: "brace", state: "warning", warning: true },
+    { action: "charge", state: "charging", chargeUntilMs: 1_500, nextActionAtMs: 1_900, warningCleared: true },
+    { action: "phase-out", state: "teleportWarning", target: [310, 320], warningCreated: true },
+    { action: "reappear-dash", state: "postDash", position: [330, 340], dashUntilMs: 1_350, warningCleared: true },
+    { action: "frenzy-enter", state: "frenzy", minions: 20, ownership: true, banner: true },
+    {
+      action: "frenzy-exit",
+      state: "normal",
+      nextFrenzyAtMs: 1_000 + BALANCE.boss.scp049.frenzyCooldownMs * BALANCE.boss.scp049.frenzyEnragedMultiplier,
+      tintCleared: true
+    }
+  ]);
+  assert.deepEqual(throwing.inspections, normal.inspections);
+  for (const run of [normal, throwing]) {
+    assert.equal(run.snapshots.length, 6);
+    for (const { raw, snapshot } of run.snapshots) {
+      assert.equal(Object.isFrozen(raw), true);
+      assert.deepEqual(Object.keys(snapshot), ["presentationId", "action", "atMs"]);
+      assert.equal(snapshot.atMs, 1_000);
+    }
+  }
 });

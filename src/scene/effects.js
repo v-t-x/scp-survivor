@@ -138,6 +138,35 @@ export const effectsMixin = {
   },
 
 
+  createEnemyPresentationSnapshot(
+    enemy,
+    { lethal = false, atMs = this.elapsedSurvivalMs } = {}
+  ) {
+    const frame = Number.isInteger(enemy?.frame?.name)
+      ? enemy.frame.name
+      : Number.isInteger(enemy?.frame?.index)
+        ? enemy.frame.index
+        : 0;
+    return Object.freeze({
+      presentationId: Number.isInteger(enemy?._presentationId) ? enemy._presentationId : 0,
+      enemyType: typeof enemy?.enemyType === "string" ? enemy.enemyType : "unknown",
+      eliteType: typeof enemy?.eliteType === "string" ? enemy.eliteType : null,
+      isBoss: enemy?.isBoss === true,
+      canSplit: enemy?.canSplit === true,
+      x: Number.isFinite(enemy?.x) ? enemy.x : 0,
+      y: Number.isFinite(enemy?.y) ? enemy.y : 0,
+      frame,
+      flipX: enemy?.flipX === true,
+      alpha: Number.isFinite(enemy?.alpha) ? enemy.alpha : 1,
+      depth: Number.isFinite(enemy?.depth) ? enemy.depth : 10,
+      scaleX: Number.isFinite(enemy?.scaleX) ? enemy.scaleX : 1,
+      scaleY: Number.isFinite(enemy?.scaleY) ? enemy.scaleY : 1,
+      lethal: lethal === true,
+      atMs: Number.isFinite(atMs) ? atMs : 0
+    });
+  },
+
+
   spawnFloatingDamage(x, y, damage) {
     let damageText = this._damageTextPool.pop();
     if (damageText) {
@@ -192,11 +221,22 @@ export const effectsMixin = {
   },
 
 
-  playEnemyDeathEffect(enemy, { spawnParticles = true } = {}) {
-    enemy.isDying = true;
+  commitEnemyDeathActor(enemy) {
+    if (enemy.isDying !== true) {
+      enemy.isDying = true;
+    }
     this.clearEliteWarning(enemy);
     enemy.body.enable = false;
-    enemy.setVelocity(0, 0);
+    if (
+      enemy.body?.velocity?.x !== 0
+      || enemy.body?.velocity?.y !== 0
+    ) {
+      enemy.setVelocity(0, 0);
+    }
+  },
+
+
+  playLegacyEnemyDeathVisual(enemy, { spawnParticles = true } = {}) {
     if (spawnParticles) {
       this.spawnDeathParticles(enemy.x, enemy.y, enemy.enemyColor);
     }
@@ -213,6 +253,12 @@ export const effectsMixin = {
         }
       }
     });
+  },
+
+
+  playEnemyDeathEffect(enemy, options = {}) {
+    this.commitEnemyDeathActor(enemy);
+    this.playLegacyEnemyDeathVisual(enemy, options);
   },
 
 
