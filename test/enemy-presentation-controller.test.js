@@ -116,11 +116,11 @@ function createActor({ x = 100, y = 120, textureKey = "enemy-crawler", scale = 1
   return actor;
 }
 
-function createScene({ formal = true, missing = [], throwingTextures = false } = {}) {
+function createScene({ formal = true, legacy = true, missing = [], throwingTextures = false } = {}) {
   const sprites = [];
   const timers = [];
   const missingSet = new Set(missing);
-  const frameTotals = { ...LEGACY_FRAMES, ...(formal ? FORMAL_FRAMES : {}) };
+  const frameTotals = { ...(legacy ? LEGACY_FRAMES : {}), ...(formal ? FORMAL_FRAMES : {}) };
   const scene = {
     sprites,
     timers,
@@ -164,10 +164,10 @@ function createScene({ formal = true, missing = [], throwingTextures = false } =
   return scene;
 }
 
-function controllerFor(scene, ids) {
+function controllerFor(scene, ids, { forceLegacy = false } = {}) {
   return createEnemyPresentationController(scene, {
     allowedDevelopmentAssetIds: new Set(ids),
-    forceLegacy: false
+    forceLegacy
   });
 }
 
@@ -459,6 +459,85 @@ test("ordinary death copies pause and resume while terminal ownership is indepen
   controller.setPaused(false);
   assert.equal(copy.pauseCount, 1);
   assert.equal(copy.resumeCount, 1);
+});
+
+// Break caught: a 230-actor presentation frame allocates display children, timers, or listeners as it syncs.
+test("230 tracked actors keep formal and forced-legacy sync allocation-free for 3600 frames", () => {
+  for (const { label, forceLegacy, expectedSprites } of [
+    { label: "formal", forceLegacy: false, expectedSprites: 1 },
+    { label: "forced legacy", forceLegacy: true, expectedSprites: 0 }
+  ]) {
+    const scene = createScene();
+    const controller = controllerFor(scene, Object.keys(FORMAL_FRAMES), { forceLegacy });
+    const actors = [];
+    for (let index = 0; index < 229; index += 1) {
+      const actor = createActor({ x: index, textureKey: "enemy-crawler" });
+      actors.push(actor);
+      actor._presentationId = controller.trackActor(actor, { enemyType: "crawler", isBoss: false });
+    }
+    const boss = createActor({ x: 230, textureKey: "enemy-scp049" });
+    actors.push(boss);
+    const bossId = controller.trackActor(boss, { enemyType: "scp049", isBoss: true });
+    boss._presentationId = bossId;
+
+    for (let frame = 0; frame < 3_600; frame += 1) {
+      const elapsedMs = frame * 16;
+      if (frame % 600 === 0) {
+        controller.notifyHit(Object.freeze({ presentationId: bossId, lethal: false, atMs: elapsedMs }));
+      }
+      controller.sync(elapsedMs, 16);
+    }
+
+    assert.equal(actors.length, 230, label);
+    assert.equal(scene.sprites.length, expectedSprites, `${label}: only the reusable Boss overlay may exist`);
+    assert.equal(scene.timers.length, 0, `${label}: live sync creates no timers`);
+    assert.equal(actors.reduce((total, actor) => total + actor.listenerCount("animationcomplete"), 0), 0, label);
+    assert.ok(actors.every((actor) => actor.active && actor.visible), `${label}: no live actor is replaced`);
+    controller.destroy();
+    assert.ok(actors.every((actor) => actor._presentationId === 0), label);
+  }
+});
+
+// Break caught: a partial or absent asset family leaves an actor, copy, timer, listener, or prior-run pool alive after restart.
+test("four fallback rows survive two pause cleanup restart cycles without presentation residue", () => {
+  const r17FormalKeys = Object.keys(FORMAL_FRAMES).filter((key) => key.startsWith("r17-"));
+  const rows = [
+    { label: "all formal", options: {} },
+    { label: "one R-17 sheet missing", options: { missing: ["r17-rift-skimmer-action-sheet"] } },
+    {
+      label: "R-17 missing with SCP-049 locomotion only",
+      options: { missing: [...r17FormalKeys, "enemy-scp049-action-sheet"] }
+    },
+    { label: "all formal and legacy sheets absent", options: { legacy: false, missing: Object.keys(FORMAL_FRAMES) } }
+  ];
+
+  for (const { label, options } of rows) {
+    for (let restart = 0; restart < 2; restart += 1) {
+      const scene = createScene(options);
+      const controller = controllerFor(scene, Object.keys(FORMAL_FRAMES));
+      const enemy = createActor({ textureKey: "enemy-crawler" });
+      const boss = createActor({ textureKey: "enemy-scp049" });
+      const enemyId = controller.trackActor(enemy, { enemyType: "crawler", isBoss: false });
+      const bossId = controller.trackActor(boss, { enemyType: "scp049", isBoss: true });
+      enemy._presentationId = enemyId;
+      boss._presentationId = bossId;
+
+      controller.sync(16, 16);
+      controller.setPaused(true);
+      controller.setPaused(false);
+      controller.notifyDeath(deathSnapshot(enemyId));
+      controller.notifyDeath(deathSnapshot(bossId, { enemyType: "scp049", isBoss: true }));
+      controller.destroy();
+
+      assert.equal(enemy._presentationId, 0, `${label}/${restart}: enemy record released`);
+      assert.equal(boss._presentationId, 0, `${label}/${restart}: Boss record released`);
+      assert.ok(scene.sprites.every((sprite) => sprite.destroyed), `${label}/${restart}: copies released`);
+      assert.ok(scene.timers.every((timer) => timer.removed), `${label}/${restart}: timers released`);
+      assert.equal(enemy.listenerCount("animationcomplete"), 0, `${label}/${restart}: enemy listener released`);
+      assert.equal(boss.listenerCount("animationcomplete"), 0, `${label}/${restart}: Boss listener released`);
+      assert.ok(enemy.visible && boss.visible || scene.sprites.length > 0 || scene.legacyCalls.length > 0, `${label}/${restart}: no invisible fallback`);
+    }
+  }
 });
 
 // Break caught: sync creates arrays, snapshots, sprites, tweens or other per-frame objects.
