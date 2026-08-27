@@ -34,6 +34,37 @@ const LEGACY_FRAMES = Object.freeze({
   "enemy-scp049": 1
 });
 
+const EXPECTED_ANIMATION_KEYS = Object.freeze({
+  allFormal: Object.freeze([
+    "r17-drifter-loop", "r17-rift-skimmer-loop", "r17-pulse-sac-loop", "r17-carapace-gate-loop", "r17-frame-gap-loop", "r17-brood-mass-loop", "r17-bud-loop",
+    "r17-drifter-action-move", "r17-drifter-action-hit", "r17-drifter-action-death", "r17-drifter-action-contact",
+    "r17-rift-skimmer-action-move", "r17-rift-skimmer-action-hit", "r17-rift-skimmer-action-death", "r17-rift-skimmer-action-pierce",
+    "r17-pulse-sac-action-move", "r17-pulse-sac-action-hit", "r17-pulse-sac-action-death", "r17-pulse-sac-action-shoot",
+    "r17-carapace-gate-action-move", "r17-carapace-gate-action-hit", "r17-carapace-gate-action-death", "r17-carapace-gate-action-brace", "r17-carapace-gate-action-charge",
+    "r17-frame-gap-action-move", "r17-frame-gap-action-hit", "r17-frame-gap-action-death", "r17-frame-gap-action-phase-out", "r17-frame-gap-action-reappear-dash",
+    "r17-brood-mass-action-move", "r17-brood-mass-action-hit", "r17-brood-mass-action-death", "r17-brood-mass-action-split",
+    "r17-bud-action-move", "r17-bud-action-hit", "r17-bud-action-death", "r17-bud-action-snap",
+    "enemy-scp049-down-idle", "enemy-scp049-down-walk", "enemy-scp049-left-idle", "enemy-scp049-left-walk", "enemy-scp049-right-idle", "enemy-scp049-right-walk", "enemy-scp049-up-idle", "enemy-scp049-up-walk",
+    "enemy-scp049-frenzy-enter", "enemy-scp049-frenzy-loop", "enemy-scp049-hit-overlay", "enemy-scp049-recontain"
+  ]),
+  missingRift: Object.freeze([
+    "r17-drifter-loop", "r17-rift-skimmer-loop", "r17-pulse-sac-loop", "r17-carapace-gate-loop", "r17-frame-gap-loop", "r17-brood-mass-loop", "r17-bud-loop",
+    "r17-drifter-action-move", "r17-drifter-action-hit", "r17-drifter-action-death", "r17-drifter-action-contact",
+    "r17-pulse-sac-action-move", "r17-pulse-sac-action-hit", "r17-pulse-sac-action-death", "r17-pulse-sac-action-shoot",
+    "r17-carapace-gate-action-move", "r17-carapace-gate-action-hit", "r17-carapace-gate-action-death", "r17-carapace-gate-action-brace", "r17-carapace-gate-action-charge",
+    "r17-frame-gap-action-move", "r17-frame-gap-action-hit", "r17-frame-gap-action-death", "r17-frame-gap-action-phase-out", "r17-frame-gap-action-reappear-dash",
+    "r17-brood-mass-action-move", "r17-brood-mass-action-hit", "r17-brood-mass-action-death", "r17-brood-mass-action-split",
+    "r17-bud-action-move", "r17-bud-action-hit", "r17-bud-action-death", "r17-bud-action-snap",
+    "enemy-scp049-down-idle", "enemy-scp049-down-walk", "enemy-scp049-left-idle", "enemy-scp049-left-walk", "enemy-scp049-right-idle", "enemy-scp049-right-walk", "enemy-scp049-up-idle", "enemy-scp049-up-walk",
+    "enemy-scp049-frenzy-enter", "enemy-scp049-frenzy-loop", "enemy-scp049-hit-overlay", "enemy-scp049-recontain"
+  ]),
+  locomotionOnly: Object.freeze([
+    "r17-drifter-loop", "r17-rift-skimmer-loop", "r17-pulse-sac-loop", "r17-carapace-gate-loop", "r17-frame-gap-loop", "r17-brood-mass-loop", "r17-bud-loop",
+    "enemy-scp049-down-idle", "enemy-scp049-down-walk", "enemy-scp049-left-idle", "enemy-scp049-left-walk", "enemy-scp049-right-idle", "enemy-scp049-right-walk", "enemy-scp049-up-idle", "enemy-scp049-up-walk"
+  ]),
+  absent: Object.freeze([])
+});
+
 function createBody(actor, { width = 24, height = 24, radius = 0, isCircle = false } = {}) {
   return {
     sourceWidth: width,
@@ -107,7 +138,7 @@ function createActor({ x = 100, y = 120, textureKey = "enemy-crawler", scale = 1
   return actor;
 }
 
-function createScene({ formal = true, legacy = true, missing = [], throwingTextures = false } = {}) {
+function createScene({ formal = true, legacy = true, missing = [], throwingTextures = false, failAnimationKey = null } = {}) {
   const sprites = [];
   const timers = [];
   const missingSet = new Set(missing);
@@ -126,8 +157,9 @@ function createScene({ formal = true, legacy = true, missing = [], throwingTextu
     timers,
     legacyCalls: [],
     animationKeys,
-    animationCreateCount: 0,
     animationCreateKeys: [],
+    animationCreateAttemptKeys: [],
+    animationGenerateCount: 0,
     animationRemoveKeys: [],
     duplicateAnimationKeys: [],
     allocationCounters,
@@ -144,18 +176,20 @@ function createScene({ formal = true, legacy = true, missing = [], throwingTextu
       exists(key) { return animationKeys.has(key); },
       generateFrameNumbers(textureKey, range) {
         if (!scene.textures.exists(textureKey)) throw new Error(`missing animation texture: ${textureKey}`);
+        scene.animationGenerateCount += 1;
         return { textureKey, ...range };
       },
       create(config) {
+        scene.animationCreateAttemptKeys.push(config.key);
         if (!scene.textures.exists(config.frames?.textureKey)) {
           throw new Error(`animation requires texture: ${config.frames?.textureKey}`);
         }
+        if (config.key === failAnimationKey) throw new Error(`forced animation failure: ${config.key}`);
         if (animationKeys.has(config.key)) {
           scene.duplicateAnimationKeys.push(config.key);
           throw new Error(`duplicate animation: ${config.key}`);
         }
         animationKeys.add(config.key);
-        scene.animationCreateCount += 1;
         scene.animationCreateKeys.push(config.key);
       },
       remove(key) {
@@ -569,7 +603,7 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
         bossTexture: "enemy-scp049-locomotion-sheet",
         bossAnimation: "enemy-scp049-down-idle",
         bossActionTexture: "enemy-scp049-action-sheet",
-        animationCreateCount: 49
+        animationKeys: EXPECTED_ANIMATION_KEYS.allFormal
       }
     },
     {
@@ -583,7 +617,7 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
         bossTexture: "enemy-scp049-locomotion-sheet",
         bossAnimation: "enemy-scp049-down-idle",
         bossActionTexture: "enemy-scp049-action-sheet",
-        animationCreateCount: 45
+        animationKeys: EXPECTED_ANIMATION_KEYS.missingRift
       }
     },
     {
@@ -597,7 +631,7 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
         bossTexture: "enemy-scp049-locomotion-sheet",
         bossAnimation: "enemy-scp049-down-idle",
         bossActionTexture: "enemy-scp049",
-        animationCreateCount: 15
+        animationKeys: EXPECTED_ANIMATION_KEYS.locomotionOnly
       }
     },
     {
@@ -611,7 +645,7 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
         bossTexture: "enemy-scp049",
         bossAnimation: undefined,
         bossActionTexture: undefined,
-        animationCreateCount: 0
+        animationKeys: EXPECTED_ANIMATION_KEYS.absent
       }
     },
   ];
@@ -638,9 +672,12 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
       assert.equal(enemy.currentAnimation, expected.enemyAnimation, `${label}/${restart}: R-17 animation route`);
       assert.equal(boss.texture.key, expected.bossTexture, `${label}/${restart}: SCP-049 fallback route`);
       assert.equal(boss.currentAnimation, expected.bossAnimation, `${label}/${restart}: SCP-049 animation route`);
-      assert.equal(scene.animationCreateCount, expected.animationCreateCount, `${label}/${restart}: exact animation registration`);
-      assert.equal(scene.animationKeys.size, expected.animationCreateCount, `${label}/${restart}: no partial animation registration`);
+      assert.deepEqual(scene.animationCreateKeys, expected.animationKeys, `${label}/${restart}: exact created animation identities`);
+      assert.deepEqual(scene.animationCreateAttemptKeys, expected.animationKeys, `${label}/${restart}: exact create attempts`);
+      assert.equal(scene.animationGenerateCount, expected.animationKeys.length, `${label}/${restart}: every created animation generated frames once`);
+      assert.equal(scene.animationKeys.size, expected.animationKeys.length, `${label}/${restart}: no partial animation registration`);
       assert.deepEqual(scene.duplicateAnimationKeys, [], `${label}/${restart}: no duplicate animation key`);
+      assert.deepEqual(scene.animationRemoveKeys, [], `${label}/${restart}: successful registration removes no key`);
       controller.setPaused(true);
       controller.setPaused(false);
       controller.notifyDeath(deathSnapshot(enemyId));
@@ -653,14 +690,39 @@ test("four fallback rows survive two pause cleanup restart cycles without presen
       assert.ok(scene.timers.every((timer) => timer.removed), `${label}/${restart}: timers released`);
       assert.equal(enemy.listenerCount("animationcomplete"), 0, `${label}/${restart}: enemy listener released`);
       assert.equal(boss.listenerCount("animationcomplete"), 0, `${label}/${restart}: Boss listener released`);
-      const registeredBeforeControllerRestart = scene.animationCreateCount;
+      const registeredBeforeControllerRestart = scene.animationCreateKeys.length;
       const restartedController = controllerFor(scene, Object.keys(FORMAL_FRAMES));
-      assert.equal(scene.animationCreateCount, registeredBeforeControllerRestart, `${label}/${restart}: controller restart does not duplicate animations`);
-      assert.equal(scene.animationKeys.size, expected.animationCreateCount, `${label}/${restart}: controller restart keeps exact registrations`);
+      assert.equal(scene.animationCreateKeys.length, registeredBeforeControllerRestart, `${label}/${restart}: controller restart does not duplicate animations`);
+      assert.deepEqual(scene.animationCreateKeys, expected.animationKeys, `${label}/${restart}: controller restart keeps exact registered identities`);
+      assert.deepEqual(scene.animationCreateAttemptKeys, expected.animationKeys, `${label}/${restart}: controller restart has no duplicate create attempt`);
+      assert.equal(scene.animationGenerateCount, expected.animationKeys.length, `${label}/${restart}: controller restart has no duplicate generation`);
+      assert.equal(scene.animationKeys.size, expected.animationKeys.length, `${label}/${restart}: controller restart keeps exact registrations`);
       assert.deepEqual(scene.duplicateAnimationKeys, [], `${label}/${restart}: controller restart keeps unique animations`);
+      assert.deepEqual(scene.animationRemoveKeys, [], `${label}/${restart}: controller restart removes no key`);
       restartedController.destroy();
     }
   }
+});
+
+// Break caught: one failed formal clip leaves its already-created sibling registered or prevents the affected actor's legacy fallback.
+test("failed formal batch rolls back only its partial R-17 registration", () => {
+  const scene = createScene({ failAnimationKey: "r17-rift-skimmer-action-hit" });
+  const controller = controllerFor(scene, Object.keys(FORMAL_FRAMES));
+  const actor = createActor({ textureKey: "enemy-crawler" });
+  controller.trackActor(actor, { enemyType: "crawler", isBoss: false });
+
+  assert.deepEqual(scene.animationRemoveKeys, ["r17-rift-skimmer-action-move"]);
+  assert.equal(scene.animationCreateAttemptKeys.includes("r17-rift-skimmer-action-move"), true);
+  assert.equal(scene.animationCreateAttemptKeys.includes("r17-rift-skimmer-action-hit"), true);
+  assert.equal(scene.animationKeys.has("r17-rift-skimmer-action-move"), false);
+  assert.equal(scene.animationKeys.has("r17-rift-skimmer-action-hit"), false);
+  assert.equal(scene.animationKeys.has("r17-rift-skimmer-action-death"), false);
+  assert.equal(scene.animationKeys.has("r17-rift-skimmer-action-pierce"), false);
+  assert.deepEqual(scene.duplicateAnimationKeys, []);
+  assert.equal(getEnemyPresentationMode(scene, "crawler").family, "legacy");
+  assert.equal(actor.texture.key, "r17-rift-skimmer");
+  assert.equal(actor.visible, true);
+  controller.destroy();
 });
 
 // Break caught: sync creates arrays, snapshots, sprites, tweens or other per-frame objects.
