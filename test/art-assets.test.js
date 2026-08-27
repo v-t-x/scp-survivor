@@ -1304,15 +1304,19 @@ test("production sheet admission remains an immutable exact-nine transaction", (
 // Break caught: Gate 5 governance loses its complete prompt ledger map or exact admitted-set registration.
 test("asset register keeps the complete P74 through P84 map and authoritative Gate 5 admission", async () => {
   const register = await readFile(new URL("../docs/art/asset-register.md", import.meta.url), "utf8");
+  const acceptedStatus = "Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言）";
   const promptIds = [...register.matchAll(/^### P(\d+)\b/gm)].map(([, id]) => Number(id));
   assert.deepEqual(promptIds.filter((id) => id >= 74 && id <= 84), [
     74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84
   ]);
+  assert.match(register, /项目所有者于 2026-08-27 明确接受 Gate 5/);
+  assert.match(register, /此前缺少的逐类型连续动作、完整 SCP-049 状态、普通胜利和第二次完整重启证据/);
+  assert.equal((register.match(/Gate 5 integrated acceptance pending/g) || []).length, 0);
   for (const { key } of enemyBossCandidateSheets) {
     const registerAsset = key.replace(/^enemy-scp049/, "scp-049");
     assert.match(
       register,
-      new RegExp(`\\| ${registerAsset} \\|[^\\n]*production admitted after Gates 1–4; Gate 5 integrated acceptance pending \\|`)
+      new RegExp(`\\| ${registerAsset} \\|[^\\n]*${acceptedStatus} \\|`)
     );
   }
 });
