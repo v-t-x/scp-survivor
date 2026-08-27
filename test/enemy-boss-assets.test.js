@@ -75,6 +75,70 @@ const gate2Expected = {
   },
 };
 
+const gate3Expected = {
+  r17DrifterActionSheet: {
+    productionPath: "assets/art/enemies/r17-drifter-action-sheet.png",
+    frameWidth: 48,
+    frameHeight: 48,
+    frameCount: 18,
+    sheetWidth: 864,
+    sheetHeight: 48,
+    sha256: "9f9f07490834273bc742bddca319fe9fc0529e8993987534505eb8cf449152fd",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      contact: { start: 14, end: 17, fps: 12, repeat: 0 },
+    },
+  },
+  r17PulseSacActionSheet: {
+    productionPath: "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+    frameWidth: 48,
+    frameHeight: 48,
+    frameCount: 20,
+    sheetWidth: 960,
+    sheetHeight: 48,
+    sha256: "5544920457dce1b8ef0dec09103a5568b7707294d97fc266e9adccd2125d516d",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      shoot: { start: 14, end: 19, fps: 10, repeat: 0, releaseFrame: 18 },
+    },
+  },
+  r17CarapaceGateActionSheet: {
+    productionPath: "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+    frameWidth: 64,
+    frameHeight: 64,
+    frameCount: 22,
+    sheetWidth: 1408,
+    sheetHeight: 64,
+    sha256: "4775a31f1341d245725fa569da28fb38476024c5de6205cb323f91cf0694c776",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      brace: { start: 14, end: 17, fps: 5, repeat: 0 },
+      charge: { start: 18, end: 21, fps: 9, repeat: -1 },
+    },
+  },
+  r17BroodMassActionSheet: {
+    productionPath: "assets/art/enemies/r17-brood-mass-action-sheet.png",
+    frameWidth: 64,
+    frameHeight: 64,
+    frameCount: 22,
+    sheetWidth: 1408,
+    sheetHeight: 64,
+    sha256: "d86b730ab9aae6c24769779eb9b6db5ea436e0f70f1049d69d11d2f282f1fdb6",
+    clips: {
+      move: { start: 0, end: 5, fps: 5, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      split: { start: 14, end: 21, fps: 12, repeat: 0 },
+    },
+  },
+};
+
 // Break caught: a public action-sheet key/path changes while existing production keys remain in the manifest.
 test("enemy and SCP-049 action contract has the exact nine public key/path mappings", async () => {
   const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
@@ -90,6 +154,31 @@ test("enemy and SCP-049 action contract has the exact nine public key/path mappi
 test("Gate 2 contract locks exact paths, final dimensions, frame counts and clip ranges", async () => {
   const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
   for (const [id, expectedEntry] of Object.entries(gate2Expected)) {
+    const actual = contract[id];
+    const { sha256, ...expectedContract } = expectedEntry;
+    assert.deepEqual({
+      productionPath: actual?.productionPath,
+      frameWidth: actual?.frameWidth,
+      frameHeight: actual?.frameHeight,
+      frameCount: actual?.frameCount,
+      sheetWidth: actual?.sheetWidth,
+      sheetHeight: actual?.sheetHeight,
+      clips: actual?.clips,
+    }, expectedContract, id);
+
+    const buffer = await fs.readFile(path.join(root, "public", expectedEntry.productionPath));
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${id} SHA-256`
+    );
+  }
+});
+
+// Break caught: a Gate 3 sheet changes its public path, geometry or role-action timing before assembly.
+test("Gate 3 contract locks exact paths, final dimensions, frame counts and clip ranges", async () => {
+  const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
+  for (const [id, expectedEntry] of Object.entries(gate3Expected)) {
     const actual = contract[id];
     const { sha256, ...expectedContract } = expectedEntry;
     assert.deepEqual({

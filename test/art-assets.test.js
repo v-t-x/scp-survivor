@@ -201,6 +201,70 @@ const gate2CandidateSheets = [
   }
 ];
 
+const gate3CandidateSheets = [
+  {
+    property: "r17DrifterActionSheet",
+    key: "r17-drifter-action-sheet",
+    path: "assets/art/enemies/r17-drifter-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [864, 48],
+    frameCount: 18,
+    sha256: "9f9f07490834273bc742bddca319fe9fc0529e8993987534505eb8cf449152fd",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      contact: { start: 14, end: 17, fps: 12, repeat: 0 }
+    }
+  },
+  {
+    property: "r17PulseSacActionSheet",
+    key: "r17-pulse-sac-action-sheet",
+    path: "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [960, 48],
+    frameCount: 20,
+    sha256: "5544920457dce1b8ef0dec09103a5568b7707294d97fc266e9adccd2125d516d",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      shoot: { start: 14, end: 19, fps: 10, repeat: 0, releaseFrame: 18 }
+    }
+  },
+  {
+    property: "r17CarapaceGateActionSheet",
+    key: "r17-carapace-gate-action-sheet",
+    path: "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "4775a31f1341d245725fa569da28fb38476024c5de6205cb323f91cf0694c776",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      brace: { start: 14, end: 17, fps: 5, repeat: 0 },
+      charge: { start: 18, end: 21, fps: 9, repeat: -1 }
+    }
+  },
+  {
+    property: "r17BroodMassActionSheet",
+    key: "r17-brood-mass-action-sheet",
+    path: "assets/art/enemies/r17-brood-mass-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "d86b730ab9aae6c24769779eb9b6db5ea436e0f70f1049d69d11d2f282f1fdb6",
+    clips: {
+      move: { start: 0, end: 5, fps: 5, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      split: { start: 14, end: 21, fps: 12, repeat: 0 }
+    }
+  }
+];
+
 const r17TextureKeys = {
   r17Drifter: "r17-drifter",
   r17RiftSkimmer: "r17-rift-skimmer",
@@ -700,6 +764,113 @@ for (const {
     );
   });
 }
+
+for (const {
+  property,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  clips
+} of gate3CandidateSheets) {
+  // Break caught: this exact Gate 3 candidate is missing or diverges from its dev-only real-asset contract.
+  test(`Gate 3 candidate ${key} has its exact real action sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual({
+      productionPath: contract[property]?.productionPath,
+      frameWidth: contract[property]?.frameWidth,
+      frameHeight: contract[property]?.frameHeight,
+      frameCount: contract[property]?.frameCount,
+      sheetWidth: contract[property]?.sheetWidth,
+      sheetHeight: contract[property]?.sheetHeight,
+      clips: contract[property]?.clips
+    }, {
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      clips
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${key} SHA-256`
+    );
+
+    const { pixels } = decodeRgbaPng(buffer);
+    let greenDominantPixels = 0;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      if (pixels[offset + 3] === 0) continue;
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      if (green >= 40 && green - red >= 12 && green - blue >= 12) {
+        greenDominantPixels += 1;
+      }
+    }
+    assert.equal(greenDominantPixels, 0, `${key} has non-cyan green/olive material residue`);
+  });
+}
+
+// Break caught: the Pulse Sac aperture visibly relights after the death clip has already extinguished.
+test("Gate 3 Pulse Sac death dims once and stays cyan-free after global frame 9", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/enemies/r17-pulse-sac-action-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const saturatedCyanTealByFrame = [];
+
+  for (let frameIndex = 8; frameIndex <= 13; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 48, 48, frameIndex);
+    let saturatedCyanTealPixels = 0;
+    for (let offset = 0; offset < frame.length; offset += 4) {
+      if (frame[offset + 3] === 0) continue;
+      const red = frame[offset];
+      const green = frame[offset + 1];
+      const blue = frame[offset + 2];
+      if (
+        red <= 100
+        && green >= 100
+        && blue >= 100
+        && green - red >= 30
+        && blue - red >= 30
+        && Math.abs(green - blue) <= 24
+      ) {
+        saturatedCyanTealPixels += 1;
+      }
+    }
+    saturatedCyanTealByFrame.push(saturatedCyanTealPixels);
+  }
+
+  assert.deepEqual(
+    saturatedCyanTealByFrame,
+    [20, 1, 0, 0, 0, 0],
+    "Pulse Sac death must visibly dim once, extinguish, and never relight"
+  );
+});
 
 // Break caught: a partial candidate promotion leaks into production or the exported Set can be mutated at runtime.
 test("production sheet admission remains an immutable exact-nine transaction", () => {
