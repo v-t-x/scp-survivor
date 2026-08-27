@@ -265,6 +265,40 @@ const gate3CandidateSheets = [
   }
 ];
 
+const gate4CandidateSheets = [
+  {
+    property: "enemyScp049LocomotionSheet",
+    kind: "scp049-locomotion",
+    key: "enemy-scp049-locomotion-sheet",
+    path: "assets/art/characters/scp-049-locomotion-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    finalSize: [800, 384],
+    frameCount: 40,
+    sha256: "fe7c23bc628f9cad458f7864fde1937d8d5774294137ae886d9b6cbf6c068c21",
+    directions: ["down", "left", "right", "up"],
+    rowClips: {
+      idle: { start: 0, end: 3, fps: 5, repeat: -1 },
+      walk: { start: 4, end: 9, fps: 8, repeat: -1 }
+    }
+  },
+  {
+    property: "enemyScp049ActionSheet",
+    kind: "scp049-action",
+    key: "enemy-scp049-action-sheet",
+    path: "assets/art/characters/scp-049-action-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    finalSize: [1520, 96],
+    frameCount: 19,
+    sha256: "96b8e0cd49405c538d4744b004e61dc2bcfcb6265dba12651d30600bae76413d",
+    clips: {
+      "frenzy-enter": { start: 0, end: 4, fps: 10, repeat: 0 },
+      "frenzy-loop": { start: 5, end: 8, fps: 8, repeat: -1 },
+      "hit-overlay": { start: 9, end: 10, fps: 24, repeat: 0 },
+      recontain: { start: 11, end: 18, fps: 12, repeat: 0 }
+    }
+  }
+];
+
 const r17TextureKeys = {
   r17Drifter: "r17-drifter",
   r17RiftSkimmer: "r17-rift-skimmer",
@@ -384,8 +418,12 @@ function getFramePixels(pixels, sheetWidth, frameIndex) {
 
 function getEnemyFramePixels(pixels, sheetWidth, frameWidth, frameHeight, frameIndex) {
   const result = Buffer.alloc(frameWidth * frameHeight * 4);
+  const framesPerRow = sheetWidth / frameWidth;
+  assert.equal(Number.isInteger(framesPerRow), true, "spritesheet width must contain whole frames");
+  const frameX = (frameIndex % framesPerRow) * frameWidth;
+  const frameY = Math.floor(frameIndex / framesPerRow) * frameHeight;
   for (let y = 0; y < frameHeight; y += 1) {
-    const sourceStart = ((y * sheetWidth) + (frameIndex * frameWidth)) * 4;
+    const sourceStart = (((frameY + y) * sheetWidth) + frameX) * 4;
     pixels.copy(result, y * frameWidth * 4, sourceStart, sourceStart + frameWidth * 4);
   }
   return result;
@@ -484,6 +522,123 @@ function getEnemyPairDifference(firstFrame, secondFrame) {
     changedPixelRatio: changedPixels / visibleUnionPixels,
     alphaShapeDifferenceRatio: alphaShapePixels / visibleUnionPixels
   };
+}
+
+function mirrorEnemyFrameHorizontally(framePixels, frameWidth, frameHeight) {
+  const mirrored = Buffer.alloc(framePixels.length);
+  for (let y = 0; y < frameHeight; y += 1) {
+    for (let x = 0; x < frameWidth; x += 1) {
+      const sourceOffset = (y * frameWidth + x) * 4;
+      const targetOffset = (y * frameWidth + frameWidth - 1 - x) * 4;
+      framePixels.copy(mirrored, targetOffset, sourceOffset, sourceOffset + 4);
+    }
+  }
+  return mirrored;
+}
+
+function getCroppedAlphaMask(framePixels, frameWidth, bbox) {
+  const mask = Buffer.alloc(bbox.width * bbox.height);
+  for (let y = 0; y < bbox.height; y += 1) {
+    for (let x = 0; x < bbox.width; x += 1) {
+      const sourceOffset = (((bbox.minY + y) * frameWidth) + bbox.minX + x) * 4 + 3;
+      mask[y * bbox.width + x] = framePixels[sourceOffset];
+    }
+  }
+  return mask;
+}
+
+function mirrorAlphaMaskHorizontally(mask, width, height) {
+  const mirrored = Buffer.alloc(mask.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      mirrored[y * width + width - 1 - x] = mask[y * width + x];
+    }
+  }
+  return mirrored;
+}
+
+function getOpaqueComponentMetrics(framePixels, frameWidth, frameHeight) {
+  const visited = new Uint8Array(frameWidth * frameHeight);
+  const components = [];
+  for (let start = 0; start < visited.length; start += 1) {
+    if (visited[start] || framePixels[start * 4 + 3] !== 255) continue;
+    const pending = [start];
+    visited[start] = 1;
+    let size = 0;
+    let minX = frameWidth;
+    let minY = frameHeight;
+    let maxX = -1;
+    let maxY = -1;
+    while (pending.length > 0) {
+      const index = pending.pop();
+      const x = index % frameWidth;
+      const y = Math.floor(index / frameWidth);
+      size += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      for (const [nextX, nextY] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight) continue;
+        const next = nextY * frameWidth + nextX;
+        if (visited[next] || framePixels[next * 4 + 3] !== 255) continue;
+        visited[next] = 1;
+        pending.push(next);
+      }
+    }
+    components.push({ size, minX, minY, maxX, maxY });
+  }
+  return components;
+}
+
+function isScp049ContainmentCyan(red, green, blue) {
+  return (
+    red <= 80
+    && green >= 90
+    && blue >= 140
+    && green - red >= 50
+    && blue - red >= 60
+  );
+}
+
+function isScp049GreenOrOlive(red, green, blue) {
+  return green >= 40 && green - red >= 12 && green - blue >= 12;
+}
+
+function auditScp049Frame(framePixels, frameWidth, frameHeight, label) {
+  const metrics = getEnemyFrameMetrics(framePixels, frameWidth, frameHeight);
+  let hiddenRgb = 0;
+  let greenWithoutContainmentCyan = 0;
+  let containmentCyan = 0;
+  let activeWineRed = 0;
+  for (let index = 0; index < frameWidth * frameHeight; index += 1) {
+    const offset = index * 4;
+    const red = framePixels[offset];
+    const green = framePixels[offset + 1];
+    const blue = framePixels[offset + 2];
+    const alpha = framePixels[offset + 3];
+    if (alpha === 0) {
+      if (red || green || blue) hiddenRgb += 1;
+      continue;
+    }
+    const cyan = isScp049ContainmentCyan(red, green, blue);
+    if (cyan) containmentCyan += 1;
+    if (isScp049GreenOrOlive(red, green, blue) && !cyan) greenWithoutContainmentCyan += 1;
+    if (red >= 90 && red - green >= 45 && red - blue >= 40) activeWineRed += 1;
+  }
+  for (let x = 0; x < frameWidth; x += 1) {
+    assert.equal(framePixels[x * 4 + 3], 0, `${label} touches the top edge`);
+    assert.equal(framePixels[((frameHeight - 1) * frameWidth + x) * 4 + 3], 0, `${label} touches the bottom edge`);
+  }
+  for (let y = 0; y < frameHeight; y += 1) {
+    assert.equal(framePixels[(y * frameWidth) * 4 + 3], 0, `${label} touches the left edge`);
+    assert.equal(framePixels[(y * frameWidth + frameWidth - 1) * 4 + 3], 0, `${label} touches the right edge`);
+  }
+  assert.deepEqual(metrics.alphaValues, new Set([0, 255]), `${label} binary alpha`);
+  assert.ok(metrics.colors.size <= 32, `${label} exceeds 32 opaque colors`);
+  assert.equal(hiddenRgb, 0, `${label} has hidden RGB under transparent pixels`);
+  assert.ok(getOpaqueComponentSizes(framePixels, frameWidth, frameHeight).every((size) => size > 1), `${label} has an isolated 1px component`);
+  return { ...metrics, greenWithoutContainmentCyan, containmentCyan, activeWineRed };
 }
 
 function getVisibleFootY(framePixels) {
@@ -836,6 +991,155 @@ for (const {
     assert.equal(greenDominantPixels, 0, `${key} has non-cyan green/olive material residue`);
   });
 }
+
+for (const {
+  property,
+  kind,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  directions,
+  rowClips,
+  clips
+} of gate4CandidateSheets) {
+  // Break caught: a Gate 4 Boss sheet diverges from its real dev-only contract or leaks into production.
+  test(`Gate 4 candidate ${key} has its exact real formal-animation sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(IMAGE_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(PRODUCTION_SPRITESHEET_KEYS.has(key), false, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual(contract[property], {
+      kind,
+      textureKey: key,
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      ...(directions ? { directions, rowClips } : { clips })
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(createHash("sha256").update(buffer).digest("hex"), sha256, `${key} SHA-256`);
+  });
+}
+
+// Break caught: SCP-049 direction rows use cyan body material, soft pixels or mirrored side art.
+test("Gate 4 SCP-049 locomotion is a clean native four-direction 80x96 sheet", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/characters/scp-049-locomotion-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const frames = [];
+  const audits = [];
+
+  for (let frameIndex = 0; frameIndex < 40; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 80, 96, frameIndex);
+    const audit = auditScp049Frame(frame, 80, 96, `SCP-049 locomotion frame ${frameIndex}`);
+    assert.equal(audit.greenWithoutContainmentCyan, 0, `locomotion frame ${frameIndex} green/olive residue`);
+    assert.equal(audit.containmentCyan, 0, `locomotion frame ${frameIndex} must not have a cyan body core`);
+    frames.push(frame);
+    audits.push(audit);
+  }
+
+  for (let clipFrame = 0; clipFrame < 10; clipFrame += 1) {
+    const left = frames[10 + clipFrame];
+    const right = frames[20 + clipFrame];
+    assert.equal(left.equals(right), false, `left/right frame ${clipFrame} is byte-identical`);
+    assert.equal(left.equals(mirrorEnemyFrameHorizontally(right, 80, 96)), false, `left/right frame ${clipFrame} is a full-frame mirror`);
+
+    const leftBox = audits[10 + clipFrame].bbox;
+    const rightBox = audits[20 + clipFrame].bbox;
+    const leftMask = getCroppedAlphaMask(left, 80, leftBox);
+    const rightMask = getCroppedAlphaMask(right, 80, rightBox);
+    const sameDimensions = leftBox.width === rightBox.width && leftBox.height === rightBox.height;
+    assert.equal(sameDimensions && leftMask.equals(rightMask), false, `left/right frame ${clipFrame} has the same cropped alpha`);
+    assert.equal(
+      sameDimensions && leftMask.equals(mirrorAlphaMaskHorizontally(rightMask, rightBox.width, rightBox.height)),
+      false,
+      `left/right frame ${clipFrame} has mirrored cropped alpha`
+    );
+  }
+});
+
+// Break caught: the formal hit becomes a replacement body or recontainment shrinks to disappearance.
+test("Gate 4 SCP-049 actions keep sparse hit feedback and collapse into an inactive contained remnant", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/characters/scp-049-action-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const frames = [];
+  const audits = [];
+
+  for (let frameIndex = 0; frameIndex < 19; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 80, 96, frameIndex);
+    const audit = auditScp049Frame(frame, 80, 96, `SCP-049 action frame ${frameIndex}`);
+    assert.equal(audit.greenWithoutContainmentCyan, 0, `action frame ${frameIndex} non-cyan green/olive residue`);
+    frames.push(frame);
+    audits.push(audit);
+  }
+
+  assert.deepEqual(
+    audits.map(({ containmentCyan }) => containmentCyan),
+    [...Array(16).fill(0), 118, 91, 41],
+    "cyan must exist only as the final external containment nodes"
+  );
+  for (let frameIndex = 16; frameIndex <= 18; frameIndex += 1) {
+    const cyanRatio = audits[frameIndex].containmentCyan / audits[frameIndex].visiblePixels;
+    assert.ok(cyanRatio >= 0.01 && cyanRatio <= 0.08, `recontain frame ${frameIndex} cyan ratio`);
+  }
+
+  const minimumFrenzyLoopArea = Math.min(...audits.slice(5, 9).map(({ visiblePixels }) => visiblePixels));
+  for (let frameIndex = 9; frameIndex <= 10; frameIndex += 1) {
+    const audit = audits[frameIndex];
+    const occupancy = audit.visiblePixels / (80 * 96);
+    assert.ok(occupancy >= 0.14 && occupancy <= 0.18, `hit-overlay frame ${frameIndex} occupancy`);
+    assert.ok(audit.visiblePixels / minimumFrenzyLoopArea <= 0.35, `hit-overlay frame ${frameIndex} must stay local`);
+    assert.ok(audit.bbox.height >= 90, `hit-overlay frame ${frameIndex} keeps full-height registration`);
+    const components = getOpaqueComponentMetrics(frames[frameIndex], 80, 96)
+      .sort((first, second) => second.size - first.size);
+    assert.ok(components.length >= 2, `hit-overlay frame ${frameIndex} needs two registered fragments`);
+    assert.ok(components[0].size / audit.visiblePixels < 0.70, `hit-overlay frame ${frameIndex} became one body`);
+    assert.ok(components[1].size / audit.visiblePixels >= 0.25, `hit-overlay frame ${frameIndex} lost its lower fragment`);
+    const [upper, lower] = components.slice(0, 2).sort((first, second) => first.minY - second.minY);
+    assert.ok(lower.minY - upper.maxY - 1 >= 28, `hit-overlay frame ${frameIndex} fragments are not separated`);
+  }
+
+  for (let frameIndex = 12; frameIndex <= 15; frameIndex += 1) {
+    assert.ok(audits[frameIndex].visiblePixels < audits[frameIndex - 1].visiblePixels, `collapse frame ${frameIndex} must lose tension`);
+  }
+  for (let frameIndex = 17; frameIndex <= 18; frameIndex += 1) {
+    assert.ok(audits[frameIndex].visiblePixels < audits[frameIndex - 1].visiblePixels, `containment frame ${frameIndex} must tighten`);
+  }
+
+  const loopAverageArea = audits.slice(5, 9)
+    .reduce((total, { visiblePixels }) => total + visiblePixels, 0) / 4;
+  const loopHeight = Math.max(...audits.slice(5, 9).map(({ height }) => height));
+  const finalRemnant = audits[18];
+  assert.ok(finalRemnant.visiblePixels / loopAverageArea >= 0.25 && finalRemnant.visiblePixels / loopAverageArea <= 0.35);
+  assert.ok(finalRemnant.height / loopHeight >= 0.35 && finalRemnant.height / loopHeight <= 0.45);
+  assert.equal(finalRemnant.visiblePixels / audits[11].visiblePixels >= 0.50, true, "final remnant must not shrink away");
+  assert.equal(finalRemnant.activeWineRed, 0, "final remnant must be inactive");
+  assert.equal(finalRemnant.bottomY, 94, "final remnant must remain grounded inside the frame");
+});
 
 // Break caught: the Pulse Sac aperture visibly relights after the death clip has already extinguished.
 test("Gate 3 Pulse Sac death dims once and stays cyan-free after global frame 9", async () => {

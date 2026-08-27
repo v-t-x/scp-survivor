@@ -37,6 +37,9 @@ function createDisplay({ x = 240, y = 180, textureKey = "enemy-scp049", scale = 
     alpha: 1,
     depth: 12,
     flipX: false,
+    tint: null,
+    tintFill: null,
+    clearTintCalls: 0,
     texture: { key: textureKey },
     frame: { name: 0 },
     played: [],
@@ -48,6 +51,9 @@ function createDisplay({ x = 240, y = 180, textureKey = "enemy-scp049", scale = 
     setFlipX(value) { this.flipX = value; return this; },
     setAlpha(value) { this.alpha = value; return this; },
     setDepth(value) { this.depth = value; return this; },
+    setTint(value) { this.tint = value; this.tintFill = null; return this; },
+    setTintFill(value) { this.tintFill = value; this.tint = null; return this; },
+    clearTint() { this.tint = null; this.tintFill = null; this.clearTintCalls += 1; return this; },
     setVisible(value) { this.visible = value; return this; },
     setActive(value) { this.active = value; return this; },
     setPosition(nextX, nextY) { this.x = nextX; this.y = nextY; return this; },
@@ -290,6 +296,159 @@ test("SCP-049 hit reuses one display-only overlay and never swaps the locomotion
   controller.sync(200, 16);
   assert.equal(scene.sprites.length, 1);
   assert.equal(actor.texture.key, locomotionTexture);
+});
+
+// Break caught: the formal frenzy clip plays under the legacy whole-body red tint.
+test("a successfully playing formal frenzy action suppresses the red fallback on every sync", () => {
+  const scene = createScene();
+  const actor = createDisplay();
+  const controller = createController(scene);
+  const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+
+  actor.bossState = "frenzy";
+  actor.setTint(0xff5a6e);
+  controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-enter", atMs: 100 }));
+  controller.sync(100, 16);
+
+  assert.equal(actor.currentAnimation, "enemy-scp049-frenzy-enter");
+  assert.equal(actor.tint, null);
+  const clearsAfterStart = actor.clearTintCalls;
+
+  actor.setTint(0xff5a6e);
+  controller.sync(116, 16);
+  assert.equal(actor.tint, null);
+  assert.equal(actor.clearTintCalls, clearsAfterStart + 1);
+});
+
+// Break caught: a missing or throwing formal action clears the only visible frenzy fallback.
+test("formal frenzy suppresses red tint only after actor.play succeeds", () => {
+  for (const failure of ["missing-animation", "missing-play", "throwing-play"]) {
+    const scene = createScene();
+    const actor = createDisplay();
+    const controller = createController(scene);
+    const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+    actor.bossState = "frenzy";
+    actor.setTint(0xff5a6e);
+
+    if (failure === "missing-animation") {
+      const exists = scene.anims.exists;
+      scene.anims.exists = (key) => key === "enemy-scp049-frenzy-enter" ? false : exists(key);
+    } else if (failure === "missing-play") {
+      actor.play = undefined;
+    } else {
+      actor.play = () => { throw new Error("formal action failed"); };
+    }
+
+    controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-enter", atMs: 100 }));
+    assert.doesNotThrow(() => controller.sync(100, 16), failure);
+    assert.equal(actor.tint, 0xff5a6e, failure);
+    assert.equal(actor.clearTintCalls, 0, failure);
+  }
+});
+
+// Break caught: a successful enter leaves stale formal state that clears red after the loop clip fails.
+test("a failed frenzy-loop transition restores locomotion and preserves the red fallback", () => {
+  for (const failure of ["missing-animation", "missing-play", "throwing-play"]) {
+    const scene = createScene();
+    const actor = createDisplay();
+    const controller = createController(scene);
+    const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+    const play = actor.play;
+
+    controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-enter", atMs: 100 }));
+    if (failure === "missing-animation") {
+      const exists = scene.anims.exists;
+      scene.anims.exists = (key) => key === "enemy-scp049-frenzy-loop" ? false : exists(key);
+    } else if (failure === "missing-play") {
+      actor.play = undefined;
+    } else {
+      actor.play = function playExceptLoop(key, ignoreIfPlaying) {
+        if (key === "enemy-scp049-frenzy-loop") throw new Error("loop failed");
+        return play.call(this, key, ignoreIfPlaying);
+      };
+    }
+    actor.bossState = "frenzy";
+    actor.setTint(0xff5a6e);
+
+    assert.doesNotThrow(() => controller.sync(601, 16), failure);
+    assert.equal(actor.texture.key, "enemy-scp049-locomotion-sheet", failure);
+    assert.equal(actor.tint, 0xff5a6e, failure);
+  }
+});
+
+// Break caught: the formal hit overlay is visible but the legacy full-body white flash remains on top.
+test("a successfully playing formal hit overlay suppresses the white fallback on every sync", () => {
+  const scene = createScene();
+  const actor = createDisplay();
+  const controller = createController(scene);
+  const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+
+  actor.setTintFill(0xffffff);
+  controller.notifyHit(Object.freeze({ presentationId, lethal: false, atMs: 100 }));
+  assert.equal(scene.sprites[0].currentAnimation, "enemy-scp049-hit-overlay");
+  assert.equal(actor.tintFill, null);
+  const clearsAfterStart = actor.clearTintCalls;
+
+  actor.setTintFill(0xffffff);
+  controller.sync(116, 16);
+  assert.equal(actor.tintFill, null);
+  assert.equal(actor.clearTintCalls, clearsAfterStart + 1);
+});
+
+// Break caught: overlay construction or playback failure erases the legacy white hit flash.
+test("SCP-049 hit suppresses white tint only after overlay.play succeeds", () => {
+  for (const failure of ["formal-locomotion", "missing-play", "throwing-play"]) {
+    const scene = createScene({ locomotion: true, action: failure !== "formal-locomotion" });
+    const actor = createDisplay();
+    if (failure !== "formal-locomotion") {
+      const addSprite = scene.add.sprite;
+      scene.add.sprite = (...args) => {
+        const overlay = addSprite(...args);
+        overlay.play = failure === "missing-play"
+          ? undefined
+          : () => { throw new Error("overlay play failed"); };
+        return overlay;
+      };
+    }
+    const controller = createController(scene);
+    const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+    actor.setTintFill(0xffffff);
+
+    assert.doesNotThrow(
+      () => controller.notifyHit(Object.freeze({ presentationId, lethal: false, atMs: 100 })),
+      failure
+    );
+    assert.equal(actor.tintFill, 0xffffff, failure);
+    assert.equal(actor.clearTintCalls, 0, failure);
+  }
+});
+
+// Break caught: frenzy suppression erases the white fallback after a failed overlay attempt.
+test("a failed hit overlay temporarily outranks formal frenzy tint suppression", () => {
+  const scene = createScene();
+  const actor = createDisplay();
+  const controller = createController(scene);
+  const presentationId = controller.trackActor(actor, { enemyType: "scp049", isBoss: true });
+  actor.bossState = "frenzy";
+  controller.notifyAction(Object.freeze({ presentationId, action: "frenzy-enter", atMs: 100 }));
+  controller.sync(100, 16);
+
+  const addSprite = scene.add.sprite;
+  scene.add.sprite = (...args) => {
+    const overlay = addSprite(...args);
+    overlay.play = () => { throw new Error("overlay play failed"); };
+    return overlay;
+  };
+  actor.setTintFill(0xffffff);
+  controller.notifyHit(Object.freeze({ presentationId, lethal: false, atMs: 200 }));
+  actor.setTint(0xff5a6e);
+  controller.sync(216, 16);
+  assert.equal(actor.tintFill, 0xffffff, "the existing 80ms white fallback outranks the next-frame frenzy tint");
+
+  actor.clearTint();
+  actor.setTint(0xff5a6e);
+  controller.sync(281, 16);
+  assert.equal(actor.tint, null, "formal frenzy resumes suppression after the fallback window");
 });
 
 // Break caught: terminal recontainment is registered as an enemy/transient or paused by victory freeze.

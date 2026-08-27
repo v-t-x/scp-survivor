@@ -1,4 +1,5 @@
 import { TEXTURES } from "../assets/manifest.js";
+import { BALANCE } from "../config/balance.js";
 import {
   applyEnemyPresentation,
   getEnemyAnimationKey,
@@ -15,6 +16,7 @@ export const SCP049_TERMINAL_TIMEOUT_MS = 900;
 const LIVE_ACTOR_DESTROY_DELAY_MS = 90;
 const R17_HIT_HOLD_MS = 100;
 const RELEASE_HOLD_MS = 200;
+const LEGACY_ENEMY_HIT_TINT = 0xffffff;
 
 const KNOWN_CANDIDATE_IDS = new Set([
   TEXTURES.r17DrifterActionSheet,
@@ -210,7 +212,10 @@ export function createEnemyPresentationController(scene, options = {}) {
       roleUntilMs: -1,
       releaseAtMs: -1,
       hitUntilMs: -1,
-      hitOverlay: null
+      hitOverlay: null,
+      formalFrenzyActionKey: null,
+      formalHitSuppressionUntilMs: -1,
+      formalHitFallbackUntilMs: -1
     };
     if (isBoss) {
       record.displayTextureKey = record.mode.locomotionTextureKey ?? record.mode.textureKey ?? null;
@@ -367,6 +372,93 @@ export function createEnemyPresentationController(scene, options = {}) {
     }
   }
 
+  function clearFormalBossTint(record) {
+    try {
+      if (typeof record.actor?.clearTint !== "function") return false;
+      record.actor.clearTint();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function preserveLegacyBossHitTint(record) {
+    try {
+      if (typeof record.actor?.setTintFill !== "function") return false;
+      record.actor.setTintFill(LEGACY_ENEMY_HIT_TINT);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function restoreScp049Locomotion(record) {
+    try {
+      if (!record.mode.locomotionTextureKey) return;
+      if (record.displayTextureKey !== record.mode.locomotionTextureKey) {
+        applyTextureAndScalePreservingBody(record.actor, record.mode.locomotionTextureKey, 1);
+        record.displayTextureKey = record.mode.locomotionTextureKey;
+      }
+      record.lastClip = null;
+    } catch {
+      // A failed formal action leaves the gameplay actor visible for the legacy tint fallback.
+    }
+  }
+
+  function tryPlayScp049Action(record, bossRole) {
+    const actionKey = `enemy-scp049-${bossRole}`;
+    if (
+      record.mode.family !== "formal"
+      || !scene?.anims?.exists?.(actionKey)
+      || typeof record.actor?.play !== "function"
+    ) {
+      record.formalFrenzyActionKey = null;
+      if (record.mode.family === "formal") restoreScp049Locomotion(record);
+      return false;
+    }
+    try {
+      if (record.displayTextureKey !== record.mode.actionTextureKey) {
+        applyTextureAndScalePreservingBody(record.actor, record.mode.actionTextureKey, 1);
+        record.displayTextureKey = record.mode.actionTextureKey;
+      }
+      if (record.formalFrenzyActionKey !== actionKey || record.lastClip !== bossRole) {
+        record.actor.play(actionKey, true);
+      }
+      record.lastClip = bossRole;
+      record.formalFrenzyActionKey = actionKey;
+      return true;
+    } catch {
+      record.formalFrenzyActionKey = null;
+      restoreScp049Locomotion(record);
+      return false;
+    }
+  }
+
+  function tryPlayScp049HitOverlay(record, atMs) {
+    const overlay = ensureHitOverlay(record);
+    if (!overlay || typeof overlay.play !== "function") {
+      record.formalHitSuppressionUntilMs = -1;
+      record.formalHitFallbackUntilMs = atMs + BALANCE.feedback.enemyHitFlashMs;
+      if (overlay) destroyHitOverlay(record);
+      return false;
+    }
+    try {
+      overlay.setPosition?.(record.actor.x, record.actor.y);
+      overlay.setVisible?.(true);
+      overlay.play("enemy-scp049-hit-overlay", true);
+      record.hitUntilMs = atMs + R17_HIT_HOLD_MS;
+      record.formalHitSuppressionUntilMs = record.hitUntilMs;
+      record.formalHitFallbackUntilMs = -1;
+      clearFormalBossTint(record);
+      return true;
+    } catch {
+      record.formalHitSuppressionUntilMs = -1;
+      record.formalHitFallbackUntilMs = atMs + BALANCE.feedback.enemyHitFlashMs;
+      destroyHitOverlay(record);
+      return false;
+    }
+  }
+
   function syncScp049(record, elapsedMs) {
     if (record.mode.family !== "formal" && record.mode.family !== "formal-locomotion") return;
     const actor = record.actor;
@@ -376,17 +468,11 @@ export function createEnemyPresentationController(scene, options = {}) {
 
     const bossRole = isRoleLocked(record, elapsedMs) ? record.roleClip : getBossRole(actor);
     if (record.roleClip !== null && !isRoleLocked(record, elapsedMs)) record.roleClip = null;
+    let formalFrenzyPlayed = false;
     if (record.mode.family === "formal" && bossRole !== null) {
-      const actionKey = `enemy-scp049-${bossRole}`;
-      if (scene?.anims?.exists?.(actionKey)) {
-        if (record.displayTextureKey !== record.mode.actionTextureKey) {
-          applyTextureAndScalePreservingBody(actor, record.mode.actionTextureKey, 1);
-          record.displayTextureKey = record.mode.actionTextureKey;
-        }
-        if (record.lastClip !== bossRole) actor.play?.(actionKey, true);
-        record.lastClip = bossRole;
-      }
+      formalFrenzyPlayed = tryPlayScp049Action(record, bossRole);
     } else {
+      record.formalFrenzyActionKey = null;
       if (record.displayTextureKey !== record.mode.locomotionTextureKey) {
         applyTextureAndScalePreservingBody(actor, record.mode.locomotionTextureKey, 1);
         record.displayTextureKey = record.mode.locomotionTextureKey;
@@ -406,6 +492,14 @@ export function createEnemyPresentationController(scene, options = {}) {
       overlay.setDepth?.((actor.depth ?? 12) + 1);
       const hitVisible = elapsedMs <= record.hitUntilMs;
       overlay.setVisible?.(hitVisible);
+    }
+
+    const preserveLegacyHitTint = elapsedMs <= record.formalHitFallbackUntilMs;
+    const formalHitPlaying = elapsedMs <= record.formalHitSuppressionUntilMs;
+    if (preserveLegacyHitTint) {
+      preserveLegacyBossHitTint(record);
+    } else if (formalFrenzyPlayed || formalHitPlaying) {
+      clearFormalBossTint(record);
     }
   }
 
@@ -444,6 +538,8 @@ export function createEnemyPresentationController(scene, options = {}) {
       record.roleClip = null;
       record.roleUntilMs = -1;
       record.hitUntilMs = -1;
+      record.formalFrenzyActionKey = null;
+      record.formalHitSuppressionUntilMs = -1;
       return;
     }
     const atMs = Number.isFinite(snapshot.atMs) ? snapshot.atMs : 0;
@@ -453,6 +549,10 @@ export function createEnemyPresentationController(scene, options = {}) {
     record.roleClip = snapshot.action;
     record.roleUntilMs = atMs + durationMs;
     record.hitUntilMs = -1;
+    if (record.isBoss && snapshot.action === "frenzy-enter") {
+      const played = tryPlayScp049Action(record, snapshot.action);
+      if (played && atMs > record.formalHitFallbackUntilMs) clearFormalBossTint(record);
+    }
   }
 
   function notifyHit(snapshot) {
@@ -469,15 +569,11 @@ export function createEnemyPresentationController(scene, options = {}) {
         if (remainingMs > 0 && remainingMs <= 400) return;
       }
     }
-    record.hitUntilMs = atMs + R17_HIT_HOLD_MS;
     if (record.isBoss) {
-      const overlay = ensureHitOverlay(record);
-      if (overlay) {
-        overlay.setPosition?.(record.actor.x, record.actor.y);
-        overlay.setVisible?.(true);
-        overlay.play?.("enemy-scp049-hit-overlay", true);
-      }
+      tryPlayScp049HitOverlay(record, atMs);
+      return;
     }
+    record.hitUntilMs = atMs + R17_HIT_HOLD_MS;
   }
 
   function playLegacyDeath(record) {

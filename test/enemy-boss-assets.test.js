@@ -139,6 +139,40 @@ const gate3Expected = {
   },
 };
 
+const gate4Expected = {
+  enemyScp049LocomotionSheet: {
+    kind: "scp049-locomotion",
+    productionPath: "assets/art/characters/scp-049-locomotion-sheet.png",
+    frameWidth: 80,
+    frameHeight: 96,
+    frameCount: 40,
+    sheetWidth: 800,
+    sheetHeight: 384,
+    sha256: "fe7c23bc628f9cad458f7864fde1937d8d5774294137ae886d9b6cbf6c068c21",
+    directions: ["down", "left", "right", "up"],
+    rowClips: {
+      idle: { start: 0, end: 3, fps: 5, repeat: -1 },
+      walk: { start: 4, end: 9, fps: 8, repeat: -1 },
+    },
+  },
+  enemyScp049ActionSheet: {
+    kind: "scp049-action",
+    productionPath: "assets/art/characters/scp-049-action-sheet.png",
+    frameWidth: 80,
+    frameHeight: 96,
+    frameCount: 19,
+    sheetWidth: 1520,
+    sheetHeight: 96,
+    sha256: "96b8e0cd49405c538d4744b004e61dc2bcfcb6265dba12651d30600bae76413d",
+    clips: {
+      "frenzy-enter": { start: 0, end: 4, fps: 10, repeat: 0 },
+      "frenzy-loop": { start: 5, end: 8, fps: 8, repeat: -1 },
+      "hit-overlay": { start: 9, end: 10, fps: 24, repeat: 0 },
+      recontain: { start: 11, end: 18, fps: 12, repeat: 0 },
+    },
+  },
+};
+
 // Break caught: a public action-sheet key/path changes while existing production keys remain in the manifest.
 test("enemy and SCP-049 action contract has the exact nine public key/path mappings", async () => {
   const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
@@ -200,7 +234,40 @@ test("Gate 3 contract locks exact paths, final dimensions, frame counts and clip
   }
 });
 
-// Break caught: a candidate key or path is omitted, renamed or admitted to production before Gate 4.
+// Break caught: either formal SCP-049 sheet changes its kind, geometry, direction/clip contract or frozen bytes.
+test("Gate 4 contract locks the exact SCP-049 locomotion and action sheets", async () => {
+  const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
+  for (const [id, expectedEntry] of Object.entries(gate4Expected)) {
+    const actual = contract[id];
+    const { sha256, ...expectedContract } = expectedEntry;
+    assert.deepEqual({
+      kind: actual?.kind,
+      productionPath: actual?.productionPath,
+      frameWidth: actual?.frameWidth,
+      frameHeight: actual?.frameHeight,
+      frameCount: actual?.frameCount,
+      sheetWidth: actual?.sheetWidth,
+      sheetHeight: actual?.sheetHeight,
+      directions: actual?.directions,
+      rowClips: actual?.rowClips,
+      clips: actual?.clips,
+    }, {
+      ...expectedContract,
+      directions: expectedContract.directions,
+      rowClips: expectedContract.rowClips,
+      clips: expectedContract.clips,
+    }, id);
+
+    const buffer = await fs.readFile(path.join(root, "public", expectedEntry.productionPath));
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${id} SHA-256`
+    );
+  }
+});
+
+// Break caught: a candidate key or path is omitted, renamed or admitted before owner production admission.
 test("the manifest exposes all nine action sheets only through the gated development contract", () => {
   const actual = {};
   for (const [property, [key, assetPath]] of Object.entries(expected)) {
