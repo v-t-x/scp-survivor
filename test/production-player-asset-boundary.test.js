@@ -215,7 +215,9 @@ test("build cleanup refuses every public descendant before touching source playe
     process.chdir(root);
 
     await assert.rejects(
-      plugin.writeBundle({ dir: path.join(publicDir.toUpperCase(), "generated") }),
+      plugin.writeBundle({
+        dir: path.join(process.platform === "win32" ? publicDir.toUpperCase() : publicDir, "generated")
+      }),
       /public/i
     );
     assert.equal((await readFile(protectedAsset, "utf8")), "must-not-delete");
