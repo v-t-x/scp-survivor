@@ -251,62 +251,6 @@ export const SPRITESHEET_ASSETS = [
     key: TEXTURES.r17Bud,
     path: "assets/art/enemies/r17-bud.png",
     frameConfig: { frameWidth: 32, frameHeight: 32 }
-  }
-];
-
-function createImmutableSet(values) {
-  const valuesSet = new Set(values);
-  const rejectMutation = () => {
-    throw new TypeError("PRODUCTION_SPRITESHEET_KEYS is immutable");
-  };
-  let immutableSet = null;
-  immutableSet = new Proxy(valuesSet, {
-    get(target, property) {
-      if (["add", "delete", "clear"].includes(property)) return rejectMutation;
-      if (property === "valueOf") return () => immutableSet;
-      if (property === "forEach") {
-        return (callback, thisArg) => {
-          if (typeof callback !== "function") {
-            return Set.prototype.forEach.call(target, callback, thisArg);
-          }
-          return target.forEach((value, key) => {
-            Reflect.apply(callback, thisArg, [value, key, immutableSet]);
-          });
-        };
-      }
-      const value = Reflect.get(target, property, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    }
-  });
-  return Object.freeze(immutableSet);
-}
-
-export const PRODUCTION_SPRITESHEET_KEYS = createImmutableSet(
-  SPRITESHEET_ASSETS.map(({ key }) => key)
-);
-
-// Gate-only comparison sheets are loaded by the Vite development server and
-// stay outside the production preload contract until the owner accepts one.
-export const DEVELOPMENT_SPRITESHEET_ASSETS = [
-  {
-    key: TEXTURES.playerResponseOperativePrototypeSheet,
-    path: "assets/art/characters/player-response-operative-prototype.png",
-    frameConfig: { frameWidth: 64, frameHeight: 64 }
-  },
-  {
-    key: TEXTURES.playerResponseOperativeBodyPrototypeSheet,
-    path: "assets/art/characters/player-response-operative-body-prototype.png",
-    frameConfig: { frameWidth: 64, frameHeight: 64 }
-  },
-  {
-    key: TEXTURES.playerResponseOperativeBreacherSampleSheet,
-    path: "assets/art/characters/player-response-operative-breacher-sample.png",
-    frameConfig: { frameWidth: 64, frameHeight: 64 }
-  },
-  {
-    key: TEXTURES.playerResponseOperativeCbrnSampleSheet,
-    path: "assets/art/characters/player-response-operative-cbrn-sample.png",
-    frameConfig: { frameWidth: 64, frameHeight: 64 }
   },
   {
     key: TEXTURES.r17DrifterActionSheet,
@@ -370,6 +314,61 @@ export const DEVELOPMENT_SPRITESHEET_ASSETS = [
     frameConfig: { frameWidth: 80, frameHeight: 96 },
     previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
     candidateId: TEXTURES.enemyScp049ActionSheet
+  }
+];
+
+function createImmutableSet(values) {
+  const valuesSet = new Set(values);
+  const rejectMutation = () => {
+    throw new TypeError("PRODUCTION_SPRITESHEET_KEYS is immutable");
+  };
+  let immutableSet = null;
+  immutableSet = new Proxy(valuesSet, {
+    get(target, property) {
+      if (["add", "delete", "clear"].includes(property)) return rejectMutation;
+      if (property === "valueOf") return () => immutableSet;
+      if (property === "forEach") {
+        return (callback, thisArg) => {
+          if (typeof callback !== "function") {
+            return Set.prototype.forEach.call(target, callback, thisArg);
+          }
+          return target.forEach((value, key) => {
+            Reflect.apply(callback, thisArg, [value, key, immutableSet]);
+          });
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  return Object.freeze(immutableSet);
+}
+
+export const PRODUCTION_SPRITESHEET_KEYS = createImmutableSet(
+  SPRITESHEET_ASSETS.map(({ key }) => key)
+);
+
+// Development-only sheets remain excluded from the production preload contract.
+export const DEVELOPMENT_SPRITESHEET_ASSETS = [
+  {
+    key: TEXTURES.playerResponseOperativePrototypeSheet,
+    path: "assets/art/characters/player-response-operative-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeBodyPrototypeSheet,
+    path: "assets/art/characters/player-response-operative-body-prototype.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeBreacherSampleSheet,
+    path: "assets/art/characters/player-response-operative-breacher-sample.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
+  },
+  {
+    key: TEXTURES.playerResponseOperativeCbrnSampleSheet,
+    path: "assets/art/characters/player-response-operative-cbrn-sample.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 }
   }
 ];
 

@@ -267,16 +267,20 @@ test("Gate 4 contract locks the exact SCP-049 locomotion and action sheets", asy
   }
 });
 
-// Break caught: a candidate key or path is omitted, renamed or admitted before owner production admission.
-test("the manifest exposes all nine action sheets only through the gated development contract", () => {
+// Break caught: a promoted key or path is omitted, left in development, or overlaps the production contract.
+test("the manifest atomically admits all nine action sheets through the production contract", () => {
   const actual = {};
   for (const [property, [key, assetPath]] of Object.entries(expected)) {
     assert.equal(TEXTURES[property], key, property);
-    const developmentAsset = DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key);
-    actual[property] = [developmentAsset?.key, developmentAsset?.path];
-    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    const productionAsset = SPRITESHEET_ASSETS.find((asset) => asset.key === key);
+    actual[property] = [productionAsset?.key, productionAsset?.path];
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
   }
   assert.deepEqual(actual, expected);
+  const productionKeys = new Set(SPRITESHEET_ASSETS.map(({ key }) => key));
+  for (const { key } of DEVELOPMENT_SPRITESHEET_ASSETS) {
+    assert.equal(productionKeys.has(key), false, `${key} must not overlap production`);
+  }
 });
 
 test("the new contract preserves all eight legacy fallback identities and their paths", async () => {

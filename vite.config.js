@@ -23,18 +23,6 @@ export const NON_PRODUCTION_PLAYER_ASSETS = Object.freeze([
   "assets/art/weapons/tesla-containment-emitter-cross-front.png"
 ]);
 
-export const NON_PRODUCTION_ENEMY_BOSS_ASSETS = Object.freeze([
-  "assets/art/enemies/r17-drifter-action-sheet.png",
-  "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
-  "assets/art/enemies/r17-pulse-sac-action-sheet.png",
-  "assets/art/enemies/r17-carapace-gate-action-sheet.png",
-  "assets/art/enemies/r17-frame-gap-action-sheet.png",
-  "assets/art/enemies/r17-brood-mass-action-sheet.png",
-  "assets/art/enemies/r17-bud-action-sheet.png",
-  "assets/art/characters/scp-049-locomotion-sheet.png",
-  "assets/art/characters/scp-049-action-sheet.png"
-]);
-
 function normalizePathForContainment(candidate) {
   const resolved = path.resolve(candidate);
   return process.platform === "win32" ? resolved.toLowerCase() : resolved;
@@ -133,11 +121,7 @@ function removeDevelopmentPlayerAssets() {
     async writeBundle(outputOptions) {
       const outDir = path.resolve(outputOptions.dir ?? "dist");
       await rejectPublicOutputOverlap(outDir, resolvedPublicDir ?? path.resolve("public"));
-      const nonProductionAssets = [
-        ...NON_PRODUCTION_PLAYER_ASSETS,
-        ...NON_PRODUCTION_ENEMY_BOSS_ASSETS
-      ];
-      await Promise.all(nonProductionAssets.map(async (relativePath) => {
+      await Promise.all(NON_PRODUCTION_PLAYER_ASSETS.map(async (relativePath) => {
         const target = path.resolve(outDir, relativePath);
         const relativeTarget = path.relative(outDir, target);
         if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {

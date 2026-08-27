@@ -1372,9 +1372,9 @@ no antialiased halo and no extra objects.
 
 后处理命令为 `build_player_character_assets.py body-prototype` 与 `socket-overlay --frame-count 28`；builder 当前 SHA-256 `184bc38151c4fc1df5a9f4686e514a7c25013b1e4655fb463c43de7bb0e08c41`。当前候选的许可基础是项目自行编写的程序化像素重建；A 身份参考仍继承 Gate A2 的生成服务条款复核要求。最终准入结论等待用户查看原生 1×28 表、接点图和 960×540 实机截图后确认。
 
-## R-17 普通敌人 Gate 2 并行动作候选（待实机视觉结论）
+## R-17 普通敌人 Gate 2 动作表（Gate 5 production admission）
 
-本节新增裂吻梭、芽体与缺帧体三张完整动作表，作为旧 `r17-rift-skimmer.png`、`r17-bud.png`、`r17-frame-gap.png` 的**并行后继候选**；上方七条 legacy R-17 登记不变，这三张表不替换旧素材、不进入普通 URL，也不构成 production 或商业准入。三张表均已通过静态合同与独立静态审查，但项目所有者尚未基于真实 `960×540` 自然游玩画面逐类型给出视觉结论。因此本节三行的 Admission 统一且精确为 `Gate 2 review candidate; dev-only, not production-admitted`。
+本节登记裂吻梭、芽体与缺帧体三张正式动作表。项目所有者已接受 Gates 1–4 的九张 final，Gate 5 将三张表与其余六张一起原子加入普通 production preload/bundle；上方七条 legacy R-17 登记仍是不完整、缺失或失败时的 fallback，未被替换或删除。P74–P84 的共同、身份、动画板、角色/clip 与 SCP-049 提示/lineage 附录保持原始来源记录。
 
 外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-2/...` 均相对于该目录。外部 evidence 不随 Git 提交，仓库内候选只存在于下表 `public/...-action-sheet.png` 路径，并仍受显式开发 allowlist 与 production build 排除边界约束。
 
@@ -1482,6 +1482,16 @@ Frame Gap 四个 clip 各只有一次 ImageGen 调用，没有被拒 ImageGen at
 | `death-09` | `F459690BCD02FAA9912AB1B55A1F6B2CFE19E929318C7D4C565B6AC0924AA27C` | `E0654E688915259A05C8092D94DF98A184DE5AA974BECBA232145E5C321DA488` | unselected：Death08 已满足无 relight 合同；只保留 raw，未 key/build |
 | `snap-01` | `A367332AB38D514E73E5BF60E8FB8907C9EE16B0C6F2310A2082B244B4B13E47` | `1A5143ED69F48BBA381D8F8C5B4417557B1B960A566A5C821E1F7DCC595133DA` | rejected：大 bite/tongue 改变身份，steel ring 读到尾端 |
 | `snap-02` | `F5CE052159A6BD50FAE6DB32257A7A49560D06777FA86173143B1DDCB79295CC` | `5778E6A5CF7517037AEDD8B1EF1BB8047C2C60A769F817D151DE728A396FDB39` | rejected：额外 forked tongue/projection，并有 cyan 重复风险 |
+
+### Gate 5 final admission reconciliation — Gate 2 sheets
+
+The historical rows above retain their original Gate 2 state and complete lineage. The following final governance rows are authoritative after the owner accepted Gates 1–4; legacy R-17 PNGs remain fallback assets and were neither replaced nor deleted.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| r17-rift-skimmer-action-sheet | `789A41F703E537A9556931C66DB4C39936DE52429F4D7DFF41DD28CE66908C29` | `7B944216E4B78EAACB1A36D8AE023AC03C343E5FBDA523E56FC4EC226065E304` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/r17-rift-skimmer-prompt-ledger.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| r17-bud-action-sheet | `DF1DC4BC4FE54A7EF2A0B010F5AB7A77B9A1B69B81F1D23208DB80878BA1E8C9` | `22FF646CE9EE1DDC1B67305C95E5D4FA9C6C862A494976598AC87025E0FA99E6` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/r17-bud-prompt-ledger.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| r17-frame-gap-action-sheet | `E9D209902B2291B8996FE8CB071F6AAA0B2FE52376064D42CDEEBED661471F56` | `FF72566E4C612EE6292E6135B0F06F2E7D12AA53FE0219F82B6304AB41BCF9C5` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/static-source-audit-rift-frame-gap.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
 
 ### P74 R-17 Gate 2 common animation-board prompt
 
@@ -1633,9 +1643,9 @@ Preserve this exact approved character identity, silhouette proportions, dark bl
 Frames 1 to 4 are a missing-frame disappearance: outer masses drop out in large readable chunks while the cyan spatial gap and steel clamp hold the last stable reference. Frames 5 to 8 reconstruct into immediate forward dash: large masses re-lock around the gap, then elongate once along the committed dash without changing world position in the board.
 ```
 
-## R-17 普通敌人 Gate 3 动作候选（待实机视觉结论）
+## R-17 普通敌人 Gate 3 动作表（Gate 5 production admission）
 
-本节登记 Drifter、Pulse Sac、Carapace Gate 与 Brood Mass 四张当前锁定的 Gate 3 候选。四张 evidence final 已逐字节复制到下表精确 `public/assets/art/enemies/` 路径，但仍只能通过 development candidate manifest gate 加载，production build 明确排除，普通 URL 不会加载。四张都没有获得项目所有者在真实 `960×540` 游戏画面中的视觉验收。四行 Admission 统一且精确为 `Gate 3 review candidate; dev-only, not production-admitted`，不得由 producer/static PASS、independent/static PASS、builder PASS、public 路径存在或本登记反推 production、商业发布或项目所有者验收。
+本节登记 Drifter、Pulse Sac、Carapace Gate 与 Brood Mass 四张锁定 Gate 3 动作表。项目所有者已接受 Gates 1–4，Gate 5 将这四张与其余五张 final 原子加入 production；它们保留所有 source/final hash、处理链和拒绝候选，且不改变七张 legacy R-17 fallback 或静态 SCP-049 fallback 的身份、路径和可解析性。production admission 不等同于商业发布；许可证复核与既有署名义务继续适用。
 
 外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-3/...` 均相对于该目录。每次内置 `image_gen` 调用只使用对应 Gate 1 accepted reference 作为唯一图像输入；没有用户截图、SCP Wiki 图片、素材包或其它第三方图像输入。模型名未由工具暴露，故不推断。
 
@@ -1647,6 +1657,17 @@ Carapace Gate 旧 sheet `947C7C829FA978376A7ECDE34A9B19E197B740F9A952D8A174DF993
 | r17-pulse-sac-action-sheet | spritesheet PNG | `assets/art/enemies/r17-pulse-sac-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-pulse-sac.png`，SHA-256 `4C67ACF78365C823B4A95C6971D0F8B001DA88E003FD87D71A18CEAE6154748D`；evidence final `gate-3/normalized/r17-pulse-sac-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `5544920457DCE1B8EF0DEC09103A5568B7707294D97FC266E9ADCCD2125D516D`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选精确 tail/correction [P79](#p79-pulse-sac-gate-3-selected-exact-prompt-tails)；ledger `gate-3/logs/r17-pulse-sac-prompt-ledger.md`，SHA-256 `DB9CE5AC958E4F02D8F65E7C20AA33C6D9653A87EEBECE02961E6D54A8B3410B`；producer review `gate-3/review/r17-pulse-sac-producer-review.md`，SHA-256 `025A9CBA893BCC3DC6281AD629DF1C4A7D8A4A2425DB3D15B3F61D7717F2A6D6` | RGB selected board 用 tolerance 64 hard key；透明 move board 用完整 tolerance 36 + `--spill-cleanup` 路径并在 shared processor 以 alpha 224 gate；随后做 broad green rejection、clip-global 32 色和断开噪点清理。最终 palette remediation 清除非 cyan olive，并从 death local frame 3 起确定性熄灭饱和 cyan/teal；alpha、几何与帧序不变。含 708 个 olive 像素且 death relight `[20,1,0,0,5,1]` 的前版 `0BA3C9C5...` 已拒绝并保留 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 960×48（20×48×48；move 0–5、hit 6–7、death 8–13、shoot 14–19；release 为 global frame 18；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
 | r17-carapace-gate-action-sheet | spritesheet PNG | `assets/art/enemies/r17-carapace-gate-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入 `gate-1/normalized/r17-carapace-gate.png`，SHA-256 `7A2909CE91036C399063F411728D14BD7798097A5D2EC7413B11612BE44C9346`；selected lineage/remediation contract [P81](#p81-carapace-gate-gate-3-selected-lineage-and-remediation-contract)；ledger `gate-3/logs/r17-carapace-gate-prompt-ledger.md` SHA-256 `FF7D33C5D8C1FEBA2F66119BF7E9FED78E4173EDF32D2EA591758B6FD121934F`；producer review `gate-3/review/r17-carapace-gate-producer-review.md` SHA-256 `503442E4AB26B3644893EF5B1AEB29BB6C677963A86FC5E44FB1EC64EDF9678B`；independent review `gate-3/review/r17-carapace-gate-independent-review.md` SHA-256 `64199FAD804F90A1DEDEE12CC3BAE5FAA2225565D88C1E1EBDE23C0D780724A3`；evidence final `gate-3/normalized/r17-carapace-gate-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776` | move/hit/death 字节冻结，只替换 role8；selected attempt08 raw 与 generated original SHA-256 均为 `9E95984C17C989F6154637F75CA318F55EEFC22ACEFCDA6D6BF664263A635C93`，逐字 exact generation prompt 因 producer 中断未持久化，精确记为 `UNKNOWN — not persisted before interruption`，禁止推断。pre-remediation SHA-256 `74BD93E404014BF0C7CFDBF4809B86E3B054EFE13EDEB557E70AE22AA740AFE0`；deterministic cleanup 只改 4720 个 steel RGB 与 frame 2 的 4px cyan 碎簇，alpha、轮廓、几何和帧序不变，final role SHA-256 `A63F32925BC172EC7987876C25B06B4051F477DE802C96E1469A9A208D14023E`。remediator `FD61A715EDEDDFB006A73B9388F872A649F4FF12727C0E473BF7F955D2578B40`；focused test `BC8BD13FFA290881602D7AA3DF2D0365956B2964F48864AF94CC3A3D11645A8E`；role audit `C1C1B18BD2A57DB85ADB6F19B2C804D5CF564D435A2000BC3B1C00B62C0407BA`。唯一有界容差是 charge 首格 area `913` 相对建议下限 `921` 低 `0.87%`；无第二项容差 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 1408×64（22×64×64；move 0–5、hit 6–7、death 8–13、brace 14–17、charge 18–21；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
 | r17-brood-mass-action-sheet | spritesheet PNG | `assets/art/enemies/r17-brood-mass-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-brood-mass.png`，SHA-256 `E3EC5B05A47AD4960B151A11196B5C87568EF8B8271832AE1D485D1EEBD3E518`；evidence final `gate-3/normalized/r17-brood-mass-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `D86B730AB9AAE6C24769779EB9B6DB5EA436E0F70F1049D69D11D2F282F1FDB6`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选精确 tail/correction [P80](#p80-brood-mass-gate-3-selected-exact-prompt-tails)；ledger `gate-3/logs/r17-brood-mass-prompt-ledger.md`，SHA-256 `6786AB06699161DBE5646FF6367CFA975A609B7DDF35F25B2E255AEDAC443431`；producer review `gate-3/review/r17-brood-mass-producer-review.md`，SHA-256 `C9852EEFED99277B4B7F3E63AC6A5592FC188DE544CF8A12108AD200BE047FED` | 所选 raw 做 tolerance 36 hard key、broad green removal、component repack 与 clip-global 32 色。Split-10 的 2×4 完整姿势按 row-major 搬到单行，零 resample、零重着色、opaque count `468512→468512`；最终 alpha-preserving despill 只把仍为 green-dominant 的 G 降至 `max(R,B)`，不增删或移动主体像素。最终 broad/olive/任何 green-dominant 均为 0 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 1408×64（22×64×64；move 0–5、hit 6–7、death 8–13、split 14–21；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+
+### Gate 5 final admission reconciliation — Gate 3 sheets
+
+The historical rows above retain exact processing and rejected candidates. These final governance rows supersede their earlier dev-only admission text; all seven old R-17 sheets remain present and resolvable as fallbacks.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| r17-drifter-action-sheet | `2783916CF336FA3AE0F0C40FCEDEA6C707B0EA5644E2F54CE85A5F3E3B6B14C0` | `9F9F07490834273BC742BDDCA319FE9FC0529E8993987534505EB8CF449152FD` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-drifter-prompt-ledger.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| r17-pulse-sac-action-sheet | `4C67ACF78365C823B4A95C6971D0F8B001DA88E003FD87D71A18CEAE6154748D` | `5544920457DCE1B8EF0DEC09103A5568B7707294D97FC266E9ADCCD2125D516D` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-pulse-sac-prompt-ledger.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| r17-carapace-gate-action-sheet | `7A2909CE91036C399063F411728D14BD7798097A5D2EC7413B11612BE44C9346` | `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776` | Old sheet and attempts 15–18 remain explicitly rejected; attempt08 prompt remains `UNKNOWN` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| r17-brood-mass-action-sheet | `E3EC5B05A47AD4960B151A11196B5C87568EF8B8271832AE1D485D1EEBD3E518` | `D86B730AB9AAE6C24769779EB9B6DB5EA436E0F70F1049D69D11D2F282F1FDB6` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-brood-mass-prompt-ledger.md` | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
 
 ### 处理器、所选/淘汰链与静态证据
 
@@ -1774,11 +1795,11 @@ Correction constraints: exactly EIGHT poses in one single horizontal row: closed
 - move/hit/death 保持冻结字节，只替换 role8。最终 `gate-3/normalized/r17-carapace-gate-action-sheet.png` 与 `public/assets/art/enemies/r17-carapace-gate-action-sheet.png` 逐字节相同，SHA-256 均为 `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776`。
 - producer review `gate-3/review/r17-carapace-gate-producer-review.md` SHA-256 `503442E4AB26B3644893EF5B1AEB29BB6C677963A86FC5E44FB1EC64EDF9678B`；independent review `gate-3/review/r17-carapace-gate-independent-review.md` SHA-256 `64199FAD804F90A1DEDEE12CC3BAE5FAA2225565D88C1E1EBDE23C0D780724A3`。两者均为静态审查证据，不是项目所有者 `960×540` 实机验收。
 - 旧 sheet `947C7C829FA978376A7ECDE34A9B19E197B740F9A952D8A174DF993DE988FCFF` 与 replacement attempts 15–18 全部明确 rejected 并保留，不得恢复为 current final。
-- 当前 Admission 仍逐字为 `Gate 3 review candidate; dev-only, not production-admitted`；public 路径存在、builder/static PASS、manifest gate 或 production build exclusion 均不改变该状态。
+- Historical Admission at Gate 3 was `Gate 3 review candidate; dev-only, not production-admitted`; Gate 5 final reconciliation above is now authoritative.
 
-## SCP-049 Gate 4 正式动画候选（待项目所有者实机视觉结论）
+## SCP-049 Gate 4 正式动画表（Gate 5 production admission）
 
-本节新增 SCP-049 的 80×96 四方向 locomotion 与正式 action sheet，作为旧 `scp-049.png` 的**并行表现候选**。两张文件只在 `enemyPresentation=candidate` 且显式 allowlist 命中时加载，并由 production build 的九项 enemy/Boss 排除合同删除；它们不替换普通 URL 的旧图、不进入 production manifest，也不构成 production 或商业准入。静态审查、HTTP 200、真实 `960×540` 运行截图都不能反推项目所有者已经给出视觉验收。
+本节登记 SCP-049 的 80×96 四方向 locomotion 与正式 action sheet。项目所有者已接受 Gates 1–4，Gate 5 将两张与七张 R-17 action sheet 原子加入普通 production manifest、preload 与 bundle；候选 metadata 仅作为 provenance，不再过滤 production preload。旧 `scp-049.png` 始终保留为 locomotion/action 缺失时的静态 fallback，未被替换或删除；商业发布与署名义务仍须依现有许可记录执行。
 
 外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...` 与 `gate-4/...` 均相对于该目录。外部 evidence 不随 Git 提交。
 
@@ -1786,6 +1807,15 @@ Correction constraints: exactly EIGHT poses in one single horizontal row: closed
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | scp-049-locomotion-sheet | spritesheet PNG | `public/assets/art/characters/scp-049-locomotion-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Pillow evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入 `gate-1/normalized/scp-049.png`，SHA-256 `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD`；逐字提示、八次调用、所选/淘汰链见 `gate-4/logs/scp-049-locomotion-prompt-ledger.md`，ledger SHA-256 `E8E9876BEFF58C91F09998C1A56AE46981A4CD1159672B854A4A0B550E367F4E`；normalized/public final SHA-256 均为 `FE7C23BC628F9CAD458F7864FDE1937D8D5774294137AE886D9B6CBF6C068C21` | 四张所选 board 做 hard chroma、binary alpha、全局限色、连通域按原生左右顺序搬运、nearest 归一化与合同组装；随后 exact-RGB 映射 835px 绿/橄榄污染，alpha/轮廓/位置/帧序不变；左/右十对均非相同或镜像；locomotion cyan=0 | 项目定制生成；唯一图像输入为本项目已接受的 SCP-049 Gate 1 素材；无第三方图片输入；仓库分发继续受 `LICENSE-MAP.md` 与 SCP 衍生义务约束，商业发布前复核 OpenAI 输出权利及项目许可 | 开发态候选；静态 PASS 不构成正式商用准入 | Gate 4 review candidate; dev-only, not production-admitted | 800×384（4 rows × 10×80×96；down/left/right/up；每方向 idle 0–3、walk 4–9；RGBA、二值 alpha） | 必须署名 [SCP-049](https://scp-wiki.wikidot.com/scp-049) 条目作者 Gabriel Jade 与 2018 重写合作者 djkaktus，并附 CC BY-SA 3.0；衍生发布须遵守相同方式共享 |
 | scp-049-action-sheet | spritesheet PNG | `public/assets/art/characters/scp-049-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Pillow evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入同上；逐字提示、六次调用、所选/淘汰链见 `gate-4/logs/scp-049-action-prompt-ledger.md`，ledger SHA-256 `DE7D3B221D59162A762A431DCF7FE985772363B0B072A40649B8F8C6CC13E352`；normalized/public final SHA-256 均为 `96B8E0CD49405C538D4744B004E61DC2BCFCB6265DBA12651D30600BAE76413D` | 所选 clip 做 hard chroma、binary alpha、全局限色、零重采样 row/component 搬运、nearest 归一化与合同组装；exact-RGB 映射 2622px，其中清除 hit-overlay frame 10 的 1px 误青，alpha/几何不变；cyan 仅为 recontain frames 16–18 的外部 Foundation 节点 | 项目定制生成；唯一图像输入、许可与复核边界同 locomotion；无第三方图片输入 | 开发态候选；静态 PASS 不构成正式商用准入 | Gate 4 review candidate; dev-only, not production-admitted | 1520×96（19×80×96；frenzy-enter 0–4、frenzy-loop 5–8、hit-overlay 9–10、recontain 11–18；RGBA、二值 alpha） | 同 locomotion：Gabriel Jade、djkaktus、SCP-049 条目及 CC BY-SA 3.0 署名/相同方式共享要求 |
+
+### Gate 5 final admission reconciliation — SCP-049 sheets
+
+The historical rows above retain prompt, source and rejected-candidate evidence. These two final governance rows supersede their earlier dev-only admission text; static `scp-049.png` remains present and resolvable as the action/locomotion fallback.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| scp-049-locomotion-sheet | `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD` | `FE7C23BC628F9CAD458F7864FDE1937D8D5774294137AE886D9B6CBF6C068C21` | down-01, right-01 and up-02 rejected for nine poses; up-01 rejected for wrong direction | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
+| scp-049-action-sheet | `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD` | `96B8E0CD49405C538D4744B004E61DC2BCFCB6265DBA12651D30600BAE76413D` | frenzy-loop-01 rejected for continuity; hit-overlay-01 rejected for replacement body | production admitted after Gates 1–4; Gate 5 integrated acceptance pending |
 
 ### P82 SCP-049 Gate 4 selected lineage、remediation 与静态审查
 

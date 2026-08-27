@@ -836,29 +836,29 @@ test("production manifest declares the exact approved spritesheet contract", () 
   for (const [property, key] of Object.entries(r17TextureKeys)) {
     assert.equal(TEXTURES[property], key);
   }
-  assert.deepEqual(SPRITESHEET_ASSETS, approvedSpritesheets);
+  assert.deepEqual(SPRITESHEET_ASSETS, [
+    ...approvedSpritesheets,
+    ...enemyBossCandidateSheets.map(({ key, path, frameConfig }) => ({
+      key,
+      path,
+      frameConfig,
+      previewQuery: { name: "enemyPresentation", value: "candidate" },
+      candidateId: key
+    }))
+  ]);
 });
 
-// Break caught: candidate metadata becomes incomplete, ungated or reordered ahead of existing Player entries.
-test("enemy and Boss candidates append an exact immutable nine-sheet development contract", () => {
-  const playerDevelopmentEntries = DEVELOPMENT_SPRITESHEET_ASSETS.slice(0, 4);
-  assert.deepEqual(playerDevelopmentEntries.map(({ key }) => key), [
+// Break caught: production admission moves or mutates any Player development entry.
+test("Player development entries remain exact after the nine-sheet production admission", () => {
+  assert.deepEqual(DEVELOPMENT_SPRITESHEET_ASSETS.map(({ key }) => key), [
     "player-response-operative-prototype-sheet",
     "player-response-operative-body-prototype-sheet",
     "player-response-operative-breacher-sample-sheet",
     "player-response-operative-cbrn-sample-sheet"
   ]);
-
-  const candidateEntries = DEVELOPMENT_SPRITESHEET_ASSETS.slice(4);
-  assert.equal(candidateEntries.length, 9);
-  assert.deepEqual(candidateEntries, enemyBossCandidateSheets.map(({ key, path, frameConfig }) => ({
-    key,
-    path,
-    frameConfig,
-    previewQuery: { name: "enemyPresentation", value: "candidate" },
-    candidateId: key
-  })));
-  assert.equal(Object.isFrozen(candidateEntries[0].previewQuery), true);
+  assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some(({ key }) => (
+    enemyBossCandidateSheets.some((candidate) => candidate.key === key)
+  )), false);
 });
 
 for (const {
@@ -871,11 +871,11 @@ for (const {
   sha256,
   clips
 } of gate2CandidateSheets) {
-  // Break caught: this exact Gate 2 candidate is missing or diverges from its dev-only real-asset contract.
-  test(`Gate 2 candidate ${key} has its exact real action sheet`, async () => {
+  // Break caught: this exact Gate 2 sheet is missing or diverges from its production real-asset contract.
+  test(`Gate 2 production sheet ${key} has its exact real action sheet`, async () => {
     assert.equal(TEXTURES[property], key, property);
     assert.deepEqual(
-      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
       {
         key,
         path: assetPath,
@@ -884,7 +884,7 @@ for (const {
         candidateId: key
       }
     );
-    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
 
     const contract = JSON.parse(
       await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
@@ -930,11 +930,11 @@ for (const {
   sha256,
   clips
 } of gate3CandidateSheets) {
-  // Break caught: this exact Gate 3 candidate is missing or diverges from its dev-only real-asset contract.
-  test(`Gate 3 candidate ${key} has its exact real action sheet`, async () => {
+  // Break caught: this exact Gate 3 sheet is missing or diverges from its production real-asset contract.
+  test(`Gate 3 production sheet ${key} has its exact real action sheet`, async () => {
     assert.equal(TEXTURES[property], key, property);
     assert.deepEqual(
-      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
       {
         key,
         path: assetPath,
@@ -943,7 +943,7 @@ for (const {
         candidateId: key
       }
     );
-    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
 
     const contract = JSON.parse(
       await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
@@ -1005,11 +1005,11 @@ for (const {
   rowClips,
   clips
 } of gate4CandidateSheets) {
-  // Break caught: a Gate 4 Boss sheet diverges from its real dev-only contract or leaks into production.
-  test(`Gate 4 candidate ${key} has its exact real formal-animation sheet`, async () => {
+  // Break caught: a Gate 4 Boss sheet diverges from its real production contract.
+  test(`Gate 4 production sheet ${key} has its exact real formal-animation sheet`, async () => {
     assert.equal(TEXTURES[property], key, property);
     assert.deepEqual(
-      DEVELOPMENT_SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
       {
         key,
         path: assetPath,
@@ -1019,8 +1019,8 @@ for (const {
       }
     );
     assert.equal(IMAGE_ASSETS.some((asset) => asset.key === key), false, property);
-    assert.equal(SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
-    assert.equal(PRODUCTION_SPRITESHEET_KEYS.has(key), false, property);
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(PRODUCTION_SPRITESHEET_KEYS.has(key), true, property);
 
     const contract = JSON.parse(
       await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
@@ -1176,7 +1176,7 @@ test("Gate 3 Pulse Sac death dims once and stays cyan-free after global frame 9"
   );
 });
 
-// Break caught: a partial candidate promotion leaks into production or the exported Set can be mutated at runtime.
+// Break caught: a partial production admission leaves one promoted sheet outside the immutable production Set.
 test("production sheet admission remains an immutable exact-nine transaction", () => {
   assert.equal(PRODUCTION_SPRITESHEET_KEYS instanceof Set, true);
   assert.deepEqual([...PRODUCTION_SPRITESHEET_KEYS], SPRITESHEET_ASSETS.map(({ key }) => key));
@@ -1292,12 +1292,13 @@ test("production sheet admission remains an immutable exact-nine transaction", (
 
   const candidateKeys = enemyBossCandidateSheets.map(({ key }) => key);
   const currentlyAdmitted = candidateKeys.filter((key) => PRODUCTION_SPRITESHEET_KEYS.has(key));
-  assert.equal(currentlyAdmitted.length, 0);
-
-  const syntheticNineEntryPromotion = new Set([...PRODUCTION_SPRITESHEET_KEYS, ...candidateKeys]);
-  assert.equal(candidateKeys.filter((key) => syntheticNineEntryPromotion.has(key)).length, 9);
-  const syntheticPartialPromotion = new Set([...PRODUCTION_SPRITESHEET_KEYS, ...candidateKeys.slice(0, 8)]);
-  assert.notEqual(candidateKeys.filter((key) => syntheticPartialPromotion.has(key)).length, 9);
+  assert.deepEqual(currentlyAdmitted, candidateKeys);
+  assert.equal(
+    DEVELOPMENT_SPRITESHEET_ASSETS.some(({ key }) => candidateKeys.includes(key)),
+    false,
+    "no admitted sheet may remain in the development contract"
+  );
+  assert.notEqual(candidateKeys.slice(0, 8).length, currentlyAdmitted.length);
 });
 
 test("legacy fallback texture keys remain exact and disjoint from R-17 production keys", () => {

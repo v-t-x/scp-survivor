@@ -919,48 +919,43 @@ test("formal sheets fail closed on every wrong Phaser total and on a missing cli
   assert.equal(getEnemyPresentationMode(failedScene, "infectedStaff", CANDIDATE_OPTIONS).family, "unchanged");
 });
 
-// Break caught: candidate permission becomes global instead of the exact DEV mode and per-id allowlist intersection.
-test("candidate resolution is development-only, allowlisted per type and independently fail-safe", () => {
-  const allFrames = Object.fromEntries(
+// Break caught: a production admission is partial, or one missing formal R-17 sheet leaves an actor invisible.
+test("production admission enables all seven formal R-17 sheets and falls each missing sheet back to legacy", () => {
+  const formalFrames = Object.fromEntries(
     Object.values(FORMAL_R17_CONTRACTS).map(({ textureKey, frameTotal }) => [textureKey, frameTotal])
   );
-  const gate2Ids = [
-    "r17-rift-skimmer-action-sheet",
-    "r17-bud-action-sheet",
-    "r17-frame-gap-action-sheet"
-  ];
-  const scene = createScene(allFrames);
-  registerEnemyAnimations(scene, {
-    isDevelopment: true,
-    candidateMode: true,
-    candidateIds: gate2Ids
-  });
-
-  assert.equal(getEnemyPresentationMode(scene, "crawler", {}).family, "unchanged");
-  assert.equal(getEnemyPresentationMode(scene, "crawler", { isDevelopment: true, candidateIds: gate2Ids }).family, "unchanged");
-  assert.equal(getEnemyPresentationMode(scene, "crawler", { candidateMode: true, candidateIds: gate2Ids }).family, "unchanged");
-  assert.equal(getEnemyPresentationMode(scene, "crawler", {
-    isDevelopment: true,
-    candidateMode: true,
-    candidateIds: ["unknown", ...gate2Ids, gate2Ids[0]]
-  }).family, "formal");
-
+  const legacyFrames = Object.fromEntries(
+    Object.values(ENEMY_PRESENTATION).map(({ productionTextureKey }) => [productionTextureKey, 5])
+  );
+  const fullScene = createScene({ ...formalFrames, ...legacyFrames });
+  registerEnemyAnimations(fullScene);
   assert.deepEqual(
     Object.keys(FORMAL_R17_CONTRACTS).filter((enemyType) => (
-      getEnemyPresentationMode(scene, enemyType, {
-        isDevelopment: true,
-        candidateMode: true,
-        candidateIds: gate2Ids
-      }).family === "formal"
+      getEnemyPresentationMode(fullScene, enemyType).family === "formal"
     )),
-    ["crawler", "blinkStalker", "biomassChild"]
+    Object.keys(FORMAL_R17_CONTRACTS)
   );
 
-  const oneBroken = createScene({ ...allFrames, "r17-rift-skimmer-action-sheet": 18 });
-  registerEnemyAnimations(oneBroken, CANDIDATE_OPTIONS);
-  assert.equal(getEnemyPresentationMode(oneBroken, "crawler", CANDIDATE_OPTIONS).family, "unchanged");
-  for (const enemyType of Object.keys(FORMAL_R17_CONTRACTS).filter((type) => type !== "crawler")) {
-    assert.equal(getEnemyPresentationMode(oneBroken, enemyType, CANDIDATE_OPTIONS).family, "formal");
+  for (const [enemyType, contract] of Object.entries(FORMAL_R17_CONTRACTS)) {
+    const incompleteFrames = { ...formalFrames, ...legacyFrames };
+    delete incompleteFrames[contract.textureKey];
+    const scene = createScene(incompleteFrames);
+    registerEnemyAnimations(scene);
+    assert.equal(getEnemyPresentationMode(scene, enemyType).family, "legacy", enemyType);
+    const enemy = createEnemyStub({
+      fallbackTextureKey: FALLBACK_TEXTURES[enemyType],
+      fallbackFrameWidth: 32,
+      fallbackFrameHeight: 32,
+      productionFrameWidth: 64,
+      productionFrameHeight: 64,
+      sourceWidth: 20,
+      sourceHeight: 20,
+      offsetX: 6,
+      offsetY: 6
+    });
+    applyEnemyPresentation(scene, enemy, enemyType);
+    assert.equal(enemy.texture.key, ENEMY_PRESENTATION[enemyType].productionTextureKey, enemyType);
+    assert.equal(enemy.calls.setTexture.length, 1, `${enemyType} must retain a visible legacy texture`);
   }
 });
 
@@ -980,7 +975,7 @@ test("forceLegacy is a development-only pure option and preserves loaded formal 
     ...CANDIDATE_OPTIONS,
     isDevelopment: false,
     forceLegacy: true
-  }).family, "legacy");
+  }).family, "formal");
   assert.equal(scene.textures.exists("r17-drifter-action-sheet"), true);
   assert.equal(scene.textures.exists(TEXTURES.r17Drifter), true);
 });
@@ -992,8 +987,8 @@ test("SCP-049 resolves full formal, locomotion plus static action fallback, then
     "enemy-scp049-action-sheet": 20,
     [TEXTURES.enemyScp049]: 1
   });
-  registerEnemyAnimations(full, CANDIDATE_OPTIONS);
-  assert.deepEqual(getScp049PresentationMode(full, CANDIDATE_OPTIONS), {
+  registerEnemyAnimations(full);
+  assert.deepEqual(getScp049PresentationMode(full), {
     family: "formal",
     locomotionTextureKey: "enemy-scp049-locomotion-sheet",
     actionTextureKey: "enemy-scp049-action-sheet",
@@ -1007,8 +1002,8 @@ test("SCP-049 resolves full formal, locomotion plus static action fallback, then
     };
     if (actionTotal !== undefined) frames["enemy-scp049-action-sheet"] = actionTotal;
     const scene = createScene(frames);
-    registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
-    assert.deepEqual(getScp049PresentationMode(scene, CANDIDATE_OPTIONS), {
+    registerEnemyAnimations(scene);
+    assert.deepEqual(getScp049PresentationMode(scene), {
       family: "formal-locomotion",
       locomotionTextureKey: "enemy-scp049-locomotion-sheet",
       actionTextureKey: TEXTURES.enemyScp049,
@@ -1023,8 +1018,8 @@ test("SCP-049 resolves full formal, locomotion plus static action fallback, then
     };
     if (locomotionTotal !== undefined) frames["enemy-scp049-locomotion-sheet"] = locomotionTotal;
     const scene = createScene(frames);
-    registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
-    assert.deepEqual(getScp049PresentationMode(scene, CANDIDATE_OPTIONS), {
+    registerEnemyAnimations(scene);
+    assert.deepEqual(getScp049PresentationMode(scene), {
       family: "static",
       textureKey: TEXTURES.enemyScp049,
       displayScale: CHARACTER_DISPLAY_SCALE.scp049
@@ -1092,8 +1087,8 @@ test("formal animation registration is idempotent across all nine sheets", () =>
     "enemy-scp049-locomotion-sheet": 41,
     "enemy-scp049-action-sheet": 20
   });
-  registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
-  registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+  registerEnemyAnimations(scene);
+  registerEnemyAnimations(scene);
   assert.equal(scene.created.length, 42);
   assert.equal(new Set(scene.created.map(({ key }) => key)).size, 42);
 });
@@ -1488,9 +1483,9 @@ test("enemy adapter stays display-only and has no per-frame sync API", async () 
   assert.doesNotMatch(source, /\.(?:setSize|setOffset|setCircle|setVelocity)\s*\(/);
 });
 
-// Break caught: ordinary DEV or a bare candidate query leaks gated PNGs, or existing Player dev entries stop loading.
-test("DEV preload requests gated candidates only in explicit candidate mode with exact repeated ids", async () => {
-  const candidateKeys = CANDIDATE_OPTIONS.candidateIds;
+// Break caught: production admission leaves a sheet behind an allowlist, or changes the Player development contract.
+test("DEV preload requests all nine admitted sheets without allowing query metadata to add development assets", async () => {
+  const admittedKeys = CANDIDATE_OPTIONS.candidateIds;
   const playerDevelopmentKeys = [
     "player-response-operative-prototype-sheet",
     "player-response-operative-body-prototype-sheet",
@@ -1498,50 +1493,12 @@ test("DEV preload requests gated candidates only in explicit candidate mode with
     "player-response-operative-cbrn-sample-sheet"
   ];
 
-  for (const search of ["", "?enemyPresentation=candidate"]) {
+  for (const search of ["", "?enemyPresentation=candidate&enemyCandidate=spoofed"]) {
     const requested = await collectPreloadSpritesheets({ isDevelopment: true, search });
     const keys = requested.map(({ key }) => key);
-    assert.deepEqual(keys.filter((key) => candidateKeys.includes(key)), []);
+    assert.deepEqual(keys.filter((key) => admittedKeys.includes(key)), admittedKeys);
     assert.deepEqual(keys.filter((key) => playerDevelopmentKeys.includes(key)), playerDevelopmentKeys);
   }
-
-  const gates = [
-    [
-      ["r17-rift-skimmer-action-sheet", "r17-bud-action-sheet", "r17-frame-gap-action-sheet"],
-      ["r17-rift-skimmer-action-sheet", "r17-frame-gap-action-sheet", "r17-bud-action-sheet"]
-    ],
-    [
-      [
-        "r17-drifter-action-sheet", "r17-rift-skimmer-action-sheet", "r17-pulse-sac-action-sheet",
-        "r17-carapace-gate-action-sheet", "r17-frame-gap-action-sheet", "r17-brood-mass-action-sheet",
-        "r17-bud-action-sheet"
-      ],
-      [
-        "r17-drifter-action-sheet", "r17-rift-skimmer-action-sheet", "r17-pulse-sac-action-sheet",
-        "r17-carapace-gate-action-sheet", "r17-frame-gap-action-sheet", "r17-brood-mass-action-sheet",
-        "r17-bud-action-sheet"
-      ]
-    ],
-    [candidateKeys, candidateKeys]
-  ];
-  for (const [allowlist, expectedKeys] of gates) {
-    const query = new URLSearchParams({ enemyPresentation: "candidate" });
-    for (const id of allowlist) query.append("enemyCandidate", id);
-    const requested = await collectPreloadSpritesheets({ isDevelopment: true, search: `?${query}` });
-    const gated = requested.map(({ key }) => key).filter((key) => candidateKeys.includes(key));
-    assert.equal(gated.length, expectedKeys.length);
-    assert.deepEqual(gated, expectedKeys);
-  }
-
-  const query = new URLSearchParams({ enemyPresentation: "candidate" });
-  for (const id of ["unknown", "r17-bud-action-sheet", "r17-bud-action-sheet", "unknown"]) {
-    query.append("enemyCandidate", id);
-  }
-  const deduplicated = await collectPreloadSpritesheets({ isDevelopment: true, search: `?${query}` });
-  assert.deepEqual(
-    deduplicated.map(({ key }) => key).filter((key) => candidateKeys.includes(key)),
-    ["r17-bud-action-sheet"]
-  );
 });
 
 // Break caught: production begins honoring candidate queries or production entries are accidentally filtered by inert metadata.

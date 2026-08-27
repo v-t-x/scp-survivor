@@ -8,7 +8,7 @@ import { build as viteBuild } from "vite";
 
 import config, * as viteConfigModule from "../vite.config.js";
 
-const { NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_ENEMY_BOSS_ASSETS } = viteConfigModule;
+const { NON_PRODUCTION_PLAYER_ASSETS } = viteConfigModule;
 
 const REPOSITORY_VITE_CONFIG = fileURLToPath(new URL("../vite.config.js", import.meta.url));
 const PUBLIC_SENTINEL_BYTES = Buffer.from("task-1-public-source-sentinel\n", "utf8");
@@ -34,7 +34,7 @@ const NON_PRODUCTION_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/tesla-containment-emitter-cross-front.png"
 ];
 
-const NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS = [
+const PRODUCTION_ENEMY_BOSS_ASSET_PATHS = [
   "assets/art/enemies/r17-drifter-action-sheet.png",
   "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
   "assets/art/enemies/r17-pulse-sac-action-sheet.png",
@@ -157,15 +157,14 @@ test("build cleanup removes every non-production player candidate but retains ru
   }
 });
 
-// Break caught: the production cleanup omits one enemy/Boss candidate or mutates the frozen Player list.
-test("build cleanup removes the exact enemy and Boss candidate list independently of Player assets", async () => {
+// Break caught: promoting enemy/Boss sheets mutates the frozen Player exclusion contract.
+test("build cleanup preserves the exact Player exclusion contract after enemy and Boss admission", async () => {
   assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
-  assert.deepEqual(NON_PRODUCTION_ENEMY_BOSS_ASSETS, NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS);
   const outDir = await mkdtemp(path.join(tmpdir(), "scp-enemy-boss-assets-"));
   const plugin = config.plugins.find(({ name }) => name === "remove-development-player-assets");
   assert.ok(plugin);
   try {
-    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
+    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
       const target = path.join(outDir, relative);
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, relative);
@@ -173,8 +172,11 @@ test("build cleanup removes the exact enemy and Boss candidate list independentl
 
     await plugin.writeBundle({ dir: outDir });
 
-    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
+    for (const relative of NON_PRODUCTION_PLAYER_ASSET_PATHS) {
       await assert.rejects(stat(path.join(outDir, relative)));
+    }
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      assert.equal(await readFile(path.join(outDir, relative), "utf8"), relative);
     }
     assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
   } finally {
@@ -365,10 +367,10 @@ test("real Vite build allows a separate dist and strips non-production player as
   });
 });
 
-// Break caught: a real Vite build ships gated enemy/Boss PNGs or deletes their public source copies.
-test("real Vite build strips all nine enemy and Boss candidates only from dist", async () => {
+// Break caught: a production build omits any admitted enemy/Boss sheet or mutates its source copy.
+test("real Vite build retains all nine admitted enemy and Boss sheets in dist", async () => {
   await withTemporaryViteProject("scp-vite-enemy-boss-dist-", async ({ root, publicDir }) => {
-    for (const relative of NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
       const source = path.join(publicDir, relative);
       await mkdir(path.dirname(source), { recursive: true });
       await writeFile(source, relative);
@@ -376,8 +378,8 @@ test("real Vite build strips all nine enemy and Boss candidates only from dist",
 
     const outcome = await observeViteBuild(root, { outDir: "dist" });
     assert.equal(outcome.status, "fulfilled", outcome.message);
-    for (const relative of NON_PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
-      await assert.rejects(stat(path.join(root, "dist", relative)));
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      assert.equal(await readFile(path.join(root, "dist", relative), "utf8"), relative);
       assert.equal(await readFile(path.join(publicDir, relative), "utf8"), relative);
     }
   });
