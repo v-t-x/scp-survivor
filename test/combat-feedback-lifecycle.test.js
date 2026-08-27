@@ -332,6 +332,114 @@ test("clearCombatEntities commits every group clear before untracking each destr
   ]);
 });
 
+test("result freeze releases ordinary R-17 death copies before restart but preserves SCP-049 recontainment", async () => {
+  const { createEnemyPresentationController } = await import("../src/art/enemyPresentationController.js");
+  const { pauseGameplaySystems, clearCombatEntities } = await loadSystemMethods(
+    "pauseGameplaySystems",
+    "clearCombatEntities"
+  );
+  const visuals = [];
+  const displayScene = createLifecycleDisplayScene(visuals, { formalEnemies: true });
+  const controller = createEnemyPresentationController(displayScene, {
+    allowedDevelopmentAssetIds: new Set([
+      "r17-rift-skimmer-action-sheet",
+      "enemy-scp049-locomotion-sheet",
+      "enemy-scp049-action-sheet"
+    ])
+  });
+  const ordinaryEnemy = createEnemyLifecycleActor("r17-rift-skimmer", 1);
+  const bossEnemy = createEnemyLifecycleActor("enemy-scp049", 1.2);
+  const ordinaryId = controller.trackActor(ordinaryEnemy, {
+    enemyType: "crawler",
+    isBoss: false
+  });
+  const bossId = controller.trackActor(bossEnemy, {
+    enemyType: "scp049",
+    isBoss: true
+  });
+  controller.notifyDeath({
+    presentationId: ordinaryId,
+    enemyType: "crawler",
+    isBoss: false,
+    canSplit: false,
+    x: ordinaryEnemy.x,
+    y: ordinaryEnemy.y,
+    frame: 0,
+    flipX: false,
+    alpha: 1,
+    depth: 10,
+    scaleX: 1,
+    scaleY: 1
+  });
+  controller.notifyDeath({
+    presentationId: bossId,
+    enemyType: "scp049",
+    isBoss: true,
+    canSplit: false,
+    x: bossEnemy.x,
+    y: bossEnemy.y,
+    frame: 0,
+    flipX: false,
+    alpha: 1,
+    depth: 12,
+    scaleX: 1,
+    scaleY: 1
+  });
+  const ordinaryCopy = visuals.find(
+    (visual) => visual.currentAnimation === "r17-rift-skimmer-action-death"
+  );
+  const terminalCopy = visuals.find(
+    (visual) => visual.currentAnimation === "enemy-scp049-recontain"
+  );
+  assert.ok(ordinaryCopy?.active && terminalCopy?.active, "both terminal-window copies start live");
+
+  function group(children = []) {
+    return {
+      getChildren: () => [...children],
+      clear(remove, destroy) {
+        if (!remove || !destroy) return;
+        for (const child of children) child.destroy?.();
+        children.length = 0;
+      }
+    };
+  }
+
+  const scene = {
+    physics: { pause() {} },
+    spawnEvent: null,
+    playerPresentation: { setPaused() {} },
+    combatFeedback: { setPaused() {}, untrackActor() {} },
+    enemyPresentation: controller,
+    pauseGameplaySystems,
+    clearCombatEntities,
+    enemies: group([ordinaryEnemy, bossEnemy]),
+    enemyProjectiles: group(),
+    bullets: group(),
+    xpGems: group(),
+    supplyPickups: group(),
+    instabilityDecoys: group(),
+    clearTransientEffects() {},
+    clearFacilitySystems() {},
+    destroyLevelUpOverlay() {},
+    hidePauseOverlay() {},
+    hideBuildPanel() {},
+    pickupRadiusIndicator: { clear() {} }
+  };
+
+  menusMixin.freezeForGameOver.call(scene);
+  assert.equal(ordinaryCopy.active, false, "the result window cannot retain a frozen ordinary corpse");
+  assert.equal(ordinaryCopy.visible, false);
+  assert.equal(ordinaryCopy.listenerCount("animationcomplete"), 0);
+  assert.equal(terminalCopy.active, true, "SCP-049 recontainment crosses the victory freeze");
+  assert.equal(terminalCopy.listenerCount("animationcomplete"), 1);
+
+  assert.doesNotThrow(() => clearCombatEntities.call(scene), "ordinary-copy cleanup is idempotent");
+  assert.equal(ordinaryCopy.active, false);
+  assert.equal(terminalCopy.active, true);
+
+  controller.destroy();
+});
+
 test("manager teardown clears and destroys player presentation while isolating every cleanup failure", async () => {
   const { teardownManagers } = await loadMainLifecycle();
   for (const failure of [null, "player-pause", "player", "feedback-pause", "feedback", "audio"]) {
@@ -565,7 +673,7 @@ function createLifecycleDisplayScene(visuals, { formalEnemies = false } = {}) {
       frame: { name: 0 },
       texture: textureKey === null ? undefined : { key: textureKey },
       setOrigin() { return this; }, setPosition(x, y) { this.x = x; this.y = y; return this; }, setDisplaySize() { return this; },
-      setAlpha() { return this; }, setVisible() { return this; }, setTint() { return this; },
+      setAlpha() { return this; }, setVisible(value) { this.visible = value; return this; }, setTint() { return this; },
       setRotation() { return this; }, setDepth() { return this; }, setScale() { return this; },
       setTexture(key, frame = 0) { this.texture = { key }; this.frame.name = frame; return this; },
       setFrame(frame) { this.frame.name = frame; return this; },

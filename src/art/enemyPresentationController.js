@@ -100,6 +100,11 @@ function callAnimationPause(display, paused) {
 
 function setDisplayFrame(record, frame, marker) {
   if (record.lastClip === marker && record.lastFrame === frame) return;
+  try {
+    record.actor?.anims?.stop?.();
+  } catch {
+    // A hostile AnimationState cannot block the committed manual frame.
+  }
   record.actor.setFrame?.(frame);
   record.lastClip = marker;
   record.lastFrame = frame;
@@ -609,6 +614,13 @@ export function createEnemyPresentationController(scene, options = {}) {
     }
   }
 
+  function clearOrdinaryDeathCopies() {
+    if (destroyed) return;
+    for (const copy of allocatedR17Copies) {
+      if (copy.active !== false) recycleR17Copy(copy);
+    }
+  }
+
   function scheduleActorDestroy(record) {
     let timer = null;
     timer = scene?.time?.delayedCall?.(LIVE_ACTOR_DESTROY_DELAY_MS, () => {
@@ -782,6 +794,7 @@ export function createEnemyPresentationController(scene, options = {}) {
     notifyAction,
     notifyHit,
     notifyDeath,
+    clearOrdinaryDeathCopies,
     setPaused,
     untrackActor,
     destroy

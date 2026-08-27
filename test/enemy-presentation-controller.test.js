@@ -138,6 +138,39 @@ function createActor({ x = 100, y = 120, textureKey = "enemy-crawler", scale = 1
   return actor;
 }
 
+function installAdvancingAnimationState(actor, animatedFrame = 3) {
+  let running = false;
+  let paused = false;
+  const play = actor.play;
+  const pause = actor.anims.pause;
+  const resume = actor.anims.resume;
+
+  actor.play = function (...args) {
+    play.apply(this, args);
+    running = true;
+    paused = false;
+    return this;
+  };
+  actor.anims.pause = function () {
+    pause.call(this);
+    paused = true;
+  };
+  actor.anims.resume = function () {
+    resume.call(this);
+    paused = false;
+  };
+  actor.anims.stop = function () {
+    running = false;
+    paused = false;
+  };
+
+  return Object.freeze({
+    advance() {
+      if (running && !paused) actor.setFrame(animatedFrame);
+    }
+  });
+}
+
 function createScene({ formal = true, legacy = true, missing = [], throwingTextures = false, failAnimationKey = null } = {}) {
   const sprites = [];
   const timers = [];
@@ -427,6 +460,58 @@ test("Pulse Sac precharge and committed release use the exact approved frames", 
   controller.sync(1_201, 16);
   assert.equal(actor.currentAnimation, "r17-pulse-sac-action-move");
   assert.equal(actor.nextShotAtMs, 2_000, "presentation does not rewrite the gameplay deadline");
+});
+
+// Break caught: Phaser's still-running move AnimationState overwrites the manual shoot frame on its next update.
+test("Pulse Sac manual skill windows stop a running move animation before setting frames", () => {
+  for (const scenario of [
+    {
+      name: "precharge",
+      nextShotAtMs: 1_000,
+      startAtMs: 599,
+      enter(controller) { controller.sync(600, 16); },
+      expectedFrame: 14,
+      exitAtMs: 1_001
+    },
+    {
+      name: "release without observed precharge",
+      nextShotAtMs: 5_000,
+      startAtMs: 0,
+      enter(controller, presentationId) {
+        controller.notifyAction(Object.freeze({
+          presentationId,
+          action: "shoot-release",
+          shotAtMs: 1_000
+        }));
+      },
+      expectedFrame: 18,
+      exitAtMs: 1_201
+    }
+  ]) {
+    const scene = createScene();
+    const actor = createActor({ textureKey: "enemy-drone" });
+    const animationState = installAdvancingAnimationState(actor);
+    actor.nextShotAtMs = scenario.nextShotAtMs;
+    const controller = controllerFor(scene, ["r17-pulse-sac-action-sheet"]);
+    const presentationId = controller.trackActor(actor, { enemyType: "drone", isBoss: false });
+
+    controller.sync(scenario.startAtMs, 16);
+    assert.equal(actor.currentAnimation, "r17-pulse-sac-action-move", `${scenario.name} starts from move`);
+    animationState.advance();
+    assert.equal(actor.frame.name, 3, `${scenario.name} proves the move AnimationState can advance`);
+
+    scenario.enter(controller, presentationId);
+    animationState.advance();
+    assert.equal(
+      actor.frame.name,
+      scenario.expectedFrame,
+      `${scenario.name} manual frame survives the next AnimationState update`
+    );
+
+    controller.sync(scenario.exitAtMs, 16);
+    animationState.advance();
+    assert.equal(actor.frame.name, 3, `${scenario.name} returns to the move animation after its window`);
+  }
 });
 
 // Break caught: a nonlethal hit interrupts the active deadline-derived shoot warning.

@@ -13,6 +13,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contractPath = path.join(root, "scripts/art/data/enemy-boss-animation-contracts.json");
+const assetRegisterPath = path.join(root, "docs/art/asset-register.md");
 
 const expected = {
   r17DrifterActionSheet: ["r17-drifter-action-sheet", "assets/art/enemies/r17-drifter-action-sheet.png"],
@@ -281,6 +282,14 @@ test("the manifest atomically admits all nine action sheets through the producti
   for (const { key } of DEVELOPMENT_SPRITESHEET_ASSETS) {
     assert.equal(productionKeys.has(key), false, `${key} must not overlap production`);
   }
+});
+
+// Break caught: production promotion adds manifest entries without reconciling the user-facing register total.
+test("the asset register reports the exact current production manifest total", async () => {
+  const register = await fs.readFile(assetRegisterPath, "utf8");
+  const match = register.match(/当前合并树的运行时 manifest 为 (\d+) 项/);
+  assert.ok(match, "asset register must state the current runtime manifest total");
+  assert.equal(Number(match[1]), IMAGE_ASSETS.length + SPRITESHEET_ASSETS.length);
 });
 
 test("the new contract preserves all eight legacy fallback identities and their paths", async () => {

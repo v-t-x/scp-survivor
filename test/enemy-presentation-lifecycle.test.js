@@ -88,6 +88,18 @@ test("main controller construction failure returns the complete no-op contract",
   }
 });
 
+test("main no-op enemy presentation exposes ordinary death-copy cleanup", async () => {
+  const source = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
+  const helper = extractNamedFunction(source, "createNoopEnemyPresentationController");
+  const createNoopEnemyPresentationController = new Function(
+    `"use strict"; ${helper}; return createNoopEnemyPresentationController;`
+  )();
+  const controller = createNoopEnemyPresentationController();
+
+  assert.equal(typeof controller.clearOrdinaryDeathCopies, "function");
+  assert.doesNotThrow(() => controller.clearOrdinaryDeathCopies());
+});
+
 // Break caught: a throwing enemy-presentation sync prevents later projectile, pickup, feedback and frame work.
 test("main update isolates presentation sync failure and commits the rest of the frame", async () => {
   const source = await readFile(new URL("../src/main.js", import.meta.url), "utf8");

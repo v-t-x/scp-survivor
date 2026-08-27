@@ -410,6 +410,7 @@ function createNoopEnemyPresentationController() {
     notifyAction() {},
     notifyHit() {},
     notifyDeath() {},
+    clearOrdinaryDeathCopies() {},
     setPaused() {},
     untrackActor() {},
     destroy() {}

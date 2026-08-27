@@ -214,6 +214,11 @@ export const systemsMixin = {
     this.supplyPickups.clear(true, true);
     this.instabilityDecoys.clear(true, true);
     this.clearTransientEffects();
+    try {
+      this.enemyPresentation?.clearOrdinaryDeathCopies?.();
+    } catch {
+      // A stale ordinary death copy cannot block terminal-state actor cleanup.
+    }
     for (const enemy of trackedEnemies) {
       try {
         this.enemyPresentation?.untrackActor?.(enemy);
