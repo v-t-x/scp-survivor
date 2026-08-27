@@ -1376,7 +1376,7 @@ no antialiased halo and no extra objects.
 
 本节登记裂吻梭、芽体与缺帧体三张正式动作表。项目所有者已接受 Gates 1–4 的九张 final，Gate 5 将三张表与其余六张一起原子加入普通 production preload/bundle；上方七条 legacy R-17 登记仍是不完整、缺失或失败时的 fallback，未被替换或删除。P74–P84 的共同、身份、动画板、角色/clip 与 SCP-049 提示/lineage 附录保持原始来源记录。
 
-外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-2/...` 均相对于该目录。外部 evidence 不随 Git 提交，仓库内候选只存在于下表 `public/...-action-sheet.png` 路径，并仍受显式开发 allowlist 与 production build 排除边界约束。
+外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-2/...` 均相对于该目录。外部 evidence 不随 Git 提交；Gate 2 行中的旧 development-only 描述是当时的历史状态，当前 production admission 以本节 Gate 5 reconciliation 为准。
 
 | Asset | Type | Path | Tool/model | Date | Source / SHA-256 | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1676,7 +1676,7 @@ The historical rows above retain exact processing and rejected candidates. These
 - Brood 的 `neutralize_green_dominance.py` SHA-256 `BB92D40C36AF2C65EDBE0F59BE6A1BA9E01253505E60BB8FD74B4E04BE7D6AC8`，Split row-major helper SHA-256 `5188B2EC364EAF4E20C3CFF7A1FE00E69B0770AD8BC8F007582319E5DEDD9C1B`。Brood 结论仅为 producer review 加 deterministic audit：22/22 单连通、binary alpha、每帧 ≤32 色、三种 green audit 均为 0；这里不称其为独立审查。
 - Carapace 的当前 final 只把旧 sheet 的 role8 换成 attempt08 remediation 结果；move/hit/death 字节不变。remediator、focused test、role audit、producer review 与 independent review 的完整 hash 已在本节行和 [P81](#p81-carapace-gate-gate-3-selected-lineage-and-remediation-contract) 锁定；这里不把 `UNKNOWN` prompt 重构成任何文字，也不把独立静态推荐升级成项目所有者实机验收。
 - Drifter review：`gate-3/review/r17-drifter-clips-gray-1x.png` SHA-256 `55BD9FC5EC8CDDD0208B2F03704568CC95E6C8D68F8196E55505DD2384A6ADB3`；8× SHA-256 `488047B2A58DE1F1DCF8995646DC8CF278C8C7757F1EB7970456FC0BCEAA9E88`。Pulse 4× review：`gate-3/review/r17-pulse-sac-action-sheet-4x.png` SHA-256 `4D172D30DD271966323686BDA5D3EC85572FF76B7BCE64EC9C9469C6198F4999`。Brood native contact 与 final 字节相同；4× `gate-3/contact/r17-brood-mass-action-sheet-4x.png` SHA-256 `77D1A864387399C3BA26E092CE068D04B507CF514B0E2EB1095B26224B0460CB`。
-- 当前四张 Gate 3 final 在 evidence 与 public 的对应字节相同，四个 basename 的 builder/static validation 均 PASS；它们仍全部是 manifest-gated、production-build-excluded 的 dev-only 候选。该 PASS 只证明静态结构、像素与已登记的确定性合同，不构成四张素材的 production admission、商业准入或项目所有者 `960×540` 实机视觉验收。
+- Gate 3 当时的 evidence/public byte equality、builder/static PASS 与运行态审查记录的是当时 development-candidate 接线；Gate 5 reconciliation 已将四张纳入 production，当前权威状态见本节的 Gate 5 final admission rows。该历史证据仍只证明静态结构、像素与已登记的确定性合同，不改变商业发布与署名复核边界。
 
 | Asset | Selected raw → final keyed | Rejected ImageGen attempts / superseded candidates |
 |---|---|---|
@@ -1827,4 +1827,12 @@ The historical rows above retain prompt, source and rejected-candidate evidence.
 - 静态像素门禁为每帧 RGBA、binary alpha、hidden RGB 0、非空、不触边、无 1px alpha island、opaque palette ≤32；locomotion 无 cyan，action 的 cyan 只存在于 recontain frames 16–18。Hit overlay 是上下分离的稀疏 fragment；最终 recontain frame 保留接地、无活动酒红的 beak-and-cloth remnant，不是全局缩小消失。
 - 已知 Minor：frenzy-loop frames 5–8 的低亮衣料量化色 `(40,51,37)` 在原生 1×与实际角色尺度下仍读作蓝黑/紫黑，不满足冻结的 green/olive predicate；黄铜、象牙与后背扣件的近综合色同样保留，不能为追求扩大的颜色谓词而误删功能材料。
 - 运行态审查 `gate-4/review/scp-049-gate4-runtime-review.md` SHA-256 `25B3BAE17CC6417DC499DC633FB4FA78FEEB1E1605933A98FF5FB05149DBC6D8`，结论为 dev-only Runtime PASS。证据包含七张真实 Phaser `960×540` canvas 截图，覆盖 candidate locomotion、frenzy-enter、frenzy-loop、hit-overlay、recontain frames 17/18 与 forced legacy 对照；candidate 实际请求两张 Gate 4 sheet，forced legacy 只请求旧 `scp-049.png`。浏览器原始 JFIF 截图按解码后 RGB 像素转存为真正 PNG，未做内容编辑。为免六分钟等待造成非美术噪声，Boss 状态由本地临时调试引用触发，该引用在截图后已回滚，最终 diff 不包含调试入口或时间线改动。
-- 当前两张 final 已通过 builder `gate4` validation、仓库静态回归测试、真实 production build exclusion 与运行态审查，且 normalized/public 字节一致；这些证据只证明 dev-only 候选结构、像素、lineage、接线与实际画布表现正确。项目所有者仍需查看上述 `960×540` 截图或亲自实机运行后给出视觉 verdict，之后才可另行决定是否 production-admit。
+- Gate 4 当时的 builder validation、静态回归、development-candidate runtime review 与 normalized/public byte equality 是历史证据；Gate 5 reconciliation 已将两张纳入 production，当前权威状态见本节 Gate 5 final admission rows。历史 `960×540` 截图仍可用于复核画布表现，但不再是等待 production admission 的前提；商业发布与署名复核边界不变。
+
+### P83 SCP-049 Gate 4 locomotion exact prompt ledger
+
+Gate 4 locomotion 的四方向 prompt、修正 prompt、每次调用的 raw/original SHA-256、selected/rejected disposition 和唯一静态 SCP-049 输入均完整持久化于外部 evidence：`gate-4/logs/scp-049-locomotion-prompt-ledger.md`（SHA-256 `E8E9876BEFF58C91F09998C1A56AE46981A4CD1159672B854A4A0B550E367F4E`）。该 ledger 的唯一引用输入为 `gate-1/normalized/scp-049.png`，SHA-256 `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD`；Gate 1 静态来源的逐字 prompt 见 `gate-1/logs/source-manifest.md` 与 [P9](#p9-scp-049)。本登记不转录或重建这些逐字 prompt，以 ledger 为唯一权威原文。
+
+### P84 SCP-049 Gate 4 action exact prompt ledger
+
+Gate 4 action 的 frenzy-enter、frenzy-loop、hit-overlay 与 recontain prompt、修正 prompt、每次调用的 raw/original SHA-256、selected/rejected disposition 和唯一静态 SCP-049 输入均完整持久化于外部 evidence：`gate-4/logs/scp-049-action-prompt-ledger.md`（SHA-256 `DE7D3B221D59162A762A431DCF7FE985772363B0B072A40649B8F8C6CC13E352`）。唯一引用输入同 [P83](#p83-scp-049-gate-4-locomotion-exact-prompt-ledger)；最终 source/final hashes、处理和 rejected lineage 见 P82。本登记不转录或重建未在仓库持久化的 prompt payload，以 evidence ledger 为唯一权威原文。

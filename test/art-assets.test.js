@@ -1301,6 +1301,22 @@ test("production sheet admission remains an immutable exact-nine transaction", (
   assert.notEqual(candidateKeys.slice(0, 8).length, currentlyAdmitted.length);
 });
 
+// Break caught: Gate 5 governance loses its complete prompt ledger map or exact admitted-set registration.
+test("asset register keeps the complete P74 through P84 map and authoritative Gate 5 admission", async () => {
+  const register = await readFile(new URL("../docs/art/asset-register.md", import.meta.url), "utf8");
+  const promptIds = [...register.matchAll(/^### P(\d+)\b/gm)].map(([, id]) => Number(id));
+  assert.deepEqual(promptIds.filter((id) => id >= 74 && id <= 84), [
+    74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84
+  ]);
+  for (const { key } of enemyBossCandidateSheets) {
+    const registerAsset = key.replace(/^enemy-scp049/, "scp-049");
+    assert.match(
+      register,
+      new RegExp(`\\| ${registerAsset} \\|[^\\n]*production admitted after Gates 1–4; Gate 5 integrated acceptance pending \\|`)
+    );
+  }
+});
+
 test("legacy fallback texture keys remain exact and disjoint from R-17 production keys", () => {
   assert.deepEqual(
     Object.fromEntries(Object.keys(legacyFallbackTextureKeys).map((property) => [property, TEXTURES[property]])),
