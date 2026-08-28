@@ -1,6 +1,8 @@
 # 正式素材准入登记表
 
-本表记录正式素材的真实生产信息。v1.6.0 源码发布中，本表列出的项目生成视觉素材统一按 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 所述 CC BY-SA 3.0 提供；各行的“候选/商业复核”描述生产准入历史与未来商业尽调状态，不改变本次源码发布许可证。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。v1.6.0 基线登记共计 53 项，其中 51 项由运行时 manifest 加载；当前合并树的运行时 manifest 为 61 项，玩家素材的现行边界以下方 2026-08-21 稳定化裁决为准。`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
+项目所有者于 2026-08-27 明确接受 Gate 5。本记录不伪称已经捕获此前缺少的逐类型连续动作、完整 SCP-049 状态、普通胜利和第二次完整重启证据；因此下列九项统一标注为“Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言）”。
+
+本表记录正式素材的真实生产信息。v1.6.0 源码发布中，本表列出的项目生成视觉素材统一按 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 所述 CC BY-SA 3.0 提供；各行的“候选/商业复核”描述生产准入历史与未来商业尽调状态，不改变本次源码发布许可证。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。v1.6.0 基线登记共计 53 项，其中 51 项由运行时 manifest 加载；当前合并树的运行时 manifest 为 70 项，玩家素材的现行边界以下方 2026-08-21 稳定化裁决为准。`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
 
 登记中的 `.superpowers/...` 仅是**不随 Release 分发**的本地审计归档标识；运行时加载、公开署名和许可合规均不得依赖该目录。`local-generation-archive:<generation-id>/<filename>` 同样仅标识本地生成归档位置，并保留 generation id 与文件名，不是公开分发路径。
 
@@ -1371,3 +1373,468 @@ no antialiased halo and no extra objects.
 | 接点检查图 | `.superpowers/sdd/player-overhaul-phase1/gate-b/body-prototype-socket-overlay.png` | SHA-256 `98c7d56c44f4b9d686a3adf720bde6b06f9806fa6aad8a7fd9c1066ac3397b96` | 本地验收证据，不暂存 |
 
 后处理命令为 `build_player_character_assets.py body-prototype` 与 `socket-overlay --frame-count 28`；builder 当前 SHA-256 `184bc38151c4fc1df5a9f4686e514a7c25013b1e4655fb463c43de7bb0e08c41`。当前候选的许可基础是项目自行编写的程序化像素重建；A 身份参考仍继承 Gate A2 的生成服务条款复核要求。最终准入结论等待用户查看原生 1×28 表、接点图和 960×540 实机截图后确认。
+
+## R-17 普通敌人 Gate 2 动作表（Gate 5 production admission）
+
+本节登记裂吻梭、芽体与缺帧体三张正式动作表。项目所有者已接受 Gates 1–4 的九张 final，Gate 5 将三张表与其余六张一起原子加入普通 production preload/bundle；上方七条 legacy R-17 登记仍是不完整、缺失或失败时的 fallback，未被替换或删除。P74–P84 的共同、身份、动画板、角色/clip 与 SCP-049 提示/lineage 附录保持原始来源记录。
+
+外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-2/...` 均相对于该目录。外部 evidence 不随 Git 提交；Gate 2 行中的旧 development-only 描述是当时的历史状态，当前 production admission 以本节 Gate 5 reconciliation 为准。
+
+| Asset | Type | Path | Tool/model | Date | Source / SHA-256 | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| r17-rift-skimmer-action-sheet | spritesheet PNG | `public/assets/art/enemies/r17-rift-skimmer-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Gate 1 cleanup + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-rift-skimmer.png`，SHA-256 `789A41F703E537A9556931C66DB4C39936DE52429F4D7DFF41DD28CE66908C29`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选逐字提示 [P75](#p75-rift-skimmer-gate-2-selected-exact-prompts)；所选 raw/keyed 与淘汰链见本节及 `gate-2/logs/r17-rift-skimmer-prompt-ledger.md`；public 与 normalized 最终 SHA-256 均为 `7B944216E4B78EAACB1A36D8AE023AC03C343E5FBDA523E56FC4EC226065E304` | 对所选 board 做可审计色键；signed `int16` 近绿 predicate；move/pierce 仅右补 2px 透明列；Gate 1 cleanup；按 move/hit/death/pierce 组装；无主体像素增补或重绘。旧 `uint8` 下溢候选已拒绝 | 项目定制生成；唯一图像输入为项目已接受 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；不得由静态 PASS 推断正式商用准入 | Gate 2 review candidate; dev-only, not production-admitted | 864×48（18×48×48；move 0–5、hit 6–7、death 8–13、pierce 14–17；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+| r17-bud-action-sheet | spritesheet PNG | `public/assets/art/enemies/r17-bud-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Gate 1 cleanup + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-bud.png`，SHA-256 `DF1DC4BC4FE54A7EF2A0B010F5AB7A77B9A1B69B81F1D23208DB80878BA1E8C9`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选逐字提示 [P76](#p76-bud-gate-2-selected-exact-prompts)；31 次调用及处理链见 `gate-2/logs/r17-bud-prompt-ledger.md`（ledger SHA-256 `8E53AA469BEF682DEE19743D2EEEDA9F86CD1646723FEBB79140FE37119C0F7A`）；public 与 normalized 最终 SHA-256 均为 `22FF646CE9EE1DDC1B67305C95E5D4FA9C6C862A494976598AC87025E0FA99E6` | 所选 raw 经明确容差色键、外连绿边/残绿 predicate、最小透明补列与 Gate 1 cleanup；按 move/hit/death/snap 组装；未为对齐或过门禁添加/删除合法主体像素；旧人工补像素与删 steel lineage 禁用 | 项目定制生成；唯一图像输入为项目已接受 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；不得由静态 PASS 推断正式商用准入 | Gate 2 review candidate; dev-only, not production-admitted | 576×32（18×32×32；move 0–5、hit 6–7、death 8–13、snap 14–17；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+| r17-frame-gap-action-sheet | spritesheet PNG | `public/assets/art/enemies/r17-frame-gap-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Gate 1 cleanup + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-frame-gap.png`，SHA-256 `E9D209902B2291B8996FE8CB071F6AAA0B2FE52376064D42CDEEBED661471F56`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选逐字提示 [P77](#p77-frame-gap-gate-2-selected-exact-prompts)；source audit `gate-2/logs/static-source-audit-rift-frame-gap.md`，SHA-256 `36D71A20F04BD3245A503F1129006A26CB9C37B46EEAF7A9C2E19AB664F555D6`；public 与 normalized 最终 SHA-256 均为 `FF72566E4C612EE6292E6135B0F06F2E7D12AA53FE0219F82B6304AB41BCF9C5` | 所选 board 经色键、绿边/grid/debris 清理、Gate 1 cleanup 后按 move/hit/death/role 组装；role 八格由 builder 拆为 phase-out 与 reappear-dash。特定 grid/fringe/debris 的逐字命令未落盘，明确记为 `UNKNOWN`，不冒充全链可独立重跑 | 项目定制生成；唯一图像输入为项目已接受 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；不得由静态 PASS 推断正式商用准入 | Gate 2 review candidate; dev-only, not production-admitted | 1408×64（22×64×64；move 0–5、hit 6–7、death 8–13、phase-out 14–17、reappear-dash 18–21；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+
+### 静态审查、处理链与最终产物
+
+- Rift Skimmer：最终静态 verdict `PASS`，Critical 0、Important 0；每帧 9–20 色，无触边或 1px island，baseline `y=46`，clip 中心漂移不超过 0.5px；death cyan `7→6→0→0→0→0`，pierce 从左/front cyan aperture 发力。完整静态来源审计为 `gate-2/logs/static-source-audit-rift-frame-gap.md`；独立审查结论只保存在 agent final 与该汇总审计中，单独 review report 路径为 `UNKNOWN`。
+- Bud：最终静态 verdict `PASS`，Critical 0、Important 0；独立报告 `gate-2/review/r17-bud-static-review.md`，SHA-256 `88627F6732DB3A2DF6D5DB2DE2E0C025974F729D94F4BB65B492545920AFE2C3`；death cyan `8→4→2→2→0→0`，无 relight。报告中的移动宽度切换、针点级 steel 与合法小分量均保留为真实 `960×540` 复核项。
+- Frame Gap：最终静态 verdict `PASS`，Critical 0、Important 0；每帧 11–17 色，无触边或 1px island，baseline `y=62`；phase-out opaque `1066→854→647→216`，reappear-dash `347→448→476→661`。完整静态来源审计同上；单独 review report 路径为 `UNKNOWN`。
+- 三张 normalized/public 文件已逐字节核对；最终 SHA 分别为 `7B944216E4B78EAACB1A36D8AE023AC03C343E5FBDA523E56FC4EC226065E304`、`22FF646CE9EE1DDC1B67305C95E5D4FA9C6C862A494976598AC87025E0FA99E6`、`FF72566E4C612EE6292E6135B0F06F2E7D12AA53FE0219F82B6304AB41BCF9C5`。静态 PASS 不替代项目所有者的逐类型实机视觉 verdict。
+
+#### Rift Skimmer 所选来源与处理
+
+| Clip | Prompt id | Selected raw / SHA-256 | Selected keyed / SHA-256 |
+|---|---|---|---|
+| move | `move-attempt-03` | `gate-2/raw/r17-rift-skimmer-move-attempt-03.png` / `60D2C8A8CBD4E6F678BD3D94B8134383A36B6E6F4CFF7EFA93A7FD44BD69DDF2` | `gate-2/keyed/r17-rift-skimmer-move.png` / `D5D7F8DEB1080FEBAFBAC5C42379C71A7E534D59731A0724414A885BDDE63DEA` |
+| hit | `hit-attempt-01` | `gate-2/raw/r17-rift-skimmer-hit-attempt-01.png` / `23755079D59CC82F77495498A181A558C60213278A70737D230A02FED57E52E8` | `gate-2/keyed/r17-rift-skimmer-hit.png` / `D45712DE4043036E1B079A104741D25B582CED75DA0E2E29EBE7FEACA8D18E3F` |
+| death | `death-attempt-13` | `gate-2/raw/r17-rift-skimmer-death-attempt-13.png` / `AAEECB114DB3E0C1A32B5FA0827ABD9CE068FB5F7464CF0BF150DA9869936D6B` | `gate-2/keyed/r17-rift-skimmer-death.png` / `B6E50D4483B7562E4C0ED4F88DBD35943A9541E3FEC69F15DB740F0E7A79ADCD` |
+| pierce | `pierce-attempt-04` | `gate-2/raw/r17-rift-skimmer-pierce-attempt-04.png` / `4DF901767ACC384624F79144464B572EA241B0575C1788FB9EBDD4234D428C9A` | `gate-2/keyed/r17-rift-skimmer-pierce.png` / `87EB0BA58EEF02DD38787489EE1979227A8706A6C78E5DA3CEE2CAB949A7A325` |
+
+处理链：bundled chroma helper 的逐字 invocation/参数未写入 Rift ledger，因此该一步为 `UNKNOWN`；其后把 RGB 转为 signed `int16`，以 `alpha>0 && G>=80 && G-max(R,B)>=16` 移除满足该 predicate 的近绿 opaque 像素，move/hit/death/pierce 分别移除 4432/2812/5923/3042 px；move 与 pierce 只在右侧补 2 列透明像素，未裁切、缩放、移动或换序；再执行 `cleanup_gate1_assets.py --alpha-threshold 248 --colors 31`，最后由 `build_enemy_boss_assets.py r17-action` 组装。旧 `uint8` 下溢路径错误删除 cyan/steel，normalized SHA `DAF786421B768C39E278E8B8312CC772EFB77F72BFC4619F22BADA9D4BED2BA8`，已拒绝。
+
+#### Bud 所选来源与处理
+
+| Clip | Prompt id / prompt SHA-256 | Selected raw / SHA-256 | Selected keyed / SHA-256 |
+|---|---|---|---|
+| move | `move-15` / `4FE1E0091DC520DDEE2FB918591AAFF98869055BF59FA5E5479A807196F522C5` | `gate-2/raw/r17-bud-move-attempt-15.png` / `CD0333BF877232DB23085909ED38EB5406D0A6A4E860AC333AB5521F8833E64C` | `gate-2/keyed/r17-bud-move.png` / `FA5E92BFE3F072C06B66ABA3362750FAFBFCA672392D743293B77B34DBDC4573` |
+| hit | `hit-04` / `D4BE51F76D25873B13E71CDC97946597EAE057E96151B69961A4DD78C6BA09C9` | `gate-2/raw/r17-bud-hit-attempt-04.png` / `C7AB0805E6B4A7EB3C70530A7F9C5ADAA205052DD8AFDC8501683CBB9AC9EA95` | `gate-2/keyed/r17-bud-hit.png` / `4D8588FF91DFD07E1925C7ADB80DFB12C239ED78CF62ADFAD83D4EBC53542828` |
+| death | `death-08` / `6C536312A60FAE1B360AE8FCA94827BCC632C11982DB66790576F85D77817537` | `gate-2/raw/r17-bud-death-attempt-08.png` / `9858813B2FE62B06A368222F8503446270E5322B32E043875891A22A823DB34C` | `gate-2/keyed/r17-bud-death.png` / `7E13555932E7EE23668B70E5FCD67EC32E8C55B7382D4C252BFD019A82326486` |
+| snap | `snap-03` / `AE84D40CE130E13D8A21D8DB97AE5BE4B8CD4D36517C7B847A3BC175F7125BA4` | `gate-2/raw/r17-bud-snap-attempt-03.png` / `DB55EF964776FF8B95F6B5DC639404837D184B5F743BE9F971D39AA4EA9A1770` | `gate-2/keyed/r17-bud-snap.png` / `6187EC50641318FDF8108BFE8812F6DB3B74859A9E0DAA3776AA1F87A141E034` |
+
+处理链完整记录于 Bud ledger：四张所选 raw 先执行 bundled `remove_chroma_key.py`（`#00FF00`、tolerance 36、spill cleanup、force）；move/death 只删除 8 连通到外界的候选绿边，hit 以 tolerance 180 重键后按无坐标残绿 predicate 清理，snap 以 tolerance 200 重键；move/death/snap 分别做 `1774→1776`、`1774→1776`、`1703→1704` 的最小透明补列，hit 不补；然后执行 `cleanup_gate1_assets.py --alpha-threshold 248 --colors 31`。Death 最后一格再以全局无坐标 predicate 清除 98 个残绿像素，opaque bbox 不变，未增补或重绘主体；四板最终由 `build_enemy_boss_assets.py r17-action` 组装，fresh probe 与最终 sheet 字节相同。
+
+#### Frame Gap 所选来源与处理
+
+| Clip | Prompt id | Selected raw / SHA-256 | Selected keyed / SHA-256 |
+|---|---|---|---|
+| move | `move-attempt-01` | `gate-2/raw/r17-frame-gap-move-attempt-01.png` / `E8787ED72E5238EE5A06FB6F540759B69659A06FCEAB1E499E52896EDB439417` | `gate-2/keyed/r17-frame-gap-move.png` / `981C2354107DEB20F4A98773B317FD3EBB31E5ACEA3BC62CB6091B991CF79B16` |
+| hit | `hit-attempt-01` | `gate-2/raw/r17-frame-gap-hit-attempt-01.png` / `296935EEAFB3587D58728D045824D6BF3AF7DA76E6692FD0A918570E066588FB` | `gate-2/keyed/r17-frame-gap-hit.png` / `568648706C2268BE8238F0AFEE279D4CFD10F49CD89C999D46C37F7C86C51E3E` |
+| death | `death-attempt-01` | `gate-2/raw/r17-frame-gap-death-attempt-01.png` / `2AF22C7E11AB6C59E78F87D5444375F0DC691E3FB1AAE46007411FBAFBEA8C07` | `gate-2/keyed/r17-frame-gap-death.png` / `277556AC69DFD2D365E94513C538FFD1238CB743C1ED10566E1705D52026534C` |
+| role | `role-attempt-01` | `gate-2/raw/r17-frame-gap-role-attempt-01.png` / `191734E34E931725F7870CB89A7F0A273FB2A2F0CFD232286E00C59B0C72524F` | `gate-2/keyed/r17-frame-gap-role.png` / `DFC0DF99E7CB0D427EE9D4DA56F456E887954CC775E070E8C120EA2676E56F62` |
+
+Frame Gap 四个 clip 各只有一次 ImageGen 调用，没有被拒 ImageGen attempt。命名中间文件证明 chroma→fringe→grid/debris→selected keyed 的处理顺序，且 reviewer 逐像素复建最终 22 帧与稳定候选一致；但特定 grid/fringe/debris 清理脚本或逐字命令没有落盘，故完整前处理可复现性明确为 `UNKNOWN`。`gate-2/normalized/r17-frame-gap-action-sheet-prefringe.png` 的当前文件实测 SHA-256 为 `7DA0A6036B61577CEAF3EBB70E2BC28254A2A2A8AEA1A5414C45852DF6F9D549`；它只是被最终 fringe-clean 取代的处理中间输出，不是第二次 ImageGen attempt，也未选用。
+
+### Rift Skimmer 被拒 ImageGen attempts
+
+下表每个 attempt 的实际 raw 路径为 `gate-2/raw/r17-rift-skimmer-<attempt>.png`；所列 SHA 均与当次 generated-original 字节核对一致。所选四次已在上方登记，不重复列入淘汰表。
+
+| Attempt | Raw SHA-256 | Rejection reason |
+|---|---|---|
+| `move-attempt-01` | `9660FD69FB68917BD46B167315C56C3014D3D806FFA99779AAED88340230D1BB` | cleanup/build：cell 1 主体触及 frame edge |
+| `move-attempt-02` | `70AFEDC9B4FC5C93713924F10135CB8373405B68AB9DB35304FCF39244AEBB1D` | `1774×887` 宽度不能整除 6 cells |
+| `death-attempt-01` | `CC5CE2CD00B2685FE672467CF28087A9477EF63B1E68E743087F7FEDD2FB0ED5` | 后段全局缩小，并有内部绿条/绿孔 |
+| `death-attempt-02` | `4DB0D7BEE6782694FEF9A71C8A32411B253F9E0138CE67B05BE7A26539A8CFDA` | builder：cell 0 主体触边 |
+| `death-attempt-03` | `871A95A3AC0E4BA564980790E39B87DA8C9CD9DCF69BB49707DBCDB3456E0FCF` | 视觉动作可用，但 builder 仍报 cell 0 主体触边 |
+| `death-attempt-04` | `7EF11D9D5DF342C8EE09A01F0B575D613E269E0725E28E562B079331F91E20AB` | builder：cell 0 主体触边 |
+| `death-attempt-05` | `1A17590DC37B84CD0553FD1D0BC172CAE658E34EB54E4E385790B321CE66410D` | 前四姿势跨数学 cell 边界 |
+| `death-attempt-06` | `DA043321757900078BA06BBB2C7A0BB9CEA832B1A531E31C571FDF31BAFF44AA` | 尺寸虽小但整体向内聚集，前三格仍跨边界 |
+| `death-attempt-07` | `F324421038E9199C8217E60561EDD3576E69DF9CB5A291C5686B6C51E1FB4FBA` | frames 4–5 出现内部绿孔 |
+| `death-attempt-08` | `75202E161E791B9D360A9C752F71C8C9BDE4C9566509E4FC5C2D81B4076132C2` | 内部绿色侵入仍在，早期姿势过宽 |
+| `death-attempt-09` | `C8800E1935B0F78C6636307A29D0C4F0781402B7C812ADAD6D67F0582D558D77` | 死亡动作太弱，主要读作尾部变短而非头/rail/组织崩塌 |
+| `death-attempt-10` | `CE0684529AFB177E7811B58B41AFCD899214331F5CDEFE7BC0CF0A49A2AD92AE` | cells 1–3 合法主体像素触及数学边界 |
+| `death-attempt-11` | `836952561C66BD63B322874344957E55D15BF68DDAF916D07E28DB9E1B83608B` | cyan 熄灭语义可用，但 cells 0–2 alpha bbox 触边 |
+| `death-attempt-12` | `655A15D22A3D815844C29217CC0C915902920703C6AAFA9249863CF91DE81EA0` | 网格与 cyan 序列改善，但卷尾形成封闭绿孔 |
+| `death-attempt-14` | `BA84CDB15029B85527F86A886A82BB37463129E09ED60C329B5B1337C0064876` | stop 到达前已在 flight；attempt 13 已过合同，14 反而弱化崩塌/footprint 进程 |
+| `pierce-attempt-01` | `BED21221C8B6A1C695052916823E6202476FF17D4E698043702D2E25B02AE8DF` | frame 3 变成长细 spear/trail，并有内部绿色 |
+| `pierce-attempt-02` | `B83DB8C504B50B2948D4A23EF5C2B4DA8CB196E4DA311F2A4BA430BDF29019AA` | 第三姿势读作右侧尾刺，与左/front cyan aperture 冲突 |
+| `pierce-attempt-03` | `9A90C414C16CCDB9F165C2CE1906DAC03FFE86307FCFEBE4E00E27CF3397D86D` | 攻击方向已改正，但第一姿势右尾触数学 cell 边界 |
+
+### Bud 被拒与未选 ImageGen attempts
+
+下表 Prompt SHA 是账本中 UTF-8 逐字 payload 的 SHA-256；Raw SHA 与 generated-original 一一相同。实际 raw 路径遵循 `gate-2/raw/r17-bud-<clip>-attempt-<NN>.png`。所选四次已在上方登记；`death-09` 是停止后的保留输出，未进入 key/build，故标为 unselected 而非 rejected。
+
+| Attempt | Prompt SHA-256 | Raw SHA-256 | Disposition / reason |
+|---|---|---|---|
+| `move-01` | `A54894A32041944C7302B67A7ADE190E36A66F5DEEDFB253E25FE4B9B8B7798E` | `B1D123FD0A471CC7FAD0A379361CDCD77691A529B8FC62CFBCAB3ACF6F16F697` | rejected：旧处理为通过 1px 门禁删除合法 steel tag，frames 0/2 钢件不可读；lineage 禁用 |
+| `move-02` | `CB4B3F5258C07787D94F98245BDC8DBA8FDB64AAF95C21F79D0765EF5968A59F` | `CC3148B9A6DAEEBC2D31DE63DC98CC0109E0007D77087E259F30EB1F66E372EF` | rejected：钢件膨胀成多重/双环，身份材料失真 |
+| `move-03` | `CB5C2A53673B10638E3466125C4B1D731567EB77DAB50D51310FBBADB1403F6A` | `92EB2586BA49F14E7B518F37CFE15A53FBD72B257D0C7D00C1C267C84A76141A` | rejected：身份较好，但 builder 报 normalized cell 1 主体触边 |
+| `move-04` | `02E87D0ED87F9F6A4C69664EEDF2B9BA74F8BFBCA384741228CC0ECA0D3CA1A4` | `B9382A99645D25C818171824DD6240FE6EBDF40222FFDD4DAF6AA5961CD0DBE8` | rejected：出现第二 cyan/teal 点，且 normalized cell 0 有 singleton |
+| `move-05` | `89B2DA9092F0C3726F4692CFDB4CBE6CF8F46C9AF064C7D476619D9A5542C1D3` | `0E2456D38E2114346B6278D1AAE137E58B9A4F8FAC5A652935E1603900610246` | rejected：detached steel highlight；normalized cell 0 singleton |
+| `move-06` | `193F72818947976D623C4CBC45CD73AB670CC5E15D03B386D53F69878BB8E9FB` | `06324D0D9C03AE91E48F58A2D66D5924900E066D915AE3889DE71FCD054FA61C` | rejected：normalized cell 4 主体触边 |
+| `move-07` | `5C94CF1ACA1FD12A0A0589713563C5E8F1CDCB310F8303E19511311AE6274D7E` | `FB00C0BB828CF02B1476E3E92F9E86086637D7C0E4CEFBE60FA572F20CDF40A0` | rejected：normalized cell 1 有 isolated single-pixel component |
+| `move-08` | `8573CA2E37E2C192CCE624C57B5ED678F8250BF0DA5706E51061C73C14C11572` | `114414DD8B6D2AE7753BE22202360371CFE990FDA86FB998494B93E3F76AD4EB` | rejected：steel tag 读成双环/8 字硬件 |
+| `move-09` | `B5ED423180A9ACE9F09154892F6AF6985159098D4BA703C422BD45A63AF644A8` | `4833C4691114AE3C6F5B9FA73B33D9E66633828270D845149562BF2EE0EC2AE8` | rejected：动作弱、washer 过大；32px steel 塌为零散点并有分离暗块，不做 debris salvage |
+| `move-10` | `3DFD9636108260F53588EB2C6681094965C664B9602151E02DBB5B5791618E60` | `123A549E8EC8357B79E30C8F8E848662E5D02262E7DD93DF275FAE5092A9CD14` | rejected：steel 仅成小亮点；singleton 含合法 steel/深红像素，不删除主体过门禁 |
+| `move-11` | `AF0B57333E3D78AF7BF3E04DB46CB40C99AACF0A6171B7ADD3DE52AC55369045` | `B7F21B8AE8E6575B7A1EC759395601B19764CB07C789B005366BFF02C8C23859` | rejected：normalized cell 1 singleton 涉及 cyan，不能按背景碎屑删 |
+| `move-12` | `0EDB908308BBFA9B5ABAF6DC52F716C3E940BC6684C9D9BCEDBCBF03B742ADAB` | `3E1C8187F8479D94C1555FB106E8D588AF3B41E4CDB140DF760DBB4B63B6F03D` | rejected：尾部跨逻辑 cell 边界，39–47px 连通触边不是 debris |
+| `move-13` | `A3947E567BFFEE506720A610BEC0A952E34DEF4754F44B8C6EEE50A35E5F9E9D` | `3A603B61860CBB53C67C1CA4AA45679339727FB7D11D7A0EB7AA3023DE8BF2AD` | rejected：center/baseline 不稳；frame 1 baseline 29，其余 30 |
+| `move-14` | `E9A55F0F5C943C8078374DA8B529279638B8B4834240E58823D24F62D401DF4D` | `E30E389B6F1C8AC1DBE54743372073549C0F6E3F35F916B95A6F7EFF7CCBC4F6` | rejected：尾端形成平底脚/吸盘/平台，不像漂浮 comma swim |
+| `hit-01` | `10982A3485F27127791899ECE9F517B4DD719FE66800347DB5F09EC45AC695B4` | `23AC47FDE87227797C1100F03684B1F1A8387D2C834F39DF667AF44265D19415` | rejected：不是 exact 2 cells，视觉产生 8 格 |
+| `hit-02` | `1E22DA3236BEE06D436488237BEBB18AC011E0E884DD6ECDE74DDD80369FFE7E` | `6ED867A85C1717A697A5A8A16B8D5B4B84C6A6587C516A02E3965A0E12BF96A1` | rejected：出现 debris/impact marks，姿势与锚点不稳 |
+| `hit-03` | `B681CF8D87B65473A7921EE0EDD747C911D8DC367AFCB6EC269869D5B4625566` | `B6A1E4C98C9DB76B2EA69A8730B26074A961A0C43E33BBBDE619C6F6BC29A596` | rejected：旧候选为对齐 baseline 人工补入 frame 6 `(13,30)` 主体像素；lineage 禁用 |
+| `death-01` | `96E903B36A8D30732BF70174A8D044D7D808C889B0CA905722BC657D639D52DE` | `42842396D2BE27C7EA829632A39B27DC97FA436C681598612B3C8962DDF8BFAA` | rejected：过度结构化，core/硬件/整体缩放偏离芽体身份 |
+| `death-02` | `744D81FD8FF9CC1418AAF1DE8BD599B2B576EABD9E79CF18C76D16A2D6887157` | `B3C97E53CCF052EBF82D67B4BE3AEA86EF776402CE4F516DECD6BE29691D2708` | rejected：身份、共享尺度、core 衰减与 steel 稳定性不足 |
+| `death-03` | `0FB2E205FACD82FB7CD61494729F97ACFE04C69E10048237BD2D7A24F107CB4F` | `D751F4018119204D88D2A34FAFCA048A0F0FAE9968C277227EB45C10AD7B57D5` | rejected：身份、共享尺度、core 衰减与 steel 稳定性仍不足 |
+| `death-04` | `B51A0C2C45D481581B4026F54D3411BDB330C9F2C2718CBBE9B21319B65FD155` | `3F0E422E0EE14388EAF95D5DAC56A51C96F04D82FDFD3577C556FA907A978FB6` | rejected：旧 final cyan `0→2→0→1→1→0`，熄灭后复亮 |
+| `death-05` | `348ACBD0D8F4FFE1C1E74F042E381FD71D603A9535C18AED19088D0D5BB5E13A` | `1D452F3B7A0789EECF7D7B7404D9BEA698AB4B9F74FFB323DD9321F4FFB65854` | rejected：整体缩小、steel ring 沿尾迁移且 frame 3 core 过早消失 |
+| `death-06` | `C5E14328B8C0A01AE0289D6EBCC9E0978774BAD07678D4666D467FF2D49CBCE7` | `C8C3AA1A1D279A1001E024D6FD34A484552294F895EFDF005519FBE5C9C8E0CE` | rejected：frame 3 baseline 29、其余 30；不补主体像素修门禁 |
+| `death-07` | `F0A8A2839E081FE8A5DB758CC7A75AB8A517E438E78CDE3CE183F886DC8BF111` | `165C730CD1A7286684A598B0281C92A2C547538F07A50E2A8D4141A5AB594F1D` | rejected：虽 builder PASS，但轮廓/尾部近乎不变，死亡读成 recolor/idle |
+| `death-09` | `F459690BCD02FAA9912AB1B55A1F6B2CFE19E929318C7D4C565B6AC0924AA27C` | `E0654E688915259A05C8092D94DF98A184DE5AA974BECBA232145E5C321DA488` | unselected：Death08 已满足无 relight 合同；只保留 raw，未 key/build |
+| `snap-01` | `A367332AB38D514E73E5BF60E8FB8907C9EE16B0C6F2310A2082B244B4B13E47` | `1A5143ED69F48BBA381D8F8C5B4417557B1B960A566A5C821E1F7DCC595133DA` | rejected：大 bite/tongue 改变身份，steel ring 读到尾端 |
+| `snap-02` | `F5CE052159A6BD50FAE6DB32257A7A49560D06777FA86173143B1DDCB79295CC` | `5778E6A5CF7517037AEDD8B1EF1BB8047C2C60A769F817D151DE728A396FDB39` | rejected：额外 forked tongue/projection，并有 cyan 重复风险 |
+
+### Gate 5 final admission reconciliation — Gate 2 sheets
+
+The historical rows above retain their original Gate 2 state and complete lineage. The following final governance rows are authoritative after the owner accepted Gates 1–4; legacy R-17 PNGs remain fallback assets and were neither replaced nor deleted.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| r17-rift-skimmer-action-sheet | `789A41F703E537A9556931C66DB4C39936DE52429F4D7DFF41DD28CE66908C29` | `7B944216E4B78EAACB1A36D8AE023AC03C343E5FBDA523E56FC4EC226065E304` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/r17-rift-skimmer-prompt-ledger.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| r17-bud-action-sheet | `DF1DC4BC4FE54A7EF2A0B010F5AB7A77B9A1B69B81F1D23208DB80878BA1E8C9` | `22FF646CE9EE1DDC1B67305C95E5D4FA9C6C862A494976598AC87025E0FA99E6` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/r17-bud-prompt-ledger.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| r17-frame-gap-action-sheet | `E9D209902B2291B8996FE8CB071F6AAA0B2FE52376064D42CDEEBED661471F56` | `FF72566E4C612EE6292E6135B0F06F2E7D12AA53FE0219F82B6304AB41BCF9C5` | Complete raw/keyed and rejected chain retained in the historical row and `gate-2/logs/static-source-audit-rift-frame-gap.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+
+### P74 R-17 Gate 2 common animation-board prompt
+
+以下段落逐字位于本轮每个所选 prompt 的开头；P75–P77 仍复制完整 prompt，不依赖读者自行拼接。每次调用仅使用对应 Gate 1 accepted silhouette 作为唯一 `referenced_image_paths` 输入。
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+```
+
+### P75 Rift Skimmer Gate 2 selected exact prompts
+
+Rift ledger 保存全部 22 次调用的逐字 prompt、generated-original/raw 路径、hash 与 disposition：`gate-2/logs/r17-rift-skimmer-prompt-ledger.md`，SHA-256 `942DAD4CE1772077DD07A2FA171D8FC7E32BD0614535C8AA3260CCE08A70C8D3`。下列四段是最终所选调用的完整逐字 prompt。
+
+#### move-attempt-03 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Requested cell count: exactly 6 equal-width cells. A fast low skimming cycle: wide head leads, dorsal steel rail stabilizes, sharp tail flexes with readable horizontal thrust; the body never becomes a thin line.
+
+Correction constraints: output an exact 1800×900 horizontal canvas organized as six invisible 300×900 cells. Every pose must remain wholly inside its own cell with at least 15 percent flat #00FF00 safety margin on every side; no pose or pixel may touch or cross a cell boundary. Use fully opaque hard-edged subject pixels against a fully opaque perfectly flat #00FF00 background, with no transparency, no semi-transparent pixels and no transitional green fringe.
+```
+
+#### hit-attempt-01 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Requested cell count: exactly 2 equal-width cells. A very short non-stagger hit reaction: the front aperture compresses and the shell recoils one pixel-equivalent, then remains ready to move.
+```
+
+#### death-attempt-13 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Requested cell count: exactly 6 equal-width cells. A committed display-only collapse: neural aperture fails, wide head buckles, rail releases, dark tissue folds inward into a clear inert remnant; no gore and no global shrink.
+
+Correction constraints: the creature faces LEFT and the cyan neural aperture is at the LEFT/front. Frames 1-2: cyan aperture flickers and compresses. Frames 3-4: it visibly dims. Frames 5-6: it is fully extinguished and dark with zero cyan. The left/front wide head buckles, steel dorsal rail releases and folds, and dark tissue folds inward into an inert remnant. The right tail folds as a SOLID compact dark wedge pressed flat beneath and against the main body in every frame. Never draw the tail as a loop, ring, U-shape, horseshoe or separated curl; it must create no enclosed hole and show no background through it. No global shrink: all six chunky wide bodies share one scale and roughly constant footprint. Use exactly six equal mathematical cells across the entire canvas. Center one subject in each cell, with the same broad uninterrupted green gutters and clean spacing at every 1/6 boundary; no pose pixel touches or crosses a boundary. Place first pose in the far-left cell and sixth in the far-right cell. No green holes, internal green light, green cracks or green materials anywhere inside a pose. Every region inside the silhouette is filled by dark body, steel, wine-red tissue, or the allowed cyan aperture state. Use fully opaque hard-edged subject pixels.
+```
+
+#### pierce-attempt-04 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Requested cell count: exactly 4 equal-width cells. A successful-contact pierce: wide head compresses, cyan aperture narrows, sharp nose thrusts once, then settles without moving the board position.
+
+Direction and sizing correction: the creature faces LEFT and the cyan neural aperture is the LEFT/front in all four cells. Cell 1 ready; cell 2 compresses the LEFT/front head and narrows cyan; cell 3 makes one short compact LEFTWARD nose thrust immediately around cyan; cell 4 settles. The RIGHT tail braces as a short solid wedge pressed tightly against the body and never extends toward the next cell; it is never the attack spike. Render every complete pose uniformly at only 80 percent of the previous board's sprite size, while keeping one identical shared scale, chunky wide proportions and a stable footprint. Use exactly four equal mathematical cells across the entire canvas, one centered pose per cell, with very broad uninterrupted flat-green gutters at every quarter boundary. Keep at least 15 percent of each cell width transparent green at both left and right around every pose; no pose pixel touches or crosses a boundary. No part thrusts right; no thin line, long spear, beam, filament, stretched tail, trail, green hole or internal green light. Use fully opaque hard-edged subject pixels.
+```
+
+### P76 Bud Gate 2 selected exact prompts
+
+Bud ledger 保存全部 31 次调用的逐字 prompt、UTF-8 payload SHA、generated-original/raw 路径、hash 与 disposition：`gate-2/logs/r17-bud-prompt-ledger.md`，SHA-256 `8E53AA469BEF682DEE19743D2EEEDA9F86CD1646723FEBB79140FE37119C0F7A`。下列四段是最终所选调用的完整逐字 prompt。
+
+#### move-15 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+A high-frequency comma-shaped swim: the single tail filament whips through a native six-pose cycle while the head and tag ring stay readable.
+
+exactly 6 cells; closed steel tag ring at head-tail junction must be chunky and continuously attached/readable in every final 32x32 frame, survive nearest reduction as at least a multi-pixel closed loop/component, never become isolated 1px dots; one tail only; no debris.
+
+The steel tag is one simple small circular O-ring or washer with exactly one visible transparent hole. Organic tissue at the head-tail junction directly touches its outside rim; no separate mount, link, second hole, chain, clamp, or extra steel. At final 32x32 scale the rim is at least two pixels thick, one 4-connected closed component, and readable in all six poses. No isolated steel highlight or floating metal.
+
+Exactly one cyan core total per pose. Place it deeply embedded inside a solid filled head, fully surrounded by continuous opaque charcoal tissue. No transparent gap, hollow, cutout, second cyan glint, or reflection.
+
+Use six exact equal logical cells. Pose centers are precisely at 8.33%, 25%, 41.67%, 58.33%, 75%, and 91.67% of canvas width. Keep each complete pose within the middle 45% of its logical cell and at least 25% cell width of pure #00FF00 margin on both sides. No part may approach or cross an invisible cell boundary.
+
+Keep the head, cyan core, washer, junction, shared body scale, and lowest floating y-coordinate stable in all six cells. Motion is compact lateral tail deformation only: small left bend, small right bend, tight left curl, tight right curl, shallow S-bend, and straight recovery. No long horizontal sweep. Every tail tip reaches precisely the same lowest floating baseline while remaining organic and suspended.
+
+At final 32x32 scale, each tail ends in a compact rounded or diagonally rounded cap: its lowest opaque row contains 2 or 3 connected tail pixels, and the cap remains at least 2 opaque rows deep, continuously attached to a tail at least 2 pixels thick. The cap must look like the natural end of one soft filament, never a flat foot, shoe, base, platform, pedestal, stand, suction cup, horizontal bar, bulb, or separate blob. No diagonal-only or one-pixel tail tip.
+
+Use simplified solid coarse pixel clusters and thick filled shapes. The entire non-green subject in every pose is one single 4-connected opaque component. Head and neck are solid filled masses without transparent internal gaps except the washer's one hole. No separate black outline, exterior border fragment, detached pixel, micro-detail, tiny speck, floating highlight, or particle.
+```
+
+#### hit-04 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+A tiny but readable hit recoil: head curls away and tag ring jolts; do not turn it into a round blob.
+exactly 2 cells; the head performs a short, tight curl-back recoil, but the single tail tip keeps the same continuous anchor point and the same vertical extent in both frames; a chunky closed steel tag ring remains continuously readable in both final 32x32 frames; both poses naturally share the same baseline and center after nearest-neighbor reduction without any subject-pixel additions or deletions; no detached marks. Exactly one tail and one closed steel ring per pose; no debris, impact lines, extra objects, extra rings, spikes, limbs, or projections.
+```
+
+#### death-08 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+The bud loses tail tension, head curls shut, cyan bud core extinguishes and the tag ring settles into an inert comma remnant; no gore and no global shrink.
+
+exactly 6 cells; cyan core must monotonically dim with NO relight: frames1 bright, frame2 dimmer, frame3 faint, frames4-6 completely dark/no cyan pixels; chunky closed tag ring remains readable and settles; tail loses tension, comma remnant, no shrink/debris.
+
+Maintain one shared body scale and nearly identical head-body footprint in all six cells: no progressive shrink, no smaller icon, no disappearance. The cyan core is the only cyan material and must be visibly present in exactly frames 1, 2, and 3 with strictly decreasing pixel area and brightness, then absolutely absent in frames 4, 5, and 6. No cyan reflection, second glint, teal steel, or relight. When the core is dark, replace it with solid charcoal tissue only: no eye, eyelid, mouth, face, horizontal black slit, seam, or facial expression.
+
+Exactly one chunky steel tag ring total per pose, fixed at and continuously attached to the same head-tail junction. Its functional steel segment remains continuous, stable, distinct from the cyan core and dark organic body, and readable in every final 32x32 frame while it settles slightly. No tail-tip ring, second ring, chain, extra hardware, detached steel highlight, or floating metal.
+
+Use six exact equal logical cells. Pose centers are precisely at 8.33%, 25%, 41.67%, 58.33%, 75%, and 91.67% of canvas width. Keep each complete pose within the middle 48% of its cell with at least 23% cell width of pure #00FF00 margin on both sides. No part approaches or crosses an invisible cell boundary.
+
+Make the six final 32x32 silhouettes clearly and progressively different, especially the one tail. Frame 1 has a taut narrow S-tail. Frame 2 loosens into a wider shallow S. Frame 3 bends into a lower open C. Frame 4 droops into a hooked J. Frame 5 folds into a heavy low comma. Frame 6 settles into an inert compact comma curl. These are one continuous tail losing tension, not six translations. Each adjacent silhouette change must be easily visible at native 32x32 size, including frames 4-6; do not repeat an idle tail or rely on recoloring.
+
+Preserve the same head size, total body height, central axis, and lowest floating y-coordinate while the tail changes laterally and curls. No global shrink. At final 32x32 scale, the entire non-green subject in every pose is one single 4-connected opaque component. The tail remains at least 2 pixels thick and ends in a compact rounded or diagonally rounded cap whose lowest row has 2 or 3 connected opaque pixels and is at least 2 rows deep. Keep that organic tail end at the same lowest floating baseline in all six poses. Never form a flat foot, base, platform, pedestal, suction cup, horizontal bar, detached blob, diagonal-only pixel, or one-pixel tail tip.
+
+Use simplified solid coarse pixel clusters and thick filled shapes. Head and neck are solid filled masses without transparent internal gaps except the ring opening. No separate black outline, exterior contour fragment, detached pixel, micro-detail, speck, particle, debris, or gore.
+```
+
+#### snap-03 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+A successful-contact snap: head opens, tail braces, head bites or lashes once, then closes; preserve the comma silhouette.
+CRITICAL OUTPUT CONSTRAINT: exactly four equal-width cells and exactly four character poses total, one pose per cell. Use the bite interpretation only, not a lash. Preserve exactly one single tail filament, exactly one small cyan core, and exactly one small closed steel tag ring per pose. The ring stays fixed at the same head-tail junction as the reference. Frame 1 closed ready pose; frame 2 a narrow short head slit; frame 3 a compact closed-down bite with no projection beyond the original head envelope; frame 4 closed recovery. The tail only bends conservatively to brace. No tongue, spear, tentacle, teeth row, giant jaws, detached marks, particles, projectile, prey, target, extra material, extra cyan spot, extra ring, limbs, blades, prongs, global movement, or round blob.
+```
+
+### P77 Frame Gap Gate 2 selected exact prompts
+
+四次调用均只使用 `gate-1/normalized/r17-frame-gap.png`，且全部入选，没有 correction suffix 或第二次 attempt。Producer final 记录每次实际 prompt 是 P74 共同段落、一个空行、再加对应 motion text；下列为四段完整逐字文本。API 外层封装/换行及逐次 prompt payload SHA 未单独落盘，因此该元数据为 `UNKNOWN`，不补推断值。
+
+#### move-attempt-01 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Three to five large disconnected masses orbit asymmetrically around one vertical empty gap with coherent forward drift; never form a uniform ring.
+```
+
+#### hit-attempt-01 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+A short spatial hit reaction: the central gap pinches and two masses offset, while the calibration clamp remains visible.
+```
+
+#### death-attempt-01 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+The phase relationship fails: large masses lose alignment and fold toward an inert broken gap, with no particle-only disappearance and no gore.
+```
+
+#### role-attempt-01 selected
+
+```text
+Preserve this exact approved character identity, silhouette proportions, dark blue-black/charcoal body, sparse dark wine-red tissue cracks, one small cyan anomaly focus, one steel functional material, hard upper-left pixel light, limited palette and orthographic top-down game-sprite perspective. Produce a single horizontal pixel-art animation board with the exact requested number of equal-width cells, one centered pose per cell, a perfectly flat #00FF00 chroma background, no dividers, no text, no labels, no floor, no shadow, no camera movement, no anti-aliasing and generous outer margin. Keep a single shared scale and a stable contact/floating baseline across every cell. Motion must be native silhouette deformation and material movement, not translation, rotation, recoloring, global scaling or particle noise.
+
+Frames 1 to 4 are a missing-frame disappearance: outer masses drop out in large readable chunks while the cyan spatial gap and steel clamp hold the last stable reference. Frames 5 to 8 reconstruct into immediate forward dash: large masses re-lock around the gap, then elongate once along the committed dash without changing world position in the board.
+```
+
+## R-17 普通敌人 Gate 3 动作表（Gate 5 production admission）
+
+本节登记 Drifter、Pulse Sac、Carapace Gate 与 Brood Mass 四张锁定 Gate 3 动作表。项目所有者已接受 Gates 1–4，Gate 5 将这四张与其余五张 final 原子加入 production；它们保留所有 source/final hash、处理链和拒绝候选，且不改变七张 legacy R-17 fallback 或静态 SCP-049 fallback 的身份、路径和可解析性。production admission 不等同于商业发布；许可证复核与既有署名义务继续适用。
+
+外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...`、`gate-3/...` 均相对于该目录。每次内置 `image_gen` 调用只使用对应 Gate 1 accepted reference 作为唯一图像输入；没有用户截图、SCP Wiki 图片、素材包或其它第三方图像输入。模型名未由工具暴露，故不推断。
+
+Carapace Gate 旧 sheet `947C7C829FA978376A7ECDE34A9B19E197B740F9A952D8A174DF993DE988FCFF` 是已结案的 rejected 历史：其 brace/charge 因组织占比、steel 连续性与三角假前脸而未通过独立静态审查，已以 `rejected-947c` 后缀保留，不是当前 pending 或 final。当前登记的 Carapace Gate 是 attempt08 确定性 remediation 后的新 final `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776`；attempts 15–18 也均为 rejected 历史。
+
+| Asset | Type | Path | Tool/model | Date | Source / SHA-256 | Human edits / deterministic processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| r17-drifter-action-sheet | spritesheet PNG | `assets/art/enemies/r17-drifter-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-drifter.png`，SHA-256 `2783916CF336FA3AE0F0C40FCEDEA6C707B0EA5644E2F54CE85A5F3E3B6B14C0`；evidence final `gate-3/normalized/r17-drifter-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `9F9F07490834273BC742BDDCA319FE9FC0529E8993987534505EB8CF449152FD`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选精确 tail/correction [P78](#p78-drifter-gate-3-selected-exact-prompt-tails)；ledger `gate-3/logs/r17-drifter-prompt-ledger.md`，SHA-256 `F6676F061651012F577D83482D532D06156C10579247E806E456201DD85F5021`；producer review `gate-3/review/r17-drifter-producer-review.md`，SHA-256 `846F48E7EC11E92460409B002923997C67CDB6E86D918AC630348B999E768CFA` | 所选 raw 先做 `#00FF00` tolerance 36 hard key + spill cleanup，再做 binary alpha、broad green rejection、clip-global MAXCOVERAGE 32 色与最小断开噪点审计；最后以无坐标 `g>=40 && g-r>=12 && g-b>=12` predicate 把非 cyan 暗绿/olive 确定性映射为 blue-black。alpha、几何、帧序和非匹配 RGB 不变；含 815 个 olive 像素的前版 `EAAF29C9...` 已拒绝并保留 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 864×48（18×48×48；move 0–5、hit 6–7、death 8–13、contact 14–17；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+| r17-pulse-sac-action-sheet | spritesheet PNG | `assets/art/enemies/r17-pulse-sac-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-pulse-sac.png`，SHA-256 `4C67ACF78365C823B4A95C6971D0F8B001DA88E003FD87D71A18CEAE6154748D`；evidence final `gate-3/normalized/r17-pulse-sac-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `5544920457DCE1B8EF0DEC09103A5568B7707294D97FC266E9ADCCD2125D516D`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选精确 tail/correction [P79](#p79-pulse-sac-gate-3-selected-exact-prompt-tails)；ledger `gate-3/logs/r17-pulse-sac-prompt-ledger.md`，SHA-256 `DB9CE5AC958E4F02D8F65E7C20AA33C6D9653A87EEBECE02961E6D54A8B3410B`；producer review `gate-3/review/r17-pulse-sac-producer-review.md`，SHA-256 `025A9CBA893BCC3DC6281AD629DF1C4A7D8A4A2425DB3D15B3F61D7717F2A6D6` | RGB selected board 用 tolerance 64 hard key；透明 move board 用完整 tolerance 36 + `--spill-cleanup` 路径并在 shared processor 以 alpha 224 gate；随后做 broad green rejection、clip-global 32 色和断开噪点清理。最终 palette remediation 清除非 cyan olive，并从 death local frame 3 起确定性熄灭饱和 cyan/teal；alpha、几何与帧序不变。含 708 个 olive 像素且 death relight `[20,1,0,0,5,1]` 的前版 `0BA3C9C5...` 已拒绝并保留 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 960×48（20×48×48；move 0–5、hit 6–7、death 8–13、shoot 14–19；release 为 global frame 18；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+| r17-carapace-gate-action-sheet | spritesheet PNG | `assets/art/enemies/r17-carapace-gate-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入 `gate-1/normalized/r17-carapace-gate.png`，SHA-256 `7A2909CE91036C399063F411728D14BD7798097A5D2EC7413B11612BE44C9346`；selected lineage/remediation contract [P81](#p81-carapace-gate-gate-3-selected-lineage-and-remediation-contract)；ledger `gate-3/logs/r17-carapace-gate-prompt-ledger.md` SHA-256 `FF7D33C5D8C1FEBA2F66119BF7E9FED78E4173EDF32D2EA591758B6FD121934F`；producer review `gate-3/review/r17-carapace-gate-producer-review.md` SHA-256 `503442E4AB26B3644893EF5B1AEB29BB6C677963A86FC5E44FB1EC64EDF9678B`；independent review `gate-3/review/r17-carapace-gate-independent-review.md` SHA-256 `64199FAD804F90A1DEDEE12CC3BAE5FAA2225565D88C1E1EBDE23C0D780724A3`；evidence final `gate-3/normalized/r17-carapace-gate-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776` | move/hit/death 字节冻结，只替换 role8；selected attempt08 raw 与 generated original SHA-256 均为 `9E95984C17C989F6154637F75CA318F55EEFC22ACEFCDA6D6BF664263A635C93`，逐字 exact generation prompt 因 producer 中断未持久化，精确记为 `UNKNOWN — not persisted before interruption`，禁止推断。pre-remediation SHA-256 `74BD93E404014BF0C7CFDBF4809B86E3B054EFE13EDEB557E70AE22AA740AFE0`；deterministic cleanup 只改 4720 个 steel RGB 与 frame 2 的 4px cyan 碎簇，alpha、轮廓、几何和帧序不变，final role SHA-256 `A63F32925BC172EC7987876C25B06B4051F477DE802C96E1469A9A208D14023E`。remediator `FD61A715EDEDDFB006A73B9388F872A649F4FF12727C0E473BF7F955D2578B40`；focused test `BC8BD13FFA290881602D7AA3DF2D0365956B2964F48864AF94CC3A3D11645A8E`；role audit `C1C1B18BD2A57DB85ADB6F19B2C804D5CF564D435A2000BC3B1C00B62C0407BA`。唯一有界容差是 charge 首格 area `913` 相对建议下限 `921` 低 `0.87%`；无第二项容差 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 1408×64（22×64×64；move 0–5、hit 6–7、death 8–13、brace 14–17、charge 18–21；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+| r17-brood-mass-action-sheet | spritesheet PNG | `assets/art/enemies/r17-brood-mass-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + deterministic evidence processors + `build_enemy_boss_assets.py` | 2026-08-26 | 唯一图像输入 `gate-1/normalized/r17-brood-mass.png`，SHA-256 `E3EC5B05A47AD4960B151A11196B5C87568EF8B8271832AE1D485D1EEBD3E518`；evidence final `gate-3/normalized/r17-brood-mass-action-sheet.png` 与本表 public 路径逐字节相同，SHA-256 均为 `D86B730AB9AAE6C24769779EB9B6DB5EA436E0F70F1049D69D11D2F282F1FDB6`；共同提示 [P74](#p74-r-17-gate-2-common-animation-board-prompt)，所选精确 tail/correction [P80](#p80-brood-mass-gate-3-selected-exact-prompt-tails)；ledger `gate-3/logs/r17-brood-mass-prompt-ledger.md`，SHA-256 `6786AB06699161DBE5646FF6367CFA975A609B7DDF35F25B2E255AEDAC443431`；producer review `gate-3/review/r17-brood-mass-producer-review.md`，SHA-256 `C9852EEFED99277B4B7F3E63AC6A5592FC188DE544CF8A12108AD200BE047FED` | 所选 raw 做 tolerance 36 hard key、broad green removal、component repack 与 clip-global 32 色。Split-10 的 2×4 完整姿势按 row-major 搬到单行，零 resample、零重着色、opaque count `468512→468512`；最终 alpha-preserving despill 只把仍为 green-dominant 的 G 降至 `max(R,B)`，不增删或移动主体像素。最终 broad/olive/任何 green-dominant 均为 0 | 项目定制生成；唯一图像输入为项目 Gate 1 素材；无第三方图片输入；仓库分发与 SCP 衍生义务依 `LICENSE-MAP.md`，商业发布前复核 OpenAI 输出权利与项目许可 | 开发态候选；未做 production 或商业准入 | Gate 3 review candidate; dev-only, not production-admitted | 1408×64（22×64×64；move 0–5、hit 6–7、death 8–13、split 14–21；RGBA、二值 alpha） | 当前无第三方图像署名；商业发布前复核生成服务条款与项目许可 |
+
+### Gate 5 final admission reconciliation — Gate 3 sheets
+
+The historical rows above retain exact processing and rejected candidates. These final governance rows supersede their earlier dev-only admission text; all seven old R-17 sheets remain present and resolvable as fallbacks.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| r17-drifter-action-sheet | `2783916CF336FA3AE0F0C40FCEDEA6C707B0EA5644E2F54CE85A5F3E3B6B14C0` | `9F9F07490834273BC742BDDCA319FE9FC0529E8993987534505EB8CF449152FD` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-drifter-prompt-ledger.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| r17-pulse-sac-action-sheet | `4C67ACF78365C823B4A95C6971D0F8B001DA88E003FD87D71A18CEAE6154748D` | `5544920457DCE1B8EF0DEC09103A5568B7707294D97FC266E9ADCCD2125D516D` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-pulse-sac-prompt-ledger.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| r17-carapace-gate-action-sheet | `7A2909CE91036C399063F411728D14BD7798097A5D2EC7413B11612BE44C9346` | `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776` | Old sheet and attempts 15–18 remain explicitly rejected; attempt08 prompt remains `UNKNOWN` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| r17-brood-mass-action-sheet | `E3EC5B05A47AD4960B151A11196B5C87568EF8B8271832AE1D485D1EEBD3E518` | `D86B730AB9AAE6C24769779EB9B6DB5EA436E0F70F1049D69D11D2F282F1FDB6` | Complete raw/keyed and rejected chain retained in the historical row and `gate-3/logs/r17-brood-mass-prompt-ledger.md` | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+
+### 处理器、所选/淘汰链与静态证据
+
+- 共同 deterministic 基线：bundled `remove_chroma_key.py` SHA-256 `7E51236919203B61D07DDFFDC6E0B5F501A28661003F5851F26FFBB64BDEC1EA`；最终 shared `quantize_selected_board.py` SHA-256 `FE2DA4FC412E6744CE2300E2A27A5EA4DA959BD74D7794D9DFFCE79D97202926`；builder SHA-256 `4B92466A786F8543986307DE1D5556A21D6D86EC0FB4448EE01A340B610EB445`；contract SHA-256 `615F557915771A161FDC126AB7A377F511561FACF5CB07C8EEAA8E4468370670`。
+- Drifter/Pulse palette helper `gate-3/logs/remediate_selected_palette.py` SHA-256 `C342804C87F21BE006172C1FA334B1CC823E41CFEE429A0F36CDBE759B545035`；其 3 项 focused tests 在当前 evidence 快照通过。Drifter 最终 18/18、Pulse 最终 20/20 均为单一 4-connected 主体，binary alpha、hidden RGB 0、两种 green predicate 均为 0；Pulse death saturated cyan/teal 为 `[20,1,0,0,0,0]`。
+- Brood 的 `neutralize_green_dominance.py` SHA-256 `BB92D40C36AF2C65EDBE0F59BE6A1BA9E01253505E60BB8FD74B4E04BE7D6AC8`，Split row-major helper SHA-256 `5188B2EC364EAF4E20C3CFF7A1FE00E69B0770AD8BC8F007582319E5DEDD9C1B`。Brood 结论仅为 producer review 加 deterministic audit：22/22 单连通、binary alpha、每帧 ≤32 色、三种 green audit 均为 0；这里不称其为独立审查。
+- Carapace 的当前 final 只把旧 sheet 的 role8 换成 attempt08 remediation 结果；move/hit/death 字节不变。remediator、focused test、role audit、producer review 与 independent review 的完整 hash 已在本节行和 [P81](#p81-carapace-gate-gate-3-selected-lineage-and-remediation-contract) 锁定；这里不把 `UNKNOWN` prompt 重构成任何文字，也不把独立静态推荐升级成项目所有者实机验收。
+- Drifter review：`gate-3/review/r17-drifter-clips-gray-1x.png` SHA-256 `55BD9FC5EC8CDDD0208B2F03704568CC95E6C8D68F8196E55505DD2384A6ADB3`；8× SHA-256 `488047B2A58DE1F1DCF8995646DC8CF278C8C7757F1EB7970456FC0BCEAA9E88`。Pulse 4× review：`gate-3/review/r17-pulse-sac-action-sheet-4x.png` SHA-256 `4D172D30DD271966323686BDA5D3EC85572FF76B7BCE64EC9C9469C6198F4999`。Brood native contact 与 final 字节相同；4× `gate-3/contact/r17-brood-mass-action-sheet-4x.png` SHA-256 `77D1A864387399C3BA26E092CE068D04B507CF514B0E2EB1095B26224B0460CB`。
+- Gate 3 当时的 evidence/public byte equality、builder/static PASS 与运行态审查记录的是当时 development-candidate 接线；Gate 5 reconciliation 已将四张纳入 production，当前权威状态见本节的 Gate 5 final admission rows。该历史证据仍只证明静态结构、像素与已登记的确定性合同，不改变商业发布与署名复核边界。
+
+| Asset | Selected raw → final keyed | Rejected ImageGen attempts / superseded candidates |
+|---|---|---|
+| Drifter | move-01 `CEC6D23DCCA48B93E3A045EC968591A53E8EBF51197A9810C64CF71169C956C2` → `D43196A2231F2497D219197BE3182E12EFE30F6E9D6ED1FEEBF510F208E9854E`；hit-01 `0671B1021A0C3B7CD69422EFF39D7E95B4B56C45BF035188DE9C287544C2102E` → `7256B84941D3B6101088563E04DB820099438590394989B2288E0695707E1D7F`；death-04 `A5F30FC985A08EBB8AEBE5116DB80D05BF903752B5EABD0F5C4641F60E37DDCA` → `C8B028D6BDBF5351FB83252A2CA7F6AE5297A305DD366509E6E727F0E6FF2363`；contact-01 `D05AA688408545C8EDFB14C0703FF50700993255C72EEDB794504388620A59E1` → `529CBA773F0698CBDBDEAECC52C34202E27DF188FD510F44319928D214CB9751` | death-01/02/03；pre-shared、pre-broad 与含 815 olive px 的 pre-palette candidate 均按 suffix 保留 |
+| Pulse Sac | move-01 `5B60DE7335CDF141B33845B05C55E62705C61EC70F7E3952AA6580B60C5ADC2A` → `8537C2D55FAD1A62CFFA9F96C2DEE3A9A0C2F4E9BC890BD3528BD1E1915C325B`；hit-03 `7FBF21FE55C44429EE70D7EA137D3DFDE7565C7BC995585AB22B77295EE62E42` → `F5623F5A60D387A2EE9F9D3A67C0B298D1B4DF5FE6AB5FA715441B2C8212F76D`；death-02 `65A25548CE653A1E87DCC5C9D384AAF5F8AB13F3F15BDD4BB93E5CF8FB6CD600` → `7F0EB5044FED21B3F4D794794C1FA6DB2EB9CBD6F5C55188A7A8AAE57AB89E98`；shoot-01 `6ADDC60EB8B3D782E6A497A80E367B6A26693111A26D5AA75BBEE5A9B660E3EA` → `65BBAC6EE8F2F10DEF3BEC2FF4F42642B8E9E030F9ABA3FADFCBDE61D427E412` | hit-01/02、death-01；含 olive 与 late death relight 的 pre-palette candidate 按 suffix 保留 |
+| Carapace Gate | move/hit/death 延续冻结字节；role attempt08 raw/original `9E95984C17C989F6154637F75CA318F55EEFC22ACEFCDA6D6BF664263A635C93` → pre-remediation `74BD93E404014BF0C7CFDBF4809B86E3B054EFE13EDEB557E70AE22AA740AFE0` → final keyed role `A63F32925BC172EC7987876C25B06B4051F477DE802C96E1469A9A208D14023E` | 旧 sheet `947C7C829FA978376A7ECDE34A9B19E197B740F9A952D8A174DF993DE988FCFF` 与 attempts 15–18 明确 rejected；attempt08 exact prompt 为 `UNKNOWN — not persisted before interruption`，不得推断 |
+| Brood Mass | move-05 `ED6DF3230062E0B77BA81C07F01F9D052C246AF63D271080B184589432E75C93` → `7BFC37BAB9AD94B3B2F4D86220454306F3544D72C364CAFCD256065E9E923909`；hit-03 `CB75F4A6A8358934A4467F58A452EDB75DFE607C2A1954AAE9AA13DC7D56CE3C` → `4A878B0BF5FFFDA12F426F30538B089F0D466B4E39135B8712655BFB6DB4AADF`；death-04 `09CC6918715411EA262A6783E1C889F6D326205E7B9EF81140975ADEE2E4E1FA` → `FDBF7F1EE1032389D578B9DBF5FBAE3E7FEA3C88D08510C16FDB2345C7FB8AE3`；split-10 `8247C28220C5D9F100DACAB72A38509AB48A97D21AF04D210EC30CE404A9CD7F` → `165FF013A621432F4F439DA35DE982D36AB43A6CCF9F24C3CD9DFDD15B44E3BB` | move-01–04、hit-01–02、death-01–03、split-01–09；全部 22 个 raw 与 generated original byte-equal，淘汰 raw 未覆盖 |
+
+### P78 Drifter Gate 3 selected exact prompt tails
+
+四个实际完整 prompt 均由 [P74](#p74-r-17-gate-2-common-animation-board-prompt) 的共同段落、一个空行、下列对应 tail 逐字组成；death 再以一个空行连接其 correction。除这些内容外没有其它文字。唯一引用为 `gate-1/normalized/r17-drifter.png`。
+
+#### move-attempt-01 selected（prompt SHA-256 `2C87432A99F3CDA70D37C865F40A5F5E0AB467111D0A549FD22274FBB3F6A4B8`）
+
+```text
+Requested cell count: exactly 6 equal-width cells. A restrained floating locomotion cycle: broad upper body shifts weight, three lower tendrils alternate, cyan breathing node stays singular and containment band remains stable.
+```
+
+#### hit-attempt-01 selected（prompt SHA-256 `FD033D69481EB42D5DC6A7366FE34D6A6A928DA9A8FBACA5F5F955B5446D4CA9`）
+
+```text
+Requested cell count: exactly 2 equal-width cells. A short non-stagger hit reaction: broad body compresses and containment band catches the recoil.
+```
+
+#### death-attempt-04 selected（prompt SHA-256 `DD62C02DA8AC658773025C0494A11043BC332266A369EFDA769651C13625C0B7`）
+
+```text
+Requested cell count: exactly 6 equal-width cells. The floating body loses lift, three tendrils fold, red cracks close and the node extinguishes into an inert bound remnant; no global shrink.
+
+Correction constraints: exactly six equal mathematical cells. Every pose has exactly three short unbranched lower tendrils: one left, one center and one right, with no forks, loops or extra ends. Frames 1 and 2 keep those three tendrils identifiable; frames 3 to 6 fold them upward and press them against the lower body without making an enclosed loop, hollow ring, transparent internal cavity, mouth or face. The final inert bound remnant has a solid dark lower body beneath the steel band. The cyan node follows this exact irreversible schedule: frame 1 has one bright multi-pixel cyan node; frame 2 has the same single node still visibly present but smaller and dimmer; frames 3, 4, 5 and 6 contain absolutely zero cyan, teal, turquoise, blue-green dot, glow, reflection or relight. Fill the former node region with solid dark charcoal tissue in frames 3 to 6. Red tissue cracks close progressively until frame 6 has no more than one tiny dark wine-red seam. The plain unlit steel containment band remains continuous and readable in all six frames. Keep the broad upper silhouette at one shared scale and roughly constant width; no global shrink, disappearance, debris or particles. Every pose stays fully inside its own cell with broad flat-green gutters.
+```
+
+#### contact-attempt-01 selected（prompt SHA-256 `08681AECD267BFD3FE85D7AACC6652923F5ECA5630DBA9E1E735BDAD0245609D`）
+
+```text
+Requested cell count: exactly 4 equal-width cells. A successful-contact action: broad body contracts, three tendrils brace, then the narrow lower body thrusts forward once and settles.
+```
+
+### P79 Pulse Sac Gate 3 selected exact prompt tails
+
+四个实际完整 prompt 均由 P74 共同段落、一个空行、下列对应 tail 逐字组成；hit 与 death 再以一个空行连接 correction。Pulse ledger 未单独落盘 prompt payload SHA，因此该字段为 `UNKNOWN`，不补推断值。唯一引用为 `gate-1/normalized/r17-pulse-sac.png`。
+
+#### move-attempt-01 selected
+
+```text
+Requested cell count: exactly 6 equal-width cells. A stable hovering cycle: organic sac flexes inside the negative-space ring while the steel stabilizer stays readable and the cyan aperture pulses subtly.
+```
+
+#### hit-attempt-03 selected
+
+```text
+Requested cell count: exactly 2 equal-width cells. A short hit reaction: sac dents against the steel ring and central aperture contracts.
+
+Correction constraints: draw exactly two complete poses centered in two equal mathematical cells. The outer steel stabilizer must have exactly the same diameter, footprint, four hardware anchors, center, baseline and scale in both cells; it is rigid and does not shrink, expand, rotate, flip or deform. Only the organic sac inside the ring dents and the one cyan aperture contracts. No sparks, detached glints, particles, white flash fragments, green pixels, extra cyan specks or cracks outside the body. Keep at least 20 percent flat #00FF00 margin around each pose.
+```
+
+#### death-attempt-02 selected
+
+```text
+Requested cell count: exactly 6 equal-width cells. Pressure vents inward, aperture extinguishes, sac collapses within the intact stabilizing ring and settles; no explosion, gore or global shrink.
+
+Correction constraints: output an exact 1800×900 horizontal canvas divided into six invisible 300×900 cells. Center one complete pose in each cell, keep every pose inside the middle 75 percent of its cell width, and leave uninterrupted #00FF00 at every cell boundary. Frame 1 retains the single cyan aperture, frame 2 visibly dims it, and frames 3 through 6 contain absolutely no cyan, teal, green, blue glow or detached colored specks anywhere. Keep the steel stabilizer intact and show collapse through the organic sac, not by shrinking the whole ring. Use fully opaque hard-edged subject pixels against fully opaque flat #00FF00.
+```
+
+#### shoot-attempt-01 selected
+
+```text
+Requested cell count: exactly 6 equal-width cells. Frames 1 to 4 visibly charge the existing cyan pulse aperture without changing world position; frame 5 is the exact release pose; frame 6 settles. The animation must not imply a projectile before release.
+```
+
+### P80 Brood Mass Gate 3 selected exact prompt tails
+
+四个实际完整 prompt 均由 P74 共同段落、一个空行、下列对应 motion text、一个空行、对应 correction 逐字组成。唯一引用为 `gate-1/normalized/r17-brood-mass.png`。Split-10 的生成结果为 2×4，但 prompt 本身仍逐字要求单行；随后只做已审计的 row-major 零重采样搬运。
+
+#### move-attempt-05 selected（prompt SHA-256 `6DBC9757694C2BFE49F5BED96AB30ABC358B2B9156EB86B4768377A56BCFD72A`）
+
+```text
+Requested cell count: exactly 6 equal-width cells. Preserve the accepted large multi-lobed outline; move only a few major lobes and internal weight, avoiding evenly distributed bubbling.
+
+Correction constraints: exactly six clearly separated complete poses, all at one identical large readable scale, approximately 70 percent of the first attempt's sprite size, with broad flat #00FF00 gutters and no overlap. Keep exactly three chunky containment spikes and one small singular visible cyan brood core in every pose. The full silhouette uses a continuous solid dark outer outline at least 12 generated pixels thick. Every lobe, spike base, core housing and material highlight joins the main mass through solid opaque bridges at least 32 generated pixels thick so chroma cleanup and nearest-neighbor reduction cannot break any connection; no hairline, one-pixel connector, detached speck or floating highlight. The lower spike terminates in one broad blunt cap on the same baseline. Only a few major lobes deform inside the retained scaffold. No green or near-green subject pixels or fringe; use fully opaque hard-edged subject pixels.
+```
+
+#### hit-attempt-03 selected（prompt SHA-256 `D01A9B301FC53101010170DBB3002C3A7C0B1A2A358E6DE65EFE873A004D7F74`）
+
+```text
+Requested cell count: exactly 2 equal-width cells. A short heavy hit reaction localized around the upper brood core and three containment spikes.
+
+Correction constraints: exactly two equal mathematical cells, one centered pose in each, with one identical occupied outer width and height. Keep exactly three chunky containment spikes fully attached by solid opaque bridges at least 16 generated pixels wide; every spike terminates in a blunt cap at least 16 generated pixels wide, never a one-pixel tip. Keep one small cyan brood core visible and singular in both poses. Show the hit only as compact compression around the upper core and spike anchors, not a broad red flare. Every material region and highlight is joined to the main mass by at least a 16-generated-pixel-wide opaque bridge; no detached speck, tiny detail, thin connector, green fringe or near-green fringe. Use fully opaque hard-edged pixels and broad flat #00FF00 gutters.
+```
+
+#### death-attempt-04 selected（prompt SHA-256 `20F3864C0C4941DF464149F38CAB1AE8BBE47E5EC7D9533A901659E298C919A7`）
+
+```text
+Requested cell count: exactly 6 equal-width cells. For non-splitting clones only: major lobes lose tension, brood core extinguishes and containment spikes settle into one inert colony mass.
+
+Correction constraints: exactly six clearly separated complete poses at one identical large scale. Preserve one broad connected multi-lobed colony envelope through all six cells; lobes sag and fold inside a retained wide footprint, never shrinking, dissolving or leaving thin fragments. A natural dark lower colony lobe, not an added object, provides one broad opaque bottom edge at least 48 generated pixels wide on the identical baseline in every pose. No platform, floor, pedestal, base plate or detached object. Keep exactly three chunky containment spikes physically attached. The lower spike folds sideways and settles against the lower lobe without extending below its broad bottom edge; the left and right spikes lower into the inert remnant. The cyan brood core dims progressively and is fully dark by the final pose. All lobe and spike connections are at least 32 generated pixels thick; no hairline, one-pixel connector, detached speck or floating highlight. No green or near-green subject pixels or fringe; use fully opaque hard-edged pixels and broad flat #00FF00 gutters.
+```
+
+#### split-attempt-10 selected（prompt SHA-256 `D108FD56D4DD6219CB18D4A12EF3C469F9A85751A65982552F7F87381188AD39`）
+
+```text
+Requested cell count: exactly 8 equal-width cells. A true split display: upper brood core opens, three major internal channels separate toward three directions and containment spikes release, clearly explaining three already-committed Bud spawns; do not generate the children inside the board and do not delay their gameplay spawn.
+
+Correction constraints: exactly EIGHT poses in one single horizontal row: closed, core crack, first internal channel, second internal channel, third internal channel, clamps open, hold, settle. Use eight equal cells and compact poses centered at 6.25, 18.75, 31.25, 43.75, 56.25, 68.75, 81.25 and 93.75 percent width. Lock the ENTIRE broad multi-lobed outer mother silhouette as one unchanged closed shell in all eight poses: no outer lobe opens, lifts, stretches, separates or changes the occupied bounding box. All split motion happens INSIDE this fixed broad shell. One small compact cyan upper-central core opens without growing. Three thick dark wine-red internal channels sequentially appear toward upper-left, upper-right and lower-center, but terminate well inside the opaque outer lobes and never reach the silhouette edge. The exactly three steel spike anchors remain at fixed symmetric perimeter positions; only broad clamp collars around their bases visibly open. No Y silhouette, arms, tendrils, external channels, detached lobes or children. All visible color blocks and highlights are broad and connected; no micro glint or isolated accent. Palette strictly blue-black/charcoal, dark wine-red, neutral steel and one small cyan core; no olive, green, yellow-green or turquoise body. No particles, shrink or dissolve; fully opaque hard-edged pixels.
+```
+
+### P81 Carapace Gate Gate 3 selected lineage and remediation contract
+
+本节是 selected lineage 与 deterministic remediation 合同，不是 prompt 登记，也不补写不存在的逐字生成提示。attempt08 的 exact generation prompt 永久保持 `UNKNOWN — not persisted before interruption`；不得根据图像、后续 retry prompt 或审查意见反向重构。
+
+- 唯一图像输入：`gate-1/normalized/r17-carapace-gate.png`，SHA-256 `7A2909CE91036C399063F411728D14BD7798097A5D2EC7413B11612BE44C9346`。没有用户截图、SCP Wiki 图片、素材包或其它第三方图像输入。
+- selected fallback source：`gate-3/raw/r17-carapace-gate-role-replacement-attempt-08.png`；raw 与 generated original 逐字节相同，SHA-256 均为 `9E95984C17C989F6154637F75CA318F55EEFC22ACEFCDA6D6BF664263A635C93`。完整 lineage 见 `gate-3/logs/r17-carapace-gate-prompt-ledger.md`，SHA-256 `FF7D33C5D8C1FEBA2F66119BF7E9FED78E4173EDF32D2EA591758B6FD121934F`。
+- remediation 输入：`gate-3/keyed/r17-carapace-gate-role-replacement-attempt-08-pre-normalized.png`，SHA-256 `74BD93E404014BF0C7CFDBF4809B86E3B054EFE13EDEB557E70AE22AA740AFE0`。脚本 `gate-3/logs/remediate_r17_carapace_attempt08.py` SHA-256 `FD61A715EDEDDFB006A73B9388F872A649F4FF12727C0E473BF7F955D2578B40`；focused test `gate-3/logs/test_carapace_attempt08_remediation.py` SHA-256 `BC8BD13FFA290881602D7AA3DF2D0365956B2964F48864AF94CC3A3D11645A8E`；role audit `gate-3/logs/audit_r17_carapace_role_replacement.py` SHA-256 `C1C1B18BD2A57DB85ADB6F19B2C804D5CF564D435A2000BC3B1C00B62C0407BA`。
+- 确定性变更严格限于 RGB：把 4720 个 plate/steel 像素映射为 neutral steel，并清除 frame 2 的 4px cyan 碎簇。alpha、轮廓、位置、几何、连通性和八帧顺序全部不变；final role `gate-3/keyed/r17-carapace-gate-role.png` SHA-256 `A63F32925BC172EC7987876C25B06B4051F477DE802C96E1469A9A208D14023E`。
+- 唯一有界容差：charge 首格 area `913`，比静态审查建议下限 `921` 低 8px / `0.87%`；该建议值不是运行时合同，为保持独立推荐的 alpha 不变，使用 `≤1%` 量化容差。无第二项容差或非容差失败。
+- move/hit/death 保持冻结字节，只替换 role8。最终 `gate-3/normalized/r17-carapace-gate-action-sheet.png` 与 `public/assets/art/enemies/r17-carapace-gate-action-sheet.png` 逐字节相同，SHA-256 均为 `4775A31F1341D245725FA569DA28FB38476024C5DE6205CB323F91CF0694C776`。
+- producer review `gate-3/review/r17-carapace-gate-producer-review.md` SHA-256 `503442E4AB26B3644893EF5B1AEB29BB6C677963A86FC5E44FB1EC64EDF9678B`；independent review `gate-3/review/r17-carapace-gate-independent-review.md` SHA-256 `64199FAD804F90A1DEDEE12CC3BAE5FAA2225565D88C1E1EBDE23C0D780724A3`。两者均为静态审查证据，不是项目所有者 `960×540` 实机验收。
+- 旧 sheet `947C7C829FA978376A7ECDE34A9B19E197B740F9A952D8A174DF993DE988FCFF` 与 replacement attempts 15–18 全部明确 rejected 并保留，不得恢复为 current final。
+- Historical Admission at Gate 3 was `Gate 3 review candidate; dev-only, not production-admitted`; Gate 5 final reconciliation above is now authoritative.
+
+## SCP-049 Gate 4 正式动画表（Gate 5 production admission）
+
+本节登记 SCP-049 的 80×96 四方向 locomotion 与正式 action sheet。项目所有者已接受 Gates 1–4，Gate 5 将两张与七张 R-17 action sheet 原子加入普通 production manifest、preload 与 bundle；候选 metadata 仅作为 provenance，不再过滤 production preload。旧 `scp-049.png` 始终保留为 locomotion/action 缺失时的静态 fallback，未被替换或删除；商业发布与署名义务仍须依现有许可记录执行。
+
+外部证据根目录为 `C:\scp-survivor-workspaces\evidence\enemy-scp049-visual-overhaul`；下文 `gate-1/...` 与 `gate-4/...` 均相对于该目录。外部 evidence 不随 Git 提交。
+
+| Asset | Type | Path | Tool/model | Date | Source / SHA-256 | Human edits / processing | License/right basis | Commercial-use status | Admission | Final dimensions | Attribution requirement |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| scp-049-locomotion-sheet | spritesheet PNG | `public/assets/art/characters/scp-049-locomotion-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Pillow evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入 `gate-1/normalized/scp-049.png`，SHA-256 `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD`；逐字提示、八次调用、所选/淘汰链见 `gate-4/logs/scp-049-locomotion-prompt-ledger.md`，ledger SHA-256 `E8E9876BEFF58C91F09998C1A56AE46981A4CD1159672B854A4A0B550E367F4E`；normalized/public final SHA-256 均为 `FE7C23BC628F9CAD458F7864FDE1937D8D5774294137AE886D9B6CBF6C068C21` | 四张所选 board 做 hard chroma、binary alpha、全局限色、连通域按原生左右顺序搬运、nearest 归一化与合同组装；随后 exact-RGB 映射 835px 绿/橄榄污染，alpha/轮廓/位置/帧序不变；左/右十对均非相同或镜像；locomotion cyan=0 | 项目定制生成；唯一图像输入为本项目已接受的 SCP-049 Gate 1 素材；无第三方图片输入；仓库分发继续受 `LICENSE-MAP.md` 与 SCP 衍生义务约束，商业发布前复核 OpenAI 输出权利及项目许可 | 开发态候选；静态 PASS 不构成正式商用准入 | Gate 4 review candidate; dev-only, not production-admitted | 800×384（4 rows × 10×80×96；down/left/right/up；每方向 idle 0–3、walk 4–9；RGBA、二值 alpha） | 必须署名 [SCP-049](https://scp-wiki.wikidot.com/scp-049) 条目作者 Gabriel Jade 与 2018 重写合作者 djkaktus，并附 CC BY-SA 3.0；衍生发布须遵守相同方式共享 |
+| scp-049-action-sheet | spritesheet PNG | `public/assets/art/characters/scp-049-action-sheet.png` | OpenAI built-in `image_gen`（模型名未由工具暴露）+ bundled chroma helper + Pillow evidence processors + `build_enemy_boss_assets.py` | 2026-08-27 | 唯一图像输入同上；逐字提示、六次调用、所选/淘汰链见 `gate-4/logs/scp-049-action-prompt-ledger.md`，ledger SHA-256 `DE7D3B221D59162A762A431DCF7FE985772363B0B072A40649B8F8C6CC13E352`；normalized/public final SHA-256 均为 `96B8E0CD49405C538D4744B004E61DC2BCFCB6265DBA12651D30600BAE76413D` | 所选 clip 做 hard chroma、binary alpha、全局限色、零重采样 row/component 搬运、nearest 归一化与合同组装；exact-RGB 映射 2622px，其中清除 hit-overlay frame 10 的 1px 误青，alpha/几何不变；cyan 仅为 recontain frames 16–18 的外部 Foundation 节点 | 项目定制生成；唯一图像输入、许可与复核边界同 locomotion；无第三方图片输入 | 开发态候选；静态 PASS 不构成正式商用准入 | Gate 4 review candidate; dev-only, not production-admitted | 1520×96（19×80×96；frenzy-enter 0–4、frenzy-loop 5–8、hit-overlay 9–10、recontain 11–18；RGBA、二值 alpha） | 同 locomotion：Gabriel Jade、djkaktus、SCP-049 条目及 CC BY-SA 3.0 署名/相同方式共享要求 |
+
+### Gate 5 final admission reconciliation — SCP-049 sheets
+
+The historical rows above retain prompt, source and rejected-candidate evidence. These two final governance rows supersede their earlier dev-only admission text; static `scp-049.png` remains present and resolvable as the action/locomotion fallback.
+
+| Asset | Accepted source SHA-256 | Accepted final SHA-256 | Rejected candidates | Admission |
+|---|---|---|---|---|
+| scp-049-locomotion-sheet | `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD` | `FE7C23BC628F9CAD458F7864FDE1937D8D5774294137AE886D9B6CBF6C068C21` | down-01, right-01 and up-02 rejected for nine poses; up-01 rejected for wrong direction | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+| scp-049-action-sheet | `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD` | `96B8E0CD49405C538D4744B004E61DC2BCFCB6265DBA12651D30600BAE76413D` | frenzy-loop-01 rejected for continuity; hit-overlay-01 rejected for replacement body | Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言） |
+
+### P82 SCP-049 Gate 4 selected lineage、remediation 与静态审查
+
+- Locomotion 所选 raw：down-02 `B7E78B781DCD747CC94DC0C32240E877826D6D0A0B1A1A10C5CF111EBB58713B`、left-01 `98DCDBB918DED4177CF082ABA7DA101AA6B9E03DCCD7C1FE0FCCEC353FB0D5B1`、right-02 `BBD1BF5A74F4519F3A038CAF645195ED30559EF2D1EDB7236CB0899F0513529D`、up-03 `90F5041FEB58CC06A9491FBDDA944C17768A554B42E3B4E2F942F17634334993`。down-01/right-01/up-02 因九姿势拒绝，up-01 因方向错误拒绝；无 pending attempt。
+- Action 所选 raw：frenzy-enter-01 `43E6EDE1261B214ECDA74563A43F225284DE9F016D9B760F359FFDC4429EE8EC`、frenzy-loop-02 `A0F6F550843C8AE3C935176ECE6BCD315EF4288EA0C9F2F467168750292D4839`、hit-overlay-02 `4075041D4B503EB7D279F80CD37D1FFAF7B28868049D39A5693EEABB6ADA7F31`、recontain-01 `F37D9A40B703693ED459DE7BD685376B984686EDA8CDDC8BEACE92DDF0DE42C0`。frenzy-loop-01 因连续性拒绝，hit-overlay-01 因完整替换身体拒绝；无 pending attempt。
+- Pre-remediation sheets `AB88586C703F5C3461EEC5398656BD0022C8A8836E10BD00C5D8DBAC9F2A3A70` / `17D6468207826B23C4831FA2E0384ADFBDF54D769D476DB0F6E5C4F54DAF4853` 已按 suffix 保留，不是 current final。`gate-4/logs/remediate_scp049_gate4_palette.py` SHA-256 `9F7BB8B0245192DF7FA6F9FC21244ABBC34EA19CDEE1E55F364C4D87B1BFDEBC` 只做锁定 source hash 的 exact-RGB 变换；最终 alpha channel 与 pre-remediation 字节相同。
+- 独立静态审计 `gate-4/review/scp-049-gate4-static-audit.md` SHA-256 `0AA6AB0A8D53F2EF65C35BF3D09925F48958C70CB0D0A7A4C83C2442AED633E9`，结论 PASS。Locomotion producer review SHA-256 `212A4B50DEC99680751AD8D25AAAC12883AD3FC7935F14A0EA5BD8288A1B2A48`；Action producer review SHA-256 `8C7ED12FCD8E8BF662C85073BC216E4B6F05D62D8EDFD58FC1AF004BCCC40FA5`。producer review 与独立静态审计均不是项目所有者视觉验收。
+- 4× nearest contact：locomotion `gate-4/contact/scp-049-locomotion-sheet-4x.png` SHA-256 `7047D8325B1D5D57DFC8F4C49E45B5A52DEA7FE9E46612D7323FD880A9C59152`；action `gate-4/contact/scp-049-action-sheet-4x.png` SHA-256 `35F213F4F7AEF2C7289E406A0E90DAA4F4971C0B6E1EE2D0BA95144E44803FAB`。
+- 静态像素门禁为每帧 RGBA、binary alpha、hidden RGB 0、非空、不触边、无 1px alpha island、opaque palette ≤32；locomotion 无 cyan，action 的 cyan 只存在于 recontain frames 16–18。Hit overlay 是上下分离的稀疏 fragment；最终 recontain frame 保留接地、无活动酒红的 beak-and-cloth remnant，不是全局缩小消失。
+- 已知 Minor：frenzy-loop frames 5–8 的低亮衣料量化色 `(40,51,37)` 在原生 1×与实际角色尺度下仍读作蓝黑/紫黑，不满足冻结的 green/olive predicate；黄铜、象牙与后背扣件的近综合色同样保留，不能为追求扩大的颜色谓词而误删功能材料。
+- 运行态审查 `gate-4/review/scp-049-gate4-runtime-review.md` SHA-256 `25B3BAE17CC6417DC499DC633FB4FA78FEEB1E1605933A98FF5FB05149DBC6D8`，结论为 dev-only Runtime PASS。证据包含七张真实 Phaser `960×540` canvas 截图，覆盖 candidate locomotion、frenzy-enter、frenzy-loop、hit-overlay、recontain frames 17/18 与 forced legacy 对照；candidate 实际请求两张 Gate 4 sheet，forced legacy 只请求旧 `scp-049.png`。浏览器原始 JFIF 截图按解码后 RGB 像素转存为真正 PNG，未做内容编辑。为免六分钟等待造成非美术噪声，Boss 状态由本地临时调试引用触发，该引用在截图后已回滚，最终 diff 不包含调试入口或时间线改动。
+- Gate 4 当时的 builder validation、静态回归、development-candidate runtime review 与 normalized/public byte equality 是历史证据；Gate 5 reconciliation 已将两张纳入 production，当前权威状态见本节 Gate 5 final admission rows。历史 `960×540` 截图仍可用于复核画布表现，但不再是等待 production admission 的前提；商业发布与署名复核边界不变。
+
+### P83 SCP-049 Gate 4 locomotion exact prompt ledger
+
+Gate 4 locomotion 的四方向 prompt、修正 prompt、每次调用的 raw/original SHA-256、selected/rejected disposition 和唯一静态 SCP-049 输入均完整持久化于外部 evidence：`gate-4/logs/scp-049-locomotion-prompt-ledger.md`（SHA-256 `E8E9876BEFF58C91F09998C1A56AE46981A4CD1159672B854A4A0B550E367F4E`）。该 ledger 的唯一引用输入为 `gate-1/normalized/scp-049.png`，SHA-256 `5630BB463CBF28B04ABF589CF1A6AC771AD12F14C00AB0EDDA73D8C825A37BAD`；Gate 1 静态来源的逐字 prompt 见 `gate-1/logs/source-manifest.md` 与 [P9](#p9-scp-049)。本登记不转录或重建这些逐字 prompt，以 ledger 为唯一权威原文。
+
+### P84 SCP-049 Gate 4 action exact prompt ledger
+
+Gate 4 action 的 frenzy-enter、frenzy-loop、hit-overlay 与 recontain prompt、修正 prompt、每次调用的 raw/original SHA-256、selected/rejected disposition 和唯一静态 SCP-049 输入均完整持久化于外部 evidence：`gate-4/logs/scp-049-action-prompt-ledger.md`（SHA-256 `DE7D3B221D59162A762A431DCF7FE985772363B0B072A40649B8F8C6CC13E352`）。唯一引用输入同 [P83](#p83-scp-049-gate-4-locomotion-exact-prompt-ledger)；最终 source/final hashes、处理和 rejected lineage 见 P82。本登记不转录或重建未在仓库持久化的 prompt payload，以 evidence ledger 为唯一权威原文。

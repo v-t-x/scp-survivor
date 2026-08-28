@@ -33,11 +33,28 @@ export class PreloadScene extends Phaser.Scene {
     for (const asset of IMAGE_ASSETS) {
       this.load.image(asset.key, asset.path);
     }
-    const spritesheetAssets = import.meta.env?.DEV === true
-      ? [...SPRITESHEET_ASSETS, ...DEVELOPMENT_SPRITESHEET_ASSETS]
-      : SPRITESHEET_ASSETS;
-    for (const sheet of spritesheetAssets) {
+    for (const sheet of SPRITESHEET_ASSETS) {
       this.load.spritesheet(sheet.key, sheet.path, sheet.frameConfig);
+    }
+    if (import.meta.env.DEV === true) {
+      const searchParams = new URLSearchParams(globalThis.location?.search ?? "");
+      const candidateMode = searchParams.get("enemyPresentation") === "candidate";
+      const candidateIds = candidateMode
+        ? new Set(searchParams.getAll("enemyCandidate"))
+        : new Set();
+      for (const sheet of DEVELOPMENT_SPRITESHEET_ASSETS) {
+        const previewQuery = sheet.previewQuery;
+        if (
+          previewQuery
+          && (
+            searchParams.get(previewQuery.name) !== previewQuery.value
+            || !candidateIds.has(sheet.candidateId)
+          )
+        ) {
+          continue;
+        }
+        this.load.spritesheet(sheet.key, sheet.path, sheet.frameConfig);
+      }
     }
     for (const atlas of ATLAS_ASSETS) {
       this.load.atlas(atlas.key, atlas.texturePath, atlas.dataPath);

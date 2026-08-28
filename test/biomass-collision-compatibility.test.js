@@ -337,3 +337,42 @@ test("non-biomass elite initialization and routing never use biomass compatibili
     );
   }
 });
+
+test("presentation tracking happens once after biomass body and display compatibility are committed", async () => {
+  const { initializeEnemyFromConfig } = await loadEnemyMethods();
+  const scene = createScene({ production: false });
+  const enemy = createEnemy();
+  const calls = [];
+  scene.enemyPresentation = {
+    trackActor(actor, options) {
+      calls.push({
+        actor,
+        options,
+        body: {
+          sourceWidth: actor.body.sourceWidth,
+          sourceHeight: actor.body.sourceHeight,
+          width: actor.body.width,
+          height: actor.body.height,
+          radius: actor.body.radius,
+          offsetX: actor.body.offset.x,
+          offsetY: actor.body.offset.y
+        }
+      });
+      return 17;
+    }
+  };
+  initializeEnemyFromConfig.call(
+    scene,
+    enemy,
+    BALANCE.enemy.elite.types.biomass,
+    { healthMultiplier: 1, damageMultiplier: 1 },
+    true
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].actor, enemy);
+  assert.deepEqual(calls[0].options, { enemyType: "biomass", isBoss: false });
+  assert.equal(enemy._presentationId, 17);
+  assert.equal(calls[0].body.sourceWidth, enemy.body.sourceWidth);
+  assert.equal(calls[0].body.sourceHeight, enemy.body.sourceHeight);
+  assert.equal(calls[0].body.radius, enemy.body.radius);
+});

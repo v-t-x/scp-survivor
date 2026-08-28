@@ -4,7 +4,13 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
-import { IMAGE_ASSETS, SPRITESHEET_ASSETS, TEXTURES } from "../src/assets/manifest.js";
+import {
+  DEVELOPMENT_SPRITESHEET_ASSETS,
+  IMAGE_ASSETS,
+  PRODUCTION_SPRITESHEET_KEYS,
+  SPRITESHEET_ASSETS,
+  TEXTURES
+} from "../src/assets/manifest.js";
 import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
 
 const approvedImageAssets = [
@@ -134,6 +140,165 @@ const approvedSpritesheets = [
   }))
 ];
 
+const enemyBossCandidateSheets = [
+  { property: "r17DrifterActionSheet", key: "r17-drifter-action-sheet", path: "assets/art/enemies/r17-drifter-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17RiftSkimmerActionSheet", key: "r17-rift-skimmer-action-sheet", path: "assets/art/enemies/r17-rift-skimmer-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17PulseSacActionSheet", key: "r17-pulse-sac-action-sheet", path: "assets/art/enemies/r17-pulse-sac-action-sheet.png", frameConfig: { frameWidth: 48, frameHeight: 48 } },
+  { property: "r17CarapaceGateActionSheet", key: "r17-carapace-gate-action-sheet", path: "assets/art/enemies/r17-carapace-gate-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17FrameGapActionSheet", key: "r17-frame-gap-action-sheet", path: "assets/art/enemies/r17-frame-gap-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17BroodMassActionSheet", key: "r17-brood-mass-action-sheet", path: "assets/art/enemies/r17-brood-mass-action-sheet.png", frameConfig: { frameWidth: 64, frameHeight: 64 } },
+  { property: "r17BudActionSheet", key: "r17-bud-action-sheet", path: "assets/art/enemies/r17-bud-action-sheet.png", frameConfig: { frameWidth: 32, frameHeight: 32 } },
+  { property: "enemyScp049LocomotionSheet", key: "enemy-scp049-locomotion-sheet", path: "assets/art/characters/scp-049-locomotion-sheet.png", frameConfig: { frameWidth: 80, frameHeight: 96 } },
+  { property: "enemyScp049ActionSheet", key: "enemy-scp049-action-sheet", path: "assets/art/characters/scp-049-action-sheet.png", frameConfig: { frameWidth: 80, frameHeight: 96 } }
+];
+
+const gate2CandidateSheets = [
+  {
+    property: "r17RiftSkimmerActionSheet",
+    key: "r17-rift-skimmer-action-sheet",
+    path: "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [864, 48],
+    frameCount: 18,
+    sha256: "7b944216e4b78eaacb1a36d8ae023ac03c343e5fbda523e56fc4ec226065e304",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      pierce: { start: 14, end: 17, fps: 15, repeat: 0 }
+    }
+  },
+  {
+    property: "r17BudActionSheet",
+    key: "r17-bud-action-sheet",
+    path: "assets/art/enemies/r17-bud-action-sheet.png",
+    frameConfig: { frameWidth: 32, frameHeight: 32 },
+    finalSize: [576, 32],
+    frameCount: 18,
+    sha256: "22ff646ce9ee1ddc1b67305c95e5d4fa9c6c862a494976598ac87025e0fa99e6",
+    clips: {
+      move: { start: 0, end: 5, fps: 12, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      snap: { start: 14, end: 17, fps: 16, repeat: 0 }
+    }
+  },
+  {
+    property: "r17FrameGapActionSheet",
+    key: "r17-frame-gap-action-sheet",
+    path: "assets/art/enemies/r17-frame-gap-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "ff72566e4c612ee6292e6135b0f06f2e7d12aa53fe0219f82b6304ab41bcf9c5",
+    clips: {
+      move: { start: 0, end: 5, fps: 8, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      "phase-out": { start: 14, end: 17, fps: 6, repeat: 0 },
+      "reappear-dash": { start: 18, end: 21, fps: 12.5, repeat: -1 }
+    }
+  }
+];
+
+const gate3CandidateSheets = [
+  {
+    property: "r17DrifterActionSheet",
+    key: "r17-drifter-action-sheet",
+    path: "assets/art/enemies/r17-drifter-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [864, 48],
+    frameCount: 18,
+    sha256: "9f9f07490834273bc742bddca319fe9fc0529e8993987534505eb8cf449152fd",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      contact: { start: 14, end: 17, fps: 12, repeat: 0 }
+    }
+  },
+  {
+    property: "r17PulseSacActionSheet",
+    key: "r17-pulse-sac-action-sheet",
+    path: "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    finalSize: [960, 48],
+    frameCount: 20,
+    sha256: "5544920457dce1b8ef0dec09103a5568b7707294d97fc266e9adccd2125d516d",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      shoot: { start: 14, end: 19, fps: 10, repeat: 0, releaseFrame: 18 }
+    }
+  },
+  {
+    property: "r17CarapaceGateActionSheet",
+    key: "r17-carapace-gate-action-sheet",
+    path: "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "4775a31f1341d245725fa569da28fb38476024c5de6205cb323f91cf0694c776",
+    clips: {
+      move: { start: 0, end: 5, fps: 6, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      brace: { start: 14, end: 17, fps: 5, repeat: 0 },
+      charge: { start: 18, end: 21, fps: 9, repeat: -1 }
+    }
+  },
+  {
+    property: "r17BroodMassActionSheet",
+    key: "r17-brood-mass-action-sheet",
+    path: "assets/art/enemies/r17-brood-mass-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    finalSize: [1408, 64],
+    frameCount: 22,
+    sha256: "d86b730ab9aae6c24769779eb9b6db5ea436e0f70f1049d69d11d2f282f1fdb6",
+    clips: {
+      move: { start: 0, end: 5, fps: 5, repeat: -1 },
+      hit: { start: 6, end: 7, fps: 24, repeat: 0 },
+      death: { start: 8, end: 13, fps: 12, repeat: 0 },
+      split: { start: 14, end: 21, fps: 12, repeat: 0 }
+    }
+  }
+];
+
+const gate4CandidateSheets = [
+  {
+    property: "enemyScp049LocomotionSheet",
+    kind: "scp049-locomotion",
+    key: "enemy-scp049-locomotion-sheet",
+    path: "assets/art/characters/scp-049-locomotion-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    finalSize: [800, 384],
+    frameCount: 40,
+    sha256: "fe7c23bc628f9cad458f7864fde1937d8d5774294137ae886d9b6cbf6c068c21",
+    directions: ["down", "left", "right", "up"],
+    rowClips: {
+      idle: { start: 0, end: 3, fps: 5, repeat: -1 },
+      walk: { start: 4, end: 9, fps: 8, repeat: -1 }
+    }
+  },
+  {
+    property: "enemyScp049ActionSheet",
+    kind: "scp049-action",
+    key: "enemy-scp049-action-sheet",
+    path: "assets/art/characters/scp-049-action-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    finalSize: [1520, 96],
+    frameCount: 19,
+    sha256: "96b8e0cd49405c538d4744b004e61dc2bcfcb6265dba12651d30600bae76413d",
+    clips: {
+      "frenzy-enter": { start: 0, end: 4, fps: 10, repeat: 0 },
+      "frenzy-loop": { start: 5, end: 8, fps: 8, repeat: -1 },
+      "hit-overlay": { start: 9, end: 10, fps: 24, repeat: 0 },
+      recontain: { start: 11, end: 18, fps: 12, repeat: 0 }
+    }
+  }
+];
+
 const r17TextureKeys = {
   r17Drifter: "r17-drifter",
   r17RiftSkimmer: "r17-rift-skimmer",
@@ -253,8 +418,12 @@ function getFramePixels(pixels, sheetWidth, frameIndex) {
 
 function getEnemyFramePixels(pixels, sheetWidth, frameWidth, frameHeight, frameIndex) {
   const result = Buffer.alloc(frameWidth * frameHeight * 4);
+  const framesPerRow = sheetWidth / frameWidth;
+  assert.equal(Number.isInteger(framesPerRow), true, "spritesheet width must contain whole frames");
+  const frameX = (frameIndex % framesPerRow) * frameWidth;
+  const frameY = Math.floor(frameIndex / framesPerRow) * frameHeight;
   for (let y = 0; y < frameHeight; y += 1) {
-    const sourceStart = ((y * sheetWidth) + (frameIndex * frameWidth)) * 4;
+    const sourceStart = (((frameY + y) * sheetWidth) + frameX) * 4;
     pixels.copy(result, y * frameWidth * 4, sourceStart, sourceStart + frameWidth * 4);
   }
   return result;
@@ -353,6 +522,123 @@ function getEnemyPairDifference(firstFrame, secondFrame) {
     changedPixelRatio: changedPixels / visibleUnionPixels,
     alphaShapeDifferenceRatio: alphaShapePixels / visibleUnionPixels
   };
+}
+
+function mirrorEnemyFrameHorizontally(framePixels, frameWidth, frameHeight) {
+  const mirrored = Buffer.alloc(framePixels.length);
+  for (let y = 0; y < frameHeight; y += 1) {
+    for (let x = 0; x < frameWidth; x += 1) {
+      const sourceOffset = (y * frameWidth + x) * 4;
+      const targetOffset = (y * frameWidth + frameWidth - 1 - x) * 4;
+      framePixels.copy(mirrored, targetOffset, sourceOffset, sourceOffset + 4);
+    }
+  }
+  return mirrored;
+}
+
+function getCroppedAlphaMask(framePixels, frameWidth, bbox) {
+  const mask = Buffer.alloc(bbox.width * bbox.height);
+  for (let y = 0; y < bbox.height; y += 1) {
+    for (let x = 0; x < bbox.width; x += 1) {
+      const sourceOffset = (((bbox.minY + y) * frameWidth) + bbox.minX + x) * 4 + 3;
+      mask[y * bbox.width + x] = framePixels[sourceOffset];
+    }
+  }
+  return mask;
+}
+
+function mirrorAlphaMaskHorizontally(mask, width, height) {
+  const mirrored = Buffer.alloc(mask.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      mirrored[y * width + width - 1 - x] = mask[y * width + x];
+    }
+  }
+  return mirrored;
+}
+
+function getOpaqueComponentMetrics(framePixels, frameWidth, frameHeight) {
+  const visited = new Uint8Array(frameWidth * frameHeight);
+  const components = [];
+  for (let start = 0; start < visited.length; start += 1) {
+    if (visited[start] || framePixels[start * 4 + 3] !== 255) continue;
+    const pending = [start];
+    visited[start] = 1;
+    let size = 0;
+    let minX = frameWidth;
+    let minY = frameHeight;
+    let maxX = -1;
+    let maxY = -1;
+    while (pending.length > 0) {
+      const index = pending.pop();
+      const x = index % frameWidth;
+      const y = Math.floor(index / frameWidth);
+      size += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      for (const [nextX, nextY] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight) continue;
+        const next = nextY * frameWidth + nextX;
+        if (visited[next] || framePixels[next * 4 + 3] !== 255) continue;
+        visited[next] = 1;
+        pending.push(next);
+      }
+    }
+    components.push({ size, minX, minY, maxX, maxY });
+  }
+  return components;
+}
+
+function isScp049ContainmentCyan(red, green, blue) {
+  return (
+    red <= 80
+    && green >= 90
+    && blue >= 140
+    && green - red >= 50
+    && blue - red >= 60
+  );
+}
+
+function isScp049GreenOrOlive(red, green, blue) {
+  return green >= 40 && green - red >= 12 && green - blue >= 12;
+}
+
+function auditScp049Frame(framePixels, frameWidth, frameHeight, label) {
+  const metrics = getEnemyFrameMetrics(framePixels, frameWidth, frameHeight);
+  let hiddenRgb = 0;
+  let greenWithoutContainmentCyan = 0;
+  let containmentCyan = 0;
+  let activeWineRed = 0;
+  for (let index = 0; index < frameWidth * frameHeight; index += 1) {
+    const offset = index * 4;
+    const red = framePixels[offset];
+    const green = framePixels[offset + 1];
+    const blue = framePixels[offset + 2];
+    const alpha = framePixels[offset + 3];
+    if (alpha === 0) {
+      if (red || green || blue) hiddenRgb += 1;
+      continue;
+    }
+    const cyan = isScp049ContainmentCyan(red, green, blue);
+    if (cyan) containmentCyan += 1;
+    if (isScp049GreenOrOlive(red, green, blue) && !cyan) greenWithoutContainmentCyan += 1;
+    if (red >= 90 && red - green >= 45 && red - blue >= 40) activeWineRed += 1;
+  }
+  for (let x = 0; x < frameWidth; x += 1) {
+    assert.equal(framePixels[x * 4 + 3], 0, `${label} touches the top edge`);
+    assert.equal(framePixels[((frameHeight - 1) * frameWidth + x) * 4 + 3], 0, `${label} touches the bottom edge`);
+  }
+  for (let y = 0; y < frameHeight; y += 1) {
+    assert.equal(framePixels[(y * frameWidth) * 4 + 3], 0, `${label} touches the left edge`);
+    assert.equal(framePixels[(y * frameWidth + frameWidth - 1) * 4 + 3], 0, `${label} touches the right edge`);
+  }
+  assert.deepEqual(metrics.alphaValues, new Set([0, 255]), `${label} binary alpha`);
+  assert.ok(metrics.colors.size <= 32, `${label} exceeds 32 opaque colors`);
+  assert.equal(hiddenRgb, 0, `${label} has hidden RGB under transparent pixels`);
+  assert.ok(getOpaqueComponentSizes(framePixels, frameWidth, frameHeight).every((size) => size > 1), `${label} has an isolated 1px component`);
+  return { ...metrics, greenWithoutContainmentCyan, containmentCyan, activeWineRed };
 }
 
 function getVisibleFootY(framePixels) {
@@ -550,7 +836,489 @@ test("production manifest declares the exact approved spritesheet contract", () 
   for (const [property, key] of Object.entries(r17TextureKeys)) {
     assert.equal(TEXTURES[property], key);
   }
-  assert.deepEqual(SPRITESHEET_ASSETS, approvedSpritesheets);
+  assert.deepEqual(SPRITESHEET_ASSETS, [
+    ...approvedSpritesheets,
+    ...enemyBossCandidateSheets.map(({ key, path, frameConfig }) => ({
+      key,
+      path,
+      frameConfig,
+      previewQuery: { name: "enemyPresentation", value: "candidate" },
+      candidateId: key
+    }))
+  ]);
+});
+
+// Break caught: production admission moves or mutates any Player development entry.
+test("Player development entries remain exact after the nine-sheet production admission", () => {
+  assert.deepEqual(DEVELOPMENT_SPRITESHEET_ASSETS.map(({ key }) => key), [
+    "player-response-operative-prototype-sheet",
+    "player-response-operative-body-prototype-sheet",
+    "player-response-operative-breacher-sample-sheet",
+    "player-response-operative-cbrn-sample-sheet"
+  ]);
+  assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some(({ key }) => (
+    enemyBossCandidateSheets.some((candidate) => candidate.key === key)
+  )), false);
+});
+
+for (const {
+  property,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  clips
+} of gate2CandidateSheets) {
+  // Break caught: this exact Gate 2 sheet is missing or diverges from its production real-asset contract.
+  test(`Gate 2 production sheet ${key} has its exact real action sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual({
+      productionPath: contract[property]?.productionPath,
+      frameWidth: contract[property]?.frameWidth,
+      frameHeight: contract[property]?.frameHeight,
+      frameCount: contract[property]?.frameCount,
+      sheetWidth: contract[property]?.sheetWidth,
+      sheetHeight: contract[property]?.sheetHeight,
+      clips: contract[property]?.clips
+    }, {
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      clips
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${key} SHA-256`
+    );
+  });
+}
+
+for (const {
+  property,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  clips
+} of gate3CandidateSheets) {
+  // Break caught: this exact Gate 3 sheet is missing or diverges from its production real-asset contract.
+  test(`Gate 3 production sheet ${key} has its exact real action sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual({
+      productionPath: contract[property]?.productionPath,
+      frameWidth: contract[property]?.frameWidth,
+      frameHeight: contract[property]?.frameHeight,
+      frameCount: contract[property]?.frameCount,
+      sheetWidth: contract[property]?.sheetWidth,
+      sheetHeight: contract[property]?.sheetHeight,
+      clips: contract[property]?.clips
+    }, {
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      clips
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(
+      createHash("sha256").update(buffer).digest("hex"),
+      sha256,
+      `${key} SHA-256`
+    );
+
+    const { pixels } = decodeRgbaPng(buffer);
+    let greenDominantPixels = 0;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      if (pixels[offset + 3] === 0) continue;
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      if (green >= 40 && green - red >= 12 && green - blue >= 12) {
+        greenDominantPixels += 1;
+      }
+    }
+    assert.equal(greenDominantPixels, 0, `${key} has non-cyan green/olive material residue`);
+  });
+}
+
+for (const {
+  property,
+  kind,
+  key,
+  path: assetPath,
+  frameConfig,
+  finalSize,
+  frameCount,
+  sha256,
+  directions,
+  rowClips,
+  clips
+} of gate4CandidateSheets) {
+  // Break caught: a Gate 4 Boss sheet diverges from its real production contract.
+  test(`Gate 4 production sheet ${key} has its exact real formal-animation sheet`, async () => {
+    assert.equal(TEXTURES[property], key, property);
+    assert.deepEqual(
+      SPRITESHEET_ASSETS.find((asset) => asset.key === key),
+      {
+        key,
+        path: assetPath,
+        frameConfig,
+        previewQuery: { name: "enemyPresentation", value: "candidate" },
+        candidateId: key
+      }
+    );
+    assert.equal(IMAGE_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(DEVELOPMENT_SPRITESHEET_ASSETS.some((asset) => asset.key === key), false, property);
+    assert.equal(PRODUCTION_SPRITESHEET_KEYS.has(key), true, property);
+
+    const contract = JSON.parse(
+      await readFile(new URL("../scripts/art/data/enemy-boss-animation-contracts.json", import.meta.url), "utf8")
+    );
+    assert.deepEqual(contract[property], {
+      kind,
+      textureKey: key,
+      productionPath: assetPath,
+      frameWidth: frameConfig.frameWidth,
+      frameHeight: frameConfig.frameHeight,
+      frameCount,
+      sheetWidth: finalSize[0],
+      sheetHeight: finalSize[1],
+      ...(directions ? { directions, rowClips } : { clips })
+    }, property);
+
+    const absolute = fileURLToPath(new URL(`../public/${assetPath}`, import.meta.url));
+    const buffer = await readFile(absolute);
+    const [width, height] = readPngSize(buffer);
+    assert.deepEqual([width, height], finalSize, key);
+    assert.equal((width / frameConfig.frameWidth) * (height / frameConfig.frameHeight), frameCount, key);
+    assert.equal(createHash("sha256").update(buffer).digest("hex"), sha256, `${key} SHA-256`);
+  });
+}
+
+// Break caught: SCP-049 direction rows use cyan body material, soft pixels or mirrored side art.
+test("Gate 4 SCP-049 locomotion is a clean native four-direction 80x96 sheet", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/characters/scp-049-locomotion-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const frames = [];
+  const audits = [];
+
+  for (let frameIndex = 0; frameIndex < 40; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 80, 96, frameIndex);
+    const audit = auditScp049Frame(frame, 80, 96, `SCP-049 locomotion frame ${frameIndex}`);
+    assert.equal(audit.greenWithoutContainmentCyan, 0, `locomotion frame ${frameIndex} green/olive residue`);
+    assert.equal(audit.containmentCyan, 0, `locomotion frame ${frameIndex} must not have a cyan body core`);
+    frames.push(frame);
+    audits.push(audit);
+  }
+
+  for (let clipFrame = 0; clipFrame < 10; clipFrame += 1) {
+    const left = frames[10 + clipFrame];
+    const right = frames[20 + clipFrame];
+    assert.equal(left.equals(right), false, `left/right frame ${clipFrame} is byte-identical`);
+    assert.equal(left.equals(mirrorEnemyFrameHorizontally(right, 80, 96)), false, `left/right frame ${clipFrame} is a full-frame mirror`);
+
+    const leftBox = audits[10 + clipFrame].bbox;
+    const rightBox = audits[20 + clipFrame].bbox;
+    const leftMask = getCroppedAlphaMask(left, 80, leftBox);
+    const rightMask = getCroppedAlphaMask(right, 80, rightBox);
+    const sameDimensions = leftBox.width === rightBox.width && leftBox.height === rightBox.height;
+    assert.equal(sameDimensions && leftMask.equals(rightMask), false, `left/right frame ${clipFrame} has the same cropped alpha`);
+    assert.equal(
+      sameDimensions && leftMask.equals(mirrorAlphaMaskHorizontally(rightMask, rightBox.width, rightBox.height)),
+      false,
+      `left/right frame ${clipFrame} has mirrored cropped alpha`
+    );
+  }
+});
+
+// Break caught: the formal hit becomes a replacement body or recontainment shrinks to disappearance.
+test("Gate 4 SCP-049 actions keep sparse hit feedback and collapse into an inactive contained remnant", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/characters/scp-049-action-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const frames = [];
+  const audits = [];
+
+  for (let frameIndex = 0; frameIndex < 19; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 80, 96, frameIndex);
+    const audit = auditScp049Frame(frame, 80, 96, `SCP-049 action frame ${frameIndex}`);
+    assert.equal(audit.greenWithoutContainmentCyan, 0, `action frame ${frameIndex} non-cyan green/olive residue`);
+    frames.push(frame);
+    audits.push(audit);
+  }
+
+  assert.deepEqual(
+    audits.map(({ containmentCyan }) => containmentCyan),
+    [...Array(16).fill(0), 118, 91, 41],
+    "cyan must exist only as the final external containment nodes"
+  );
+  for (let frameIndex = 16; frameIndex <= 18; frameIndex += 1) {
+    const cyanRatio = audits[frameIndex].containmentCyan / audits[frameIndex].visiblePixels;
+    assert.ok(cyanRatio >= 0.01 && cyanRatio <= 0.08, `recontain frame ${frameIndex} cyan ratio`);
+  }
+
+  const minimumFrenzyLoopArea = Math.min(...audits.slice(5, 9).map(({ visiblePixels }) => visiblePixels));
+  for (let frameIndex = 9; frameIndex <= 10; frameIndex += 1) {
+    const audit = audits[frameIndex];
+    const occupancy = audit.visiblePixels / (80 * 96);
+    assert.ok(occupancy >= 0.14 && occupancy <= 0.18, `hit-overlay frame ${frameIndex} occupancy`);
+    assert.ok(audit.visiblePixels / minimumFrenzyLoopArea <= 0.35, `hit-overlay frame ${frameIndex} must stay local`);
+    assert.ok(audit.bbox.height >= 90, `hit-overlay frame ${frameIndex} keeps full-height registration`);
+    const components = getOpaqueComponentMetrics(frames[frameIndex], 80, 96)
+      .sort((first, second) => second.size - first.size);
+    assert.ok(components.length >= 2, `hit-overlay frame ${frameIndex} needs two registered fragments`);
+    assert.ok(components[0].size / audit.visiblePixels < 0.70, `hit-overlay frame ${frameIndex} became one body`);
+    assert.ok(components[1].size / audit.visiblePixels >= 0.25, `hit-overlay frame ${frameIndex} lost its lower fragment`);
+    const [upper, lower] = components.slice(0, 2).sort((first, second) => first.minY - second.minY);
+    assert.ok(lower.minY - upper.maxY - 1 >= 28, `hit-overlay frame ${frameIndex} fragments are not separated`);
+  }
+
+  for (let frameIndex = 12; frameIndex <= 15; frameIndex += 1) {
+    assert.ok(audits[frameIndex].visiblePixels < audits[frameIndex - 1].visiblePixels, `collapse frame ${frameIndex} must lose tension`);
+  }
+  for (let frameIndex = 17; frameIndex <= 18; frameIndex += 1) {
+    assert.ok(audits[frameIndex].visiblePixels < audits[frameIndex - 1].visiblePixels, `containment frame ${frameIndex} must tighten`);
+  }
+
+  const loopAverageArea = audits.slice(5, 9)
+    .reduce((total, { visiblePixels }) => total + visiblePixels, 0) / 4;
+  const loopHeight = Math.max(...audits.slice(5, 9).map(({ height }) => height));
+  const finalRemnant = audits[18];
+  assert.ok(finalRemnant.visiblePixels / loopAverageArea >= 0.25 && finalRemnant.visiblePixels / loopAverageArea <= 0.35);
+  assert.ok(finalRemnant.height / loopHeight >= 0.35 && finalRemnant.height / loopHeight <= 0.45);
+  assert.equal(finalRemnant.visiblePixels / audits[11].visiblePixels >= 0.50, true, "final remnant must not shrink away");
+  assert.equal(finalRemnant.activeWineRed, 0, "final remnant must be inactive");
+  assert.equal(finalRemnant.bottomY, 94, "final remnant must remain grounded inside the frame");
+});
+
+// Break caught: the Pulse Sac aperture visibly relights after the death clip has already extinguished.
+test("Gate 3 Pulse Sac death dims once and stays cyan-free after global frame 9", async () => {
+  const absolute = fileURLToPath(new URL("../public/assets/art/enemies/r17-pulse-sac-action-sheet.png", import.meta.url));
+  const { width, pixels } = decodeRgbaPng(await readFile(absolute));
+  const saturatedCyanTealByFrame = [];
+
+  for (let frameIndex = 8; frameIndex <= 13; frameIndex += 1) {
+    const frame = getEnemyFramePixels(pixels, width, 48, 48, frameIndex);
+    let saturatedCyanTealPixels = 0;
+    for (let offset = 0; offset < frame.length; offset += 4) {
+      if (frame[offset + 3] === 0) continue;
+      const red = frame[offset];
+      const green = frame[offset + 1];
+      const blue = frame[offset + 2];
+      if (
+        red <= 100
+        && green >= 100
+        && blue >= 100
+        && green - red >= 30
+        && blue - red >= 30
+        && Math.abs(green - blue) <= 24
+      ) {
+        saturatedCyanTealPixels += 1;
+      }
+    }
+    saturatedCyanTealByFrame.push(saturatedCyanTealPixels);
+  }
+
+  assert.deepEqual(
+    saturatedCyanTealByFrame,
+    [20, 1, 0, 0, 0, 0],
+    "Pulse Sac death must visibly dim once, extinguish, and never relight"
+  );
+});
+
+// Break caught: a partial production admission leaves one promoted sheet outside the immutable production Set.
+test("production sheet admission remains an immutable exact-nine transaction", () => {
+  assert.equal(PRODUCTION_SPRITESHEET_KEYS instanceof Set, true);
+  assert.deepEqual([...PRODUCTION_SPRITESHEET_KEYS], SPRITESHEET_ASSETS.map(({ key }) => key));
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.add("r17-drifter-action-sheet"), /immutable/i);
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.delete("player-opening-sheet"), /immutable/i);
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.clear(), /immutable/i);
+  assert.throws(() => Set.prototype.add.call(PRODUCTION_SPRITESHEET_KEYS, "bypass"), TypeError);
+  assert.throws(() => Set.prototype.delete.call(PRODUCTION_SPRITESHEET_KEYS, "player-opening-sheet"), TypeError);
+  assert.throws(() => Set.prototype.clear.call(PRODUCTION_SPRITESHEET_KEYS), TypeError);
+
+  const contentsBeforeForEach = [...PRODUCTION_SPRITESHEET_KEYS];
+  const callbackThis = { label: "production-sheet-forEach-this" };
+  const shadowedCallObservations = [];
+  function observeWithShadowedCall(value, key, owner) {
+    shadowedCallObservations.push({
+      ownerIsExportedSet: owner === PRODUCTION_SPRITESHEET_KEYS,
+      preservedThisArg: this === callbackThis,
+      valueEqualsKey: value === key
+    });
+  }
+  observeWithShadowedCall.call = null;
+  let shadowedCallError = null;
+  try {
+    PRODUCTION_SPRITESHEET_KEYS.forEach(observeWithShadowedCall, callbackThis);
+  } catch (error) {
+    shadowedCallError = error?.constructor?.name ?? "unknown";
+  }
+  const shadowedCallContract = {
+    shadowedCallError,
+    invocationCount: shadowedCallObservations.length,
+    observationsAreNative: shadowedCallObservations.every((observation) =>
+      Object.values(observation).every(Boolean)
+    )
+  };
+
+  const observedPairs = [];
+  let callbackOwner = null;
+  let preservedThisArg = true;
+  PRODUCTION_SPRITESHEET_KEYS.forEach(function observeProductionKey(value, key, owner) {
+    observedPairs.push([value, key]);
+    callbackOwner = owner;
+    preservedThisArg &&= this === callbackThis;
+  }, callbackThis);
+  const mutationResults = [
+    ["add", ["__forEach_leak_probe__"]],
+    ["delete", ["player-opening-sheet"]],
+    ["clear", []]
+  ].map(([method, args]) => {
+    try {
+      callbackOwner[method](...args);
+      return "returned";
+    } catch (error) {
+      return error?.constructor?.name ?? "unknown";
+    }
+  });
+  assert.deepEqual({
+    callbackOwnerIsExportedSet: callbackOwner === PRODUCTION_SPRITESHEET_KEYS,
+    preservedThisArg,
+    valuesEqualKeys: observedPairs.every(([value, key]) => value === key),
+    mutationResults,
+    contentsAfterForEach: [...PRODUCTION_SPRITESHEET_KEYS]
+  }, {
+    callbackOwnerIsExportedSet: true,
+    preservedThisArg: true,
+    valuesEqualKeys: true,
+    mutationResults: ["TypeError", "TypeError", "TypeError"],
+    contentsAfterForEach: contentsBeforeForEach
+  });
+  assert.throws(() => PRODUCTION_SPRITESHEET_KEYS.forEach(null), TypeError);
+  const callbackSentinel = new Error("immutable Set forEach callback sentinel");
+  assert.throws(
+    () => PRODUCTION_SPRITESHEET_KEYS.forEach(() => {
+      throw callbackSentinel;
+    }),
+    (error) => error === callbackSentinel
+  );
+  assert.equal(PRODUCTION_SPRITESHEET_KEYS.forEach(() => {}), undefined);
+
+  const valueOfResult = PRODUCTION_SPRITESHEET_KEYS.valueOf();
+  const contentsBeforeValueOfMutations = [...PRODUCTION_SPRITESHEET_KEYS];
+  const valueOfMutationResults = [];
+  for (const [method, args] of [
+    ["add", ["__valueOf_leak_probe__"]],
+    ["delete", [contentsBeforeValueOfMutations[0]]],
+    ["clear", []]
+  ]) {
+    try {
+      valueOfResult[method](...args);
+      valueOfMutationResults.push("returned");
+    } catch (error) {
+      valueOfMutationResults.push(error?.constructor?.name ?? "unknown");
+    }
+  }
+  if (valueOfResult !== PRODUCTION_SPRITESHEET_KEYS) {
+    valueOfResult.clear();
+    contentsBeforeValueOfMutations.forEach((key) => valueOfResult.add(key));
+  }
+  assert.deepEqual({
+    shadowedCallContract,
+    valueOfReturnsExportedSet: valueOfResult === PRODUCTION_SPRITESHEET_KEYS,
+    mutationResults: valueOfMutationResults,
+    contentsAfterValueOf: [...PRODUCTION_SPRITESHEET_KEYS]
+  }, {
+    shadowedCallContract: {
+      shadowedCallError: null,
+      invocationCount: contentsBeforeForEach.length,
+      observationsAreNative: true
+    },
+    valueOfReturnsExportedSet: true,
+    mutationResults: ["TypeError", "TypeError", "TypeError"],
+    contentsAfterValueOf: contentsBeforeValueOfMutations
+  });
+
+  const candidateKeys = enemyBossCandidateSheets.map(({ key }) => key);
+  const currentlyAdmitted = candidateKeys.filter((key) => PRODUCTION_SPRITESHEET_KEYS.has(key));
+  assert.deepEqual(currentlyAdmitted, candidateKeys);
+  assert.equal(
+    DEVELOPMENT_SPRITESHEET_ASSETS.some(({ key }) => candidateKeys.includes(key)),
+    false,
+    "no admitted sheet may remain in the development contract"
+  );
+  assert.notEqual(candidateKeys.slice(0, 8).length, currentlyAdmitted.length);
+});
+
+// Break caught: Gate 5 governance loses its complete prompt ledger map or exact admitted-set registration.
+test("asset register keeps the complete P74 through P84 map and authoritative Gate 5 admission", async () => {
+  const register = await readFile(new URL("../docs/art/asset-register.md", import.meta.url), "utf8");
+  const acceptedStatus = "Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言）";
+  const promptIds = [...register.matchAll(/^### P(\d+)\b/gm)].map(([, id]) => Number(id));
+  assert.deepEqual(promptIds.filter((id) => id >= 74 && id <= 84), [
+    74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84
+  ]);
+  assert.match(register, /项目所有者于 2026-08-27 明确接受 Gate 5/);
+  assert.match(register, /此前缺少的逐类型连续动作、完整 SCP-049 状态、普通胜利和第二次完整重启证据/);
+  assert.equal((register.match(/Gate 5 integrated acceptance pending/g) || []).length, 0);
+  for (const { key } of enemyBossCandidateSheets) {
+    const registerAsset = key.replace(/^enemy-scp049/, "scp-049");
+    assert.match(
+      register,
+      new RegExp(`\\| ${registerAsset} \\|[^\\n]*${acceptedStatus} \\|`)
+    );
+  }
 });
 
 test("legacy fallback texture keys remain exact and disjoint from R-17 production keys", () => {

@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 
-import { TEXTURES } from "../src/assets/manifest.js";
+import {
+  SPRITESHEET_ASSETS,
+  TEXTURES
+} from "../src/assets/manifest.js";
 import { BALANCE } from "../src/config/balance.js";
 import * as enemyPresentationModule from "../src/art/enemyPresentation.js";
 import {
@@ -15,8 +20,87 @@ import { runPreloadCreatePipeline } from "../src/scenes/preloadOrchestration.js"
 const {
   ENEMY_PRESENTATION,
   applyEnemyPresentation,
+  getEnemyAnimationKey,
+  getEnemyPresentationMode,
+  getScp049LocomotionAnimationKey,
+  getScp049PresentationMode,
   registerEnemyAnimations
 } = enemyPresentationModule;
+
+const CANDIDATE_OPTIONS = {
+  isDevelopment: true,
+  candidateMode: true,
+  candidateIds: [
+    "r17-drifter-action-sheet",
+    "r17-rift-skimmer-action-sheet",
+    "r17-pulse-sac-action-sheet",
+    "r17-carapace-gate-action-sheet",
+    "r17-frame-gap-action-sheet",
+    "r17-brood-mass-action-sheet",
+    "r17-bud-action-sheet",
+    "enemy-scp049-locomotion-sheet",
+    "enemy-scp049-action-sheet"
+  ]
+};
+
+const FORMAL_R17_CONTRACTS = {
+  infectedStaff: {
+    textureKey: "r17-drifter-action-sheet",
+    frameTotal: 19,
+    prefix: "r17-drifter-action",
+    clips: {
+      move: [0, 5, 6, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], contact: [14, 17, 12, 0]
+    }
+  },
+  crawler: {
+    textureKey: "r17-rift-skimmer-action-sheet",
+    frameTotal: 19,
+    prefix: "r17-rift-skimmer-action",
+    clips: {
+      move: [0, 5, 12, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], pierce: [14, 17, 15, 0]
+    }
+  },
+  drone: {
+    textureKey: "r17-pulse-sac-action-sheet",
+    frameTotal: 21,
+    prefix: "r17-pulse-sac-action",
+    clips: {
+      move: [0, 5, 6, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], shoot: [14, 19, 10, 0]
+    }
+  },
+  riotUnit: {
+    textureKey: "r17-carapace-gate-action-sheet",
+    frameTotal: 23,
+    prefix: "r17-carapace-gate-action",
+    clips: {
+      move: [0, 5, 6, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], brace: [14, 17, 5, 0], charge: [18, 21, 9, -1]
+    }
+  },
+  blinkStalker: {
+    textureKey: "r17-frame-gap-action-sheet",
+    frameTotal: 23,
+    prefix: "r17-frame-gap-action",
+    clips: {
+      move: [0, 5, 8, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], "phase-out": [14, 17, 6, 0], "reappear-dash": [18, 21, 12.5, -1]
+    }
+  },
+  biomass: {
+    textureKey: "r17-brood-mass-action-sheet",
+    frameTotal: 23,
+    prefix: "r17-brood-mass-action",
+    clips: {
+      move: [0, 5, 5, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], split: [14, 21, 12, 0]
+    }
+  },
+  biomassChild: {
+    textureKey: "r17-bud-action-sheet",
+    frameTotal: 19,
+    prefix: "r17-bud-action",
+    clips: {
+      move: [0, 5, 12, -1], hit: [6, 7, 24, 0], death: [8, 13, 12, 0], snap: [14, 17, 16, 0]
+    }
+  }
+};
 
 const EXPECTED_PRESENTATION = {
   infectedStaff: {
@@ -80,9 +164,9 @@ const FALLBACK_TEXTURES = {
   biomassChild: TEXTURES.biomassChild
 };
 
-function createScene(frameTotals = {}) {
+function createScene(frameTotals = {}, { existingAnimations = [], failOnCreate = null } = {}) {
   const availableFrames = new Map(Object.entries(frameTotals));
-  const existingAnimations = new Set();
+  const registeredAnimations = new Set(existingAnimations);
   const created = [];
   return {
     created,
@@ -91,14 +175,98 @@ function createScene(frameTotals = {}) {
       get: (key) => ({ frameTotal: availableFrames.get(key) })
     },
     anims: {
-      exists: (key) => existingAnimations.has(key),
+      exists: (key) => registeredAnimations.has(key),
       generateFrameNumbers: (textureKey, range) => ({ textureKey, ...range }),
       create(config) {
-        existingAnimations.add(config.key);
+        if (config.key === failOnCreate) throw new Error(`refused ${config.key}`);
+        registeredAnimations.add(config.key);
         created.push(config);
+      },
+      remove(key) {
+        registeredAnimations.delete(key);
+        const index = created.findIndex((animation) => animation.key === key);
+        if (index >= 0) created.splice(index, 1);
       }
     }
   };
+}
+
+async function loadPreloadSceneForBehavior({ isDevelopment, manifestModule = null }) {
+  const entryPoint = fileURLToPath(new URL("../src/scenes/PreloadScene.js", import.meta.url));
+  const result = await build({
+    entryPoints: [entryPoint],
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    define: {
+      "import.meta.env.DEV": JSON.stringify(isDevelopment)
+    },
+    plugins: [{
+      name: "preload-scene-test-boundaries",
+      setup(esbuild) {
+        esbuild.onResolve({ filter: /^phaser$/ }, () => ({ path: "phaser", namespace: "test-stub" }));
+        esbuild.onLoad({ filter: /^phaser$/, namespace: "test-stub" }, () => ({
+          contents: "export default { Scene: class Scene {} };",
+          loader: "js"
+        }));
+
+        if (manifestModule !== null) {
+          esbuild.onResolve({ filter: /assets[\\/]manifest\.js$/ }, () => ({
+            path: "manifest",
+            namespace: "test-stub"
+          }));
+          esbuild.onLoad({ filter: /^manifest$/, namespace: "test-stub" }, () => ({
+            contents: manifestModule,
+            loader: "js"
+          }));
+        }
+
+        const runtimeStubs = [
+          [/fallbackTextureFactory\.js$/, "export function generateFallbackTextures() {}"],
+          [/characterPresentation\.js$/, "export function registerOpeningCharacterAnimations() {}"],
+          [/enemyPresentation\.js$/, "export function registerEnemyAnimations() {}"],
+          [/preloadOrchestration\.js$/, "export function runPreloadCreatePipeline() {}"]
+        ];
+        for (const [filter, contents] of runtimeStubs) {
+          esbuild.onResolve({ filter }, () => ({
+            path: filter.source,
+            namespace: "test-stub",
+            pluginData: { contents }
+          }));
+        }
+        esbuild.onLoad({ filter: /.*/, namespace: "test-stub" }, (args) => {
+          return args.pluginData?.contents
+            ? { contents: args.pluginData.contents, loader: "js" }
+            : null;
+        });
+      }
+    }]
+  });
+  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].contents).toString("base64")}`);
+}
+
+async function collectPreloadSpritesheets({ isDevelopment, search = "", manifestModule = null }) {
+  const { PreloadScene } = await loadPreloadSceneForBehavior({ isDevelopment, manifestModule });
+  const previousLocation = globalThis.location;
+  globalThis.location = { search };
+  try {
+    const scene = new PreloadScene();
+    const requested = [];
+    scene.load = {
+      image() {},
+      spritesheet(key, assetPath, frameConfig) {
+        requested.push({ key, path: assetPath, frameConfig });
+      },
+      atlas() {},
+      audio() {}
+    };
+    scene.preload();
+    return requested;
+  } finally {
+    if (previousLocation === undefined) delete globalThis.location;
+    else globalThis.location = previousLocation;
+  }
 }
 
 function createEnemyStub({
@@ -137,6 +305,27 @@ function createEnemyStub({
       height: productionFrameHeight ?? config.frameHeight,
       originX: (productionFrameWidth ?? config.frameWidth) * 0.375,
       originY: (productionFrameHeight ?? config.frameHeight) * 0.625
+    };
+  }
+  for (const config of Object.values(FORMAL_R17_CONTRACTS)) {
+    const formalFrameSize = config.textureKey === "r17-bud-action-sheet"
+      ? 32
+      : ["carapace", "frame-gap", "brood"].some((name) => config.textureKey.includes(name))
+        ? 64
+        : 48;
+    textureFrames[config.textureKey] = {
+      width: productionFrameWidth ?? formalFrameSize,
+      height: productionFrameHeight ?? formalFrameSize,
+      originX: (productionFrameWidth ?? formalFrameSize) / 2,
+      originY: (productionFrameHeight ?? formalFrameSize) / 2
+    };
+  }
+  for (const key of ["enemy-scp049-locomotion-sheet", "enemy-scp049-action-sheet"]) {
+    textureFrames[key] = {
+      width: productionFrameWidth ?? 80,
+      height: productionFrameHeight ?? 96,
+      originX: (productionFrameWidth ?? 80) / 2,
+      originY: (productionFrameHeight ?? 96) / 2
     };
   }
 
@@ -613,6 +802,297 @@ test("riot arc update reads gameplay geometry without writing multipliers facing
   assert.doesNotMatch(updateSource, /enemy\.(?:setRotation|setAngle)\s*\(/);
 });
 
+// Break caught: a formal animation key or clip range drifts from the accepted sheet layout.
+test("formal R-17 and SCP-049 animation keys and clip definitions are exact", () => {
+  for (const [enemyType, contract] of Object.entries(FORMAL_R17_CONTRACTS)) {
+    for (const [clip, [start, end, frameRate, repeat]] of Object.entries(contract.clips)) {
+      const key = `${contract.prefix}-${clip}`;
+      assert.equal(getEnemyAnimationKey(enemyType, clip), key);
+      const scene = createScene({ [contract.textureKey]: contract.frameTotal });
+      registerEnemyAnimations(scene, {
+        isDevelopment: true,
+        candidateMode: true,
+        candidateIds: [contract.textureKey]
+      });
+      assert.deepEqual(scene.created.find((animation) => animation.key === key), {
+        key,
+        frames: { textureKey: contract.textureKey, start, end },
+        frameRate,
+        repeat
+      });
+    }
+  }
+
+  const locomotion = [
+    ["down", "idle", 0, 3, 5, -1], ["down", "walk", 4, 9, 8, -1],
+    ["left", "idle", 10, 13, 5, -1], ["left", "walk", 14, 19, 8, -1],
+    ["right", "idle", 20, 23, 5, -1], ["right", "walk", 24, 29, 8, -1],
+    ["up", "idle", 30, 33, 5, -1], ["up", "walk", 34, 39, 8, -1]
+  ];
+  const actions = [
+    ["frenzy-enter", 0, 4, 10, 0],
+    ["frenzy-loop", 5, 8, 8, -1],
+    ["hit-overlay", 9, 10, 24, 0],
+    ["recontain", 11, 18, 12, 0]
+  ];
+  const scene = createScene({
+    "enemy-scp049-locomotion-sheet": 41,
+    "enemy-scp049-action-sheet": 20
+  });
+  registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+  for (const [direction, clip, start, end, frameRate, repeat] of locomotion) {
+    const key = `enemy-scp049-${direction}-${clip}`;
+    assert.equal(getScp049LocomotionAnimationKey(direction, clip), key);
+    assert.deepEqual(scene.created.find((animation) => animation.key === key), {
+      key,
+      frames: { textureKey: "enemy-scp049-locomotion-sheet", start, end },
+      frameRate,
+      repeat
+    });
+  }
+  for (const [clip, start, end, frameRate, repeat] of actions) {
+    const key = `enemy-scp049-${clip}`;
+    assert.deepEqual(scene.created.find((animation) => animation.key === key), {
+      key,
+      frames: { textureKey: "enemy-scp049-action-sheet", start, end },
+      frameRate,
+      repeat
+    });
+  }
+});
+
+// Break caught: the Pulse Sac release event moves away from its accepted sixth shoot frame.
+test("Pulse Sac shoot resolves frames 14 through 19 at 10fps with release frame 18", () => {
+  const scene = createScene({
+    "r17-pulse-sac-action-sheet": 21,
+    [TEXTURES.r17PulseSac]: 5
+  });
+  registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+  const mode = getEnemyPresentationMode(scene, "drone", CANDIDATE_OPTIONS);
+  assert.deepEqual(
+    {
+      animationKey: getEnemyAnimationKey("drone", "shoot"),
+      registered: scene.created.find((animation) => animation.key === "r17-pulse-sac-action-shoot"),
+      releaseFrame: mode.releaseFrame
+    },
+    {
+      animationKey: "r17-pulse-sac-action-shoot",
+      registered: {
+        key: "r17-pulse-sac-action-shoot",
+        frames: { textureKey: "r17-pulse-sac-action-sheet", start: 14, end: 19 },
+        frameRate: 10,
+        repeat: 0
+      },
+      releaseFrame: 18
+    }
+  );
+});
+
+// Break caught: an absent, short, long or transactionally incomplete action sheet is partially admitted.
+test("formal sheets fail closed on every wrong Phaser total and on a missing clip", () => {
+  for (const [enemyType, contract] of Object.entries(FORMAL_R17_CONTRACTS)) {
+    for (const frameTotal of [undefined, contract.frameTotal - 1, contract.frameTotal + 1]) {
+      const scene = createScene(frameTotal === undefined ? {} : { [contract.textureKey]: frameTotal });
+      registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+      assert.equal(scene.created.some(({ key }) => key.startsWith(`${contract.prefix}-`)), false);
+      assert.equal(getEnemyPresentationMode(scene, enemyType, CANDIDATE_OPTIONS).family, "unchanged");
+    }
+  }
+
+  for (const [textureKey, expectedTotal, prefix] of [
+    ["enemy-scp049-locomotion-sheet", 41, "enemy-scp049-down-"],
+    ["enemy-scp049-action-sheet", 20, "enemy-scp049-frenzy-"]
+  ]) {
+    for (const frameTotal of [expectedTotal - 1, expectedTotal + 1]) {
+      const scene = createScene({ [textureKey]: frameTotal });
+      registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+      assert.equal(scene.created.some(({ key }) => key.startsWith(prefix)), false);
+    }
+  }
+
+  const failedScene = createScene(
+    { "r17-drifter-action-sheet": 19 },
+    { failOnCreate: "r17-drifter-action-hit" }
+  );
+  registerEnemyAnimations(failedScene, CANDIDATE_OPTIONS);
+  assert.deepEqual(failedScene.created, []);
+  assert.equal(getEnemyPresentationMode(failedScene, "infectedStaff", CANDIDATE_OPTIONS).family, "unchanged");
+});
+
+// Break caught: a production admission is partial, or one missing formal R-17 sheet leaves an actor invisible.
+test("production admission enables all seven formal R-17 sheets and falls each missing sheet back to legacy", () => {
+  const formalFrames = Object.fromEntries(
+    Object.values(FORMAL_R17_CONTRACTS).map(({ textureKey, frameTotal }) => [textureKey, frameTotal])
+  );
+  const legacyFrames = Object.fromEntries(
+    Object.values(ENEMY_PRESENTATION).map(({ productionTextureKey }) => [productionTextureKey, 5])
+  );
+  const fullScene = createScene({ ...formalFrames, ...legacyFrames });
+  registerEnemyAnimations(fullScene);
+  assert.deepEqual(
+    Object.keys(FORMAL_R17_CONTRACTS).filter((enemyType) => (
+      getEnemyPresentationMode(fullScene, enemyType).family === "formal"
+    )),
+    Object.keys(FORMAL_R17_CONTRACTS)
+  );
+
+  for (const [enemyType, contract] of Object.entries(FORMAL_R17_CONTRACTS)) {
+    const incompleteFrames = { ...formalFrames, ...legacyFrames };
+    delete incompleteFrames[contract.textureKey];
+    const scene = createScene(incompleteFrames);
+    registerEnemyAnimations(scene);
+    assert.equal(getEnemyPresentationMode(scene, enemyType).family, "legacy", enemyType);
+    const enemy = createEnemyStub({
+      fallbackTextureKey: FALLBACK_TEXTURES[enemyType],
+      fallbackFrameWidth: 32,
+      fallbackFrameHeight: 32,
+      productionFrameWidth: 64,
+      productionFrameHeight: 64,
+      sourceWidth: 20,
+      sourceHeight: 20,
+      offsetX: 6,
+      offsetY: 6
+    });
+    applyEnemyPresentation(scene, enemy, enemyType);
+    assert.equal(enemy.texture.key, ENEMY_PRESENTATION[enemyType].productionTextureKey, enemyType);
+    assert.equal(enemy.calls.setTexture.length, 1, `${enemyType} must retain a visible legacy texture`);
+  }
+});
+
+// Break caught: the dev-only forceLegacy switch deletes or bypasses the exact legacy fallback contract in production.
+test("forceLegacy is a development-only pure option and preserves loaded formal and legacy sheets", () => {
+  const scene = createScene({
+    "r17-drifter-action-sheet": 19,
+    [TEXTURES.r17Drifter]: 5
+  });
+  registerEnemyAnimations(scene, CANDIDATE_OPTIONS);
+  assert.equal(getEnemyPresentationMode(scene, "infectedStaff", CANDIDATE_OPTIONS).family, "formal");
+  assert.equal(getEnemyPresentationMode(scene, "infectedStaff", {
+    ...CANDIDATE_OPTIONS,
+    forceLegacy: true
+  }).family, "legacy");
+  assert.equal(getEnemyPresentationMode(scene, "infectedStaff", {
+    ...CANDIDATE_OPTIONS,
+    isDevelopment: false,
+    forceLegacy: true
+  }).family, "formal");
+  assert.equal(scene.textures.exists("r17-drifter-action-sheet"), true);
+  assert.equal(scene.textures.exists(TEXTURES.r17Drifter), true);
+});
+
+// Break caught: 049 action failure incorrectly disables valid locomotion, or invalid locomotion uses formal art.
+test("SCP-049 resolves full formal, locomotion plus static action fallback, then old static", () => {
+  const full = createScene({
+    "enemy-scp049-locomotion-sheet": 41,
+    "enemy-scp049-action-sheet": 20,
+    [TEXTURES.enemyScp049]: 1
+  });
+  registerEnemyAnimations(full);
+  assert.deepEqual(getScp049PresentationMode(full), {
+    family: "formal",
+    locomotionTextureKey: "enemy-scp049-locomotion-sheet",
+    actionTextureKey: "enemy-scp049-action-sheet",
+    displayScale: 1
+  });
+
+  for (const actionTotal of [undefined, 19, 21]) {
+    const frames = {
+      "enemy-scp049-locomotion-sheet": 41,
+      [TEXTURES.enemyScp049]: 1
+    };
+    if (actionTotal !== undefined) frames["enemy-scp049-action-sheet"] = actionTotal;
+    const scene = createScene(frames);
+    registerEnemyAnimations(scene);
+    assert.deepEqual(getScp049PresentationMode(scene), {
+      family: "formal-locomotion",
+      locomotionTextureKey: "enemy-scp049-locomotion-sheet",
+      actionTextureKey: TEXTURES.enemyScp049,
+      displayScale: 1
+    });
+  }
+
+  for (const locomotionTotal of [undefined, 40, 42]) {
+    const frames = {
+      "enemy-scp049-action-sheet": 20,
+      [TEXTURES.enemyScp049]: 1
+    };
+    if (locomotionTotal !== undefined) frames["enemy-scp049-locomotion-sheet"] = locomotionTotal;
+    const scene = createScene(frames);
+    registerEnemyAnimations(scene);
+    assert.deepEqual(getScp049PresentationMode(scene), {
+      family: "static",
+      textureKey: TEXTURES.enemyScp049,
+      displayScale: CHARACTER_DISPLAY_SCALE.scp049
+    });
+  }
+});
+
+// Break caught: applying a formal sheet changes world/body geometry, rotates actors or scales types by role.
+test("formal R-17 and SCP-049 application preserves world position and body geometry", () => {
+  const enemyScene = createScene({
+    "r17-carapace-gate-action-sheet": 23,
+    [TEXTURES.r17CarapaceGate]: 5
+  });
+  registerEnemyAnimations(enemyScene, CANDIDATE_OPTIONS);
+  const enemy = createEnemyStub({
+    fallbackTextureKey: TEXTURES.eliteRiot,
+    fallbackFrameWidth: 38,
+    fallbackFrameHeight: 42,
+    productionFrameWidth: 64,
+    productionFrameHeight: 64,
+    sourceWidth: 20,
+    sourceHeight: 24,
+    offsetX: 5,
+    offsetY: 7,
+    pendingScale: 1.2
+  });
+  const enemyBefore = effectiveBodySnapshot(enemy);
+  applyEnemyPresentation(enemyScene, enemy, "riotUnit", CANDIDATE_OPTIONS);
+  assert.equal(enemy.texture.key, "r17-carapace-gate-action-sheet");
+  assert.equal(enemy.scaleX, 1);
+  assert.deepEqual(effectiveBodySnapshot(enemy), enemyBefore);
+
+  const bossScene = createScene({
+    "enemy-scp049-locomotion-sheet": 41,
+    "enemy-scp049-action-sheet": 20,
+    [TEXTURES.enemyScp049]: 1
+  });
+  registerEnemyAnimations(bossScene, CANDIDATE_OPTIONS);
+  const boss = createEnemyStub({
+    fallbackTextureKey: TEXTURES.enemyScp049,
+    fallbackFrameWidth: 64,
+    fallbackFrameHeight: 80,
+    productionFrameWidth: 80,
+    productionFrameHeight: 96,
+    sourceWidth: 36,
+    sourceHeight: 36,
+    offsetX: 14,
+    offsetY: 22,
+    radius: 18,
+    pendingScale: CHARACTER_DISPLAY_SCALE.scp049
+  });
+  const bossBefore = effectiveBodySnapshot(boss);
+  applyEnemyPresentation(bossScene, boss, "scp049", CANDIDATE_OPTIONS);
+  assert.equal(boss.texture.key, "enemy-scp049-locomotion-sheet");
+  assert.equal(boss.scaleX, 1);
+  assert.equal(boss.body.radius, 18);
+  assert.deepEqual(effectiveBodySnapshot(boss), bossBefore);
+  assert.equal("rotation" in enemy || "rotation" in boss, false);
+});
+
+// Break caught: repeat registration creates duplicate global Phaser animation keys.
+test("formal animation registration is idempotent across all nine sheets", () => {
+  const scene = createScene({
+    ...Object.fromEntries(Object.values(FORMAL_R17_CONTRACTS).map(({ textureKey, frameTotal }) => [textureKey, frameTotal])),
+    "enemy-scp049-locomotion-sheet": 41,
+    "enemy-scp049-action-sheet": 20
+  });
+  registerEnemyAnimations(scene);
+  registerEnemyAnimations(scene);
+  assert.equal(scene.created.length, 42);
+  assert.equal(new Set(scene.created.map(({ key }) => key)).size, 42);
+});
+
 test("only exact four-frame production sheets register complete idempotent loops", () => {
   const validFrames = Object.fromEntries(
     Object.values(ENEMY_PRESENTATION).map(({ productionTextureKey }) => [
@@ -944,13 +1424,22 @@ test("actor tracking is attached after enemy and boss presentation setup", async
   );
 
   const enemyPresentation = initializer.indexOf("applyEnemyPresentation(this, enemy, config.type)");
+  const enemyAnimationTracking = initializer.indexOf("this.enemyPresentation?.trackActor?.(enemy");
   const enemyTracking = initializer.indexOf("this.combatFeedback?.trackActor(enemy");
-  assert.ok(enemyPresentation >= 0 && enemyPresentation < enemyTracking);
+  assert.ok(enemyPresentation >= 0 && enemyPresentation < enemyAnimationTracking);
+  assert.ok(enemyAnimationTracking < enemyTracking);
+  assert.equal((initializer.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
+  assert.match(initializer, /enemy\.once\("destroy"[\s\S]*enemyPresentation\?\.untrackActor\(enemy\)/);
   assert.match(initializer, /enemy\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(enemy\)/);
 
   const bossBody = bossCreation.indexOf("boss.body.setImmovable(true)");
+  const bossAnimationTracking = bossCreation.indexOf("this.enemyPresentation?.trackActor?.(boss");
   const bossTracking = bossCreation.indexOf("this.combatFeedback.trackActor(boss");
+  assert.ok(bossBody >= 0 && bossBody < bossAnimationTracking);
+  assert.ok(bossAnimationTracking < bossTracking);
+  assert.equal((bossCreation.match(/enemyPresentation\?\.trackActor\?\./g) ?? []).length, 1);
   assert.ok(bossBody >= 0 && bossBody < bossTracking);
+  assert.match(bossCreation, /boss\.once\("destroy"[\s\S]*enemyPresentation\?\.untrackActor\(boss\)/);
   assert.match(bossCreation, /boss\.once\("destroy"[\s\S]*combatFeedback\?\.untrackActor\(boss\)/);
 });
 
@@ -992,6 +1481,56 @@ test("enemy adapter stays display-only and has no per-frame sync API", async () 
   assert.doesNotMatch(source, /\.(?:health|speed|damage|behavior|timer|velocity)\s*=/i);
   assert.doesNotMatch(source, /\.body\./);
   assert.doesNotMatch(source, /\.(?:setSize|setOffset|setCircle|setVelocity)\s*\(/);
+});
+
+// Break caught: production admission leaves a sheet behind an allowlist, or changes the Player development contract.
+test("DEV preload requests all nine admitted sheets without allowing query metadata to add development assets", async () => {
+  const admittedKeys = CANDIDATE_OPTIONS.candidateIds;
+  const playerDevelopmentKeys = [
+    "player-response-operative-prototype-sheet",
+    "player-response-operative-body-prototype-sheet",
+    "player-response-operative-breacher-sample-sheet",
+    "player-response-operative-cbrn-sample-sheet"
+  ];
+
+  for (const search of ["", "?enemyPresentation=candidate&enemyCandidate=spoofed"]) {
+    const requested = await collectPreloadSpritesheets({ isDevelopment: true, search });
+    const keys = requested.map(({ key }) => key);
+    assert.deepEqual(keys.filter((key) => admittedKeys.includes(key)), admittedKeys);
+    assert.deepEqual(keys.filter((key) => playerDevelopmentKeys.includes(key)), playerDevelopmentKeys);
+  }
+});
+
+// Break caught: production begins honoring candidate queries or production entries are accidentally filtered by inert metadata.
+test("production preload ignores candidate query and always requests every production sheet", async () => {
+  const query = new URLSearchParams({ enemyPresentation: "candidate" });
+  for (const id of CANDIDATE_OPTIONS.candidateIds) query.append("enemyCandidate", id);
+  const requested = await collectPreloadSpritesheets({ isDevelopment: false, search: `?${query}` });
+  assert.deepEqual(requested.map(({ key }) => key), SPRITESHEET_ASSETS.map(({ key }) => key));
+
+  const fixtureManifest = `
+    export const IMAGE_ASSETS = [];
+    export const SPRITESHEET_ASSETS = [{
+      key: "production-with-inert-candidate-metadata",
+      path: "production.png",
+      frameConfig: { frameWidth: 32, frameHeight: 32 },
+      previewQuery: { name: "enemyPresentation", value: "candidate" },
+      candidateId: "not-allowlisted"
+    }];
+    export const DEVELOPMENT_SPRITESHEET_ASSETS = [];
+    export const ATLAS_ASSETS = [];
+    export const AUDIO_ASSETS = [];
+  `;
+  const productionFixture = await collectPreloadSpritesheets({
+    isDevelopment: false,
+    search: "",
+    manifestModule: fixtureManifest
+  });
+  assert.deepEqual(productionFixture, [{
+    key: "production-with-inert-candidate-metadata",
+    path: "production.png",
+    frameConfig: { frameWidth: 32, frameHeight: 32 }
+  }]);
 });
 
 test("preload create pipeline invokes each dependency once with one scene in exact order", () => {

@@ -28,6 +28,13 @@ export const TEXTURES = {
   r17FrameGap: "r17-frame-gap",
   r17BroodMass: "r17-brood-mass",
   r17Bud: "r17-bud",
+  r17DrifterActionSheet: "r17-drifter-action-sheet",
+  r17RiftSkimmerActionSheet: "r17-rift-skimmer-action-sheet",
+  r17PulseSacActionSheet: "r17-pulse-sac-action-sheet",
+  r17CarapaceGateActionSheet: "r17-carapace-gate-action-sheet",
+  r17FrameGapActionSheet: "r17-frame-gap-action-sheet",
+  r17BroodMassActionSheet: "r17-brood-mass-action-sheet",
+  r17BudActionSheet: "r17-bud-action-sheet",
   enemyCrawler: "enemy-crawler",
   enemyDrone: "enemy-drone",
   eliteRiot: "elite-riot",
@@ -35,6 +42,8 @@ export const TEXTURES = {
   eliteBiomass: "elite-biomass",
   biomassChild: "biomass-child",
   enemyScp049: "enemy-scp049",
+  enemyScp049LocomotionSheet: "enemy-scp049-locomotion-sheet",
+  enemyScp049ActionSheet: "enemy-scp049-action-sheet",
   facilityFloor: "facility-floor",
   facilityWall: "facility-wall",
   facilityDoor: "facility-door",
@@ -242,11 +251,104 @@ export const SPRITESHEET_ASSETS = [
     key: TEXTURES.r17Bud,
     path: "assets/art/enemies/r17-bud.png",
     frameConfig: { frameWidth: 32, frameHeight: 32 }
+  },
+  {
+    key: TEXTURES.r17DrifterActionSheet,
+    path: "assets/art/enemies/r17-drifter-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17DrifterActionSheet
+  },
+  {
+    key: TEXTURES.r17RiftSkimmerActionSheet,
+    path: "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17RiftSkimmerActionSheet
+  },
+  {
+    key: TEXTURES.r17PulseSacActionSheet,
+    path: "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+    frameConfig: { frameWidth: 48, frameHeight: 48 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17PulseSacActionSheet
+  },
+  {
+    key: TEXTURES.r17CarapaceGateActionSheet,
+    path: "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17CarapaceGateActionSheet
+  },
+  {
+    key: TEXTURES.r17FrameGapActionSheet,
+    path: "assets/art/enemies/r17-frame-gap-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17FrameGapActionSheet
+  },
+  {
+    key: TEXTURES.r17BroodMassActionSheet,
+    path: "assets/art/enemies/r17-brood-mass-action-sheet.png",
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17BroodMassActionSheet
+  },
+  {
+    key: TEXTURES.r17BudActionSheet,
+    path: "assets/art/enemies/r17-bud-action-sheet.png",
+    frameConfig: { frameWidth: 32, frameHeight: 32 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.r17BudActionSheet
+  },
+  {
+    key: TEXTURES.enemyScp049LocomotionSheet,
+    path: "assets/art/characters/scp-049-locomotion-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.enemyScp049LocomotionSheet
+  },
+  {
+    key: TEXTURES.enemyScp049ActionSheet,
+    path: "assets/art/characters/scp-049-action-sheet.png",
+    frameConfig: { frameWidth: 80, frameHeight: 96 },
+    previewQuery: Object.freeze({ name: "enemyPresentation", value: "candidate" }),
+    candidateId: TEXTURES.enemyScp049ActionSheet
   }
 ];
 
-// Gate-only comparison sheets are loaded by the Vite development server and
-// stay outside the production preload contract until the owner accepts one.
+function createImmutableSet(values) {
+  const valuesSet = new Set(values);
+  const rejectMutation = () => {
+    throw new TypeError("PRODUCTION_SPRITESHEET_KEYS is immutable");
+  };
+  let immutableSet = null;
+  immutableSet = new Proxy(valuesSet, {
+    get(target, property) {
+      if (["add", "delete", "clear"].includes(property)) return rejectMutation;
+      if (property === "valueOf") return () => immutableSet;
+      if (property === "forEach") {
+        return (callback, thisArg) => {
+          if (typeof callback !== "function") {
+            return Set.prototype.forEach.call(target, callback, thisArg);
+          }
+          return target.forEach((value, key) => {
+            Reflect.apply(callback, thisArg, [value, key, immutableSet]);
+          });
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  return Object.freeze(immutableSet);
+}
+
+export const PRODUCTION_SPRITESHEET_KEYS = createImmutableSet(
+  SPRITESHEET_ASSETS.map(({ key }) => key)
+);
+
+// Development-only sheets remain excluded from the production preload contract.
 export const DEVELOPMENT_SPRITESHEET_ASSETS = [
   {
     key: TEXTURES.playerResponseOperativePrototypeSheet,

@@ -13,6 +13,7 @@ import { timelineMixin } from "./scene/timeline.js";
 import { worldMixin } from "./scene/world.js";
 import { systemsMixin } from "./scene/systems.js";
 import { createCombatFeedbackController } from "./art/combatFeedback.js";
+import { createEnemyPresentationController } from "./art/enemyPresentationController.js";
 import { createPlayerPresentationSnapshot } from "./art/playerPresentationModel.js";
 import {
   DEBUG_MODE,
@@ -124,6 +125,19 @@ class PrototypeScene extends Phaser.Scene {
     this.combatFeedback = typeof createCombatFeedbackController === "function"
       ? createCombatFeedbackController(this)
       : createNoopCombatFeedbackController();
+    const enemyPresentationParams = new URLSearchParams(
+      typeof window === "undefined" ? "" : window.location.search
+    );
+    const enemyPresentationMode = import.meta.env?.DEV === true
+      ? enemyPresentationParams.get("enemyPresentation")
+      : null;
+    const allowedDevelopmentAssetIds = enemyPresentationMode === "candidate"
+      ? new Set(enemyPresentationParams.getAll("enemyCandidate"))
+      : new Set();
+    this.enemyPresentation = createSafeEnemyPresentationController(this, {
+      allowedDevelopmentAssetIds,
+      forceLegacy: enemyPresentationMode === "legacy"
+    });
     // Release audio/UI resources when the scene shuts down or restarts, so a new
     // run does not leak a stale AudioContext or manager.
     //
@@ -210,6 +224,11 @@ class PrototypeScene extends Phaser.Scene {
       if (this.bossPhaseActive) {
         this.updateBoss();
       }
+      try {
+        this.enemyPresentation?.sync?.(this.elapsedSurvivalMs, delta);
+      } catch {
+        // Presentation failure cannot interrupt the remaining committed frame work.
+      }
       this.updatePlayerBullets();
       this.updateEnemyProjectiles();
       this.handleExperienceCollection();
@@ -236,6 +255,21 @@ class PrototypeScene extends Phaser.Scene {
     // restarted Scene receives a fresh token, so an older promise cannot
     // replace the new bridge after shutdown.
     this._playerPresentationPreviewInstallToken = null;
+
+    const enemyPresentation = this.enemyPresentation;
+    this.enemyPresentation = null;
+    if (enemyPresentation) {
+      try {
+        enemyPresentation.setPaused?.(true);
+      } catch {
+        // A presentation freeze failure cannot strand later manager cleanup.
+      }
+      try {
+        enemyPresentation.destroy?.();
+      } catch {
+        // Scene ownership is already cleared, so teardown remains idempotent.
+      }
+    }
 
     const playerPresentation = this.playerPresentation;
     this.playerPresentation = null;
@@ -367,5 +401,29 @@ function createNoopCombatFeedbackController() {
     setPaused() {},
     destroy() {}
   };
+}
+
+function createNoopEnemyPresentationController() {
+  return {
+    trackActor() { return 0; },
+    sync() {},
+    notifyAction() {},
+    notifyHit() {},
+    notifyDeath() {},
+    clearOrdinaryDeathCopies() {},
+    setPaused() {},
+    untrackActor() {},
+    destroy() {}
+  };
+}
+
+function createSafeEnemyPresentationController(scene, options) {
+  try {
+    return typeof createEnemyPresentationController === "function"
+      ? createEnemyPresentationController(scene, options)
+      : createNoopEnemyPresentationController();
+  } catch {
+    return createNoopEnemyPresentationController();
+  }
 }
 

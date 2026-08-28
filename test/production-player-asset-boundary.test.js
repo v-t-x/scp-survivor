@@ -6,7 +6,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as viteBuild } from "vite";
 
-import config, { NON_PRODUCTION_PLAYER_ASSETS } from "../vite.config.js";
+import config, * as viteConfigModule from "../vite.config.js";
+
+const { NON_PRODUCTION_PLAYER_ASSETS } = viteConfigModule;
 
 const REPOSITORY_VITE_CONFIG = fileURLToPath(new URL("../vite.config.js", import.meta.url));
 const PUBLIC_SENTINEL_BYTES = Buffer.from("task-1-public-source-sentinel\n", "utf8");
@@ -30,6 +32,18 @@ const NON_PRODUCTION_PLAYER_ASSET_PATHS = [
   "assets/art/weapons/tesla-containment-emitter-same-front.png",
   "assets/art/weapons/tesla-containment-emitter-cross-back.png",
   "assets/art/weapons/tesla-containment-emitter-cross-front.png"
+];
+
+const PRODUCTION_ENEMY_BOSS_ASSET_PATHS = [
+  "assets/art/enemies/r17-drifter-action-sheet.png",
+  "assets/art/enemies/r17-rift-skimmer-action-sheet.png",
+  "assets/art/enemies/r17-pulse-sac-action-sheet.png",
+  "assets/art/enemies/r17-carapace-gate-action-sheet.png",
+  "assets/art/enemies/r17-frame-gap-action-sheet.png",
+  "assets/art/enemies/r17-brood-mass-action-sheet.png",
+  "assets/art/enemies/r17-bud-action-sheet.png",
+  "assets/art/characters/scp-049-locomotion-sheet.png",
+  "assets/art/characters/scp-049-action-sheet.png"
 ];
 
 const REQUIRED_RUNTIME_PLAYER_ASSET_PATHS = [
@@ -143,6 +157,33 @@ test("build cleanup removes every non-production player candidate but retains ru
   }
 });
 
+// Break caught: promoting enemy/Boss sheets mutates the frozen Player exclusion contract.
+test("build cleanup preserves the exact Player exclusion contract after enemy and Boss admission", async () => {
+  assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
+  const outDir = await mkdtemp(path.join(tmpdir(), "scp-enemy-boss-assets-"));
+  const plugin = config.plugins.find(({ name }) => name === "remove-development-player-assets");
+  assert.ok(plugin);
+  try {
+    for (const relative of [...NON_PRODUCTION_PLAYER_ASSET_PATHS, ...PRODUCTION_ENEMY_BOSS_ASSET_PATHS]) {
+      const target = path.join(outDir, relative);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, relative);
+    }
+
+    await plugin.writeBundle({ dir: outDir });
+
+    for (const relative of NON_PRODUCTION_PLAYER_ASSET_PATHS) {
+      await assert.rejects(stat(path.join(outDir, relative)));
+    }
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      assert.equal(await readFile(path.join(outDir, relative), "utf8"), relative);
+    }
+    assert.deepEqual(NON_PRODUCTION_PLAYER_ASSETS, NON_PRODUCTION_PLAYER_ASSET_PATHS);
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
+});
+
 test("build cleanup refuses a public outDir before touching source player assets", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "scp-public-boundary-"));
   const publicDir = path.join(root, "public");
@@ -174,7 +215,9 @@ test("build cleanup refuses every public descendant before touching source playe
     process.chdir(root);
 
     await assert.rejects(
-      plugin.writeBundle({ dir: path.join(publicDir.toUpperCase(), "generated") }),
+      plugin.writeBundle({
+        dir: path.join(process.platform === "win32" ? publicDir.toUpperCase() : publicDir, "generated")
+      }),
       /public/i
     );
     assert.equal((await readFile(protectedAsset, "utf8")), "must-not-delete");
@@ -323,5 +366,23 @@ test("real Vite build allows a separate dist and strips non-production player as
       "keep-in-dist"
     );
     await stat(path.join(root, "dist", "index.html"));
+  });
+});
+
+// Break caught: a production build omits any admitted enemy/Boss sheet or mutates its source copy.
+test("real Vite build retains all nine admitted enemy and Boss sheets in dist", async () => {
+  await withTemporaryViteProject("scp-vite-enemy-boss-dist-", async ({ root, publicDir }) => {
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      const source = path.join(publicDir, relative);
+      await mkdir(path.dirname(source), { recursive: true });
+      await writeFile(source, relative);
+    }
+
+    const outcome = await observeViteBuild(root, { outDir: "dist" });
+    assert.equal(outcome.status, "fulfilled", outcome.message);
+    for (const relative of PRODUCTION_ENEMY_BOSS_ASSET_PATHS) {
+      assert.equal(await readFile(path.join(root, "dist", relative), "utf8"), relative);
+      assert.equal(await readFile(path.join(publicDir, relative), "utf8"), relative);
+    }
   });
 });

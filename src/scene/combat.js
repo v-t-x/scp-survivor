@@ -165,7 +165,7 @@ export const combatMixin = {
     const damage = Math.max(1, Math.round(damageAmount * damageMultiplier));
     const nextHealth = enemy.health - damage;
     const lethal = nextHealth <= 0;
-    const hitSnapshot = Object.freeze({
+    const hitFeedbackSnapshot = Object.freeze({
       x: enemy.x,
       y: enemy.y,
       impactX,
@@ -176,7 +176,7 @@ export const combatMixin = {
       damage,
       lethal
     });
-    const deathSnapshot = lethal
+    const deathFeedbackSnapshot = lethal
       ? Object.freeze({
           x: enemy.x,
           y: enemy.y,
@@ -194,37 +194,95 @@ export const combatMixin = {
       this.playSound("enemyHit");
     }
 
-    if (lethal) {
-      if (enemy.isBoss) {
-        this.handleBossDefeat(enemy);
-      } else {
-        this.handleEnemyDefeatRewards(enemy, combatContext);
-        this.playEnemyDeathEffect(enemy, { spawnParticles: false });
-        this.killCount += 1;
-      }
-    }
-
-    let controllerHandledHit = false;
-    try {
-      controllerHandledHit = this.combatFeedback?.notifyHit(hitSnapshot) === true;
-    } catch {
-      // Presentation failures cannot roll back committed damage or death state.
-    }
-    if (!controllerHandledHit) {
-      this.spawnImpactEffect(hitSnapshot.impactX, hitSnapshot.impactY);
-    }
-
-    if (deathSnapshot) {
-      let controllerHandledDeath = false;
+    const notifyEnemyHitPresentation = () => {
       try {
-        controllerHandledDeath = this.combatFeedback?.notifyDeath(deathSnapshot) === true;
+        const snapshot = this.createEnemyPresentationSnapshot(enemy, {
+          lethal: false,
+          atMs: this.elapsedSurvivalMs
+        });
+        this.enemyPresentation?.notifyHit?.(snapshot);
       } catch {
-        // Hit and death feedback are independent fallback boundaries.
+        // Enemy animation failure cannot affect committed damage or legacy feedback.
       }
-      if (!controllerHandledDeath) {
-        this.spawnDeathParticles(deathSnapshot.x, deathSnapshot.y, deathSnapshot.color);
+    };
+
+    const notifyEnemyDeathPresentation = () => {
+      let delivered = false;
+      try {
+        const snapshot = this.createEnemyPresentationSnapshot(enemy, {
+          lethal: true,
+          atMs: this.elapsedSurvivalMs
+        });
+        const notifyDeath = this.enemyPresentation?.notifyDeath;
+        if (snapshot.presentationId > 0 && typeof notifyDeath === "function") {
+          notifyDeath.call(this.enemyPresentation, snapshot);
+          delivered = true;
+        }
+      } catch {
+        // A throwing death controller falls through to the legacy actor visual.
       }
+      if (!delivered) {
+        try {
+          this.playLegacyEnemyDeathVisual(enemy, { spawnParticles: false });
+        } catch {
+          // The actor is already gameplay-dead; visual fallback remains best effort.
+        }
+      }
+    };
+
+    const notifyCombatFeedback = () => {
+      let controllerHandledHit = false;
+      try {
+        controllerHandledHit = this.combatFeedback?.notifyHit(hitFeedbackSnapshot) === true;
+      } catch {
+        // Presentation failures cannot roll back committed damage or death state.
+      }
+      if (!controllerHandledHit) {
+        try {
+          this.spawnImpactEffect(hitFeedbackSnapshot.impactX, hitFeedbackSnapshot.impactY);
+        } catch {
+          // A failing legacy impact cannot block death feedback or Boss victory.
+        }
+      }
+
+      if (deathFeedbackSnapshot) {
+        let controllerHandledDeath = false;
+        try {
+          controllerHandledDeath = this.combatFeedback?.notifyDeath(deathFeedbackSnapshot) === true;
+        } catch {
+          // Hit and death feedback are independent fallback boundaries.
+        }
+        if (!controllerHandledDeath) {
+          try {
+            this.spawnDeathParticles(
+              deathFeedbackSnapshot.x,
+              deathFeedbackSnapshot.y,
+              deathFeedbackSnapshot.color
+            );
+          } catch {
+            // A failing legacy burst cannot block committed death completion.
+          }
+        }
+      }
+    };
+
+    if (lethal && enemy.isBoss) {
+      this.handleBossDefeat(enemy, () => {
+        notifyEnemyDeathPresentation();
+        notifyCombatFeedback();
+      });
+      return;
     }
+
+    if (lethal) {
+      this.handleEnemyDefeatRewards(enemy, combatContext);
+      this.killCount += 1;
+      this.commitEnemyDeathActor(enemy);
+      notifyEnemyDeathPresentation();
+    } else {
+      notifyEnemyHitPresentation();
+    }
+    notifyCombatFeedback();
   },
 
 
@@ -327,7 +385,34 @@ export const combatMixin = {
 
 
   handlePlayerEnemyOverlap(_, enemy) {
-    this.applyPlayerDamage(enemy.contactDamage ?? 1, enemy.x, enemy.y);
+    const damageCommitted = this.applyPlayerDamage(
+      enemy.contactDamage ?? 1,
+      enemy.x,
+      enemy.y
+    );
+    if (!damageCommitted) {
+      return;
+    }
+
+    const action = enemy.enemyType === "infectedStaff"
+      ? "contact"
+      : enemy.enemyType === "crawler"
+        ? "pierce"
+        : enemy.enemyType === "biomassChild"
+          ? "snap"
+          : null;
+    if (!action) {
+      return;
+    }
+    try {
+      this.enemyPresentation?.notifyAction?.(Object.freeze({
+        presentationId: Number.isInteger(enemy._presentationId) ? enemy._presentationId : 0,
+        action,
+        atMs: this.elapsedSurvivalMs
+      }));
+    } catch {
+      // Contact animation delivery cannot alter accepted player damage.
+    }
   },
 
 
@@ -343,7 +428,7 @@ export const combatMixin = {
   applyPlayerDamage(amount, sourceX = this.player.x, sourceY = this.player.y) {
     const now = this.elapsedSurvivalMs;
     if (now < this.playerInvulnerableUntilMs) {
-      return;
+      return false;
     }
 
     this.playerInvulnerableUntilMs = now + BALANCE.player.damageCooldownMs;
@@ -356,6 +441,7 @@ export const combatMixin = {
       this.health = 0;
       this.triggerGameOver();
     }
+    return true;
   },
 
 

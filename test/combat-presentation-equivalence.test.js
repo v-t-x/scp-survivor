@@ -34,9 +34,29 @@ function createPhaserStub() {
       DegToRad: (degrees) => (degrees * Math.PI) / 180,
       Distance: {
         Between: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1)
-      }
+      },
+      Between: (minimum) => minimum,
+      Clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value))
     }
   };
+}
+
+async function loadCombatMethods(...names) {
+  const source = await readFile(new URL("../src/scene/combat.js", import.meta.url), "utf8");
+  const methods = names.map((name) => extractObjectMethod(source, name)).join(",");
+  return new Function(
+    "Phaser",
+    "BALANCE",
+    "WORLD_WIDTH",
+    "WORLD_HEIGHT",
+    `"use strict"; return ({${methods}});`
+  )(createPhaserStub(), BALANCE, 1_280, 720);
+}
+
+async function loadEffectsMethods(...names) {
+  const source = await readFile(new URL("../src/scene/effects.js", import.meta.url), "utf8");
+  const methods = names.map((name) => extractObjectMethod(source, name)).join(",");
+  return new Function("BALANCE", `"use strict"; return ({${methods}});`)(BALANCE);
 }
 
 async function loadWeaponMethods(...names) {
@@ -107,14 +127,23 @@ function makeActor(health) {
       radius: 0,
       offset: { x: 2, y: 3 },
       velocity: { x: 7, y: -4 }
+    },
+    setVelocity(x, y) {
+      this.body.velocity.x = x;
+      this.body.velocity.y = y;
     }
   };
 }
 
 async function runSimulation(mode, lethal) {
-  const [{ createCombatFeedbackController }, damageEnemy] = await Promise.all([
+  const [{ createCombatFeedbackController }, damageEnemy, effects] = await Promise.all([
     import("../src/art/combatFeedback.js"),
-    loadDamageEnemy()
+    loadDamageEnemy(),
+    loadEffectsMethods(
+      "createEnemyPresentationSnapshot",
+      "commitEnemyDeathActor",
+      "playLegacyEnemyDeathVisual"
+    )
   ]);
   const presentation = makePresentationScene(mode);
   const controller = createCombatFeedbackController(presentation);
@@ -126,6 +155,7 @@ async function runSimulation(mode, lethal) {
   let impacts = 0;
   let deathBursts = 0;
   const scene = {
+    ...effects,
     player,
     combatFeedback: controller,
     killCount: 0,
@@ -136,13 +166,8 @@ async function runSimulation(mode, lethal) {
     spawnDeathParticles() { deathBursts += 1; },
     playSound() {},
     handleEnemyDefeatRewards() { rewards += 1; },
-    playEnemyDeathEffect(target, { spawnParticles } = {}) {
-      target.isDying = true;
-      target.body.enable = false;
-      target.body.velocity.x = 0;
-      target.body.velocity.y = 0;
-      if (spawnParticles !== false) deathBursts += 1;
-    }
+    clearEliteWarning() {},
+    tweens: { add() {} }
   };
 
   controller.trackActor(player, { kind: "player", radius: 12 });
@@ -640,4 +665,168 @@ test("changing presentation action points changes only muzzle and first-arc visu
   assert.deepEqual(first.visualFirstArc, [132, 92, 200, 120]);
   assert.deepEqual(second.visualFirstArc, [148, 84, 200, 120]);
   assert.deepEqual(first.visualRemainingArcs, second.visualRemainingArcs);
+});
+
+async function runTask5DeathEquivalence(mode) {
+  const combat = await loadCombatMethods(
+    "damageEnemy",
+    "handleEnemyDefeatRewards",
+    "dropEliteRewards"
+  );
+  const effects = await loadEffectsMethods(
+    "createEnemyPresentationSnapshot",
+    "commitEnemyDeathActor",
+    "playLegacyEnemyDeathVisual"
+  );
+  const enemy = {
+    active: true,
+    isDying: false,
+    isBoss: false,
+    isElite: true,
+    enemyType: "biomass",
+    eliteType: "biomass",
+    canSplit: true,
+    _presentationId: 31,
+    enemyColor: 0x8b2635,
+    xpReward: 3,
+    health: 1,
+    x: 100,
+    y: 100,
+    frame: { name: 9 },
+    flipX: false,
+    alpha: 0.9,
+    depth: 10,
+    scaleX: 1.2,
+    scaleY: 1.2,
+    body: {
+      enable: true,
+      velocity: { x: 7, y: -4 }
+    },
+    setVelocity(x, y) { this.body.velocity.x = x; this.body.velocity.y = y; }
+  };
+  const gems = [];
+  const children = [];
+  const notifications = [];
+  let supplyDrops = 0;
+  let supplyRngCalls = 0;
+  let legacyTweens = 0;
+  let combatHits = 0;
+  let combatDeaths = 0;
+  const scene = {
+    ...combat,
+    ...effects,
+    player: { x: 0, y: 0 },
+    elapsedSurvivalMs: 7_500,
+    killCount: 0,
+    getEnemyDamageTakenMultiplier: () => 1,
+    flashEnemyOnHit() {},
+    spawnFloatingDamage() {},
+    playSound() {},
+    clearEliteWarning() {},
+    showEliteNeutralizedText() {},
+    dropExperienceGem(x, y, value) { gems.push({ x, y, value }); },
+    spawnBiomassChild(x, y) { children.push({ x, y }); },
+    spawnCombatStim() { supplyDrops += 1; },
+    spawnImpactEffect() { throw new Error("handled combat hit must not fall back"); },
+    spawnDeathParticles() { throw new Error("handled combat death must not fall back"); },
+    tweens: {
+      add(config) {
+        legacyTweens += 1;
+        return config;
+      }
+    },
+    combatFeedback: {
+      notifyHit() { combatHits += 1; return true; },
+      notifyDeath() { combatDeaths += 1; return true; }
+    }
+  };
+  if (mode !== "absent") {
+    scene.enemyPresentation = {
+      notifyAction() {
+        notifications.push("action");
+        if (mode === "throw") throw new Error("action presentation failed");
+      },
+      notifyHit() {
+        notifications.push("hit");
+        if (mode === "throw") throw new Error("hit presentation failed");
+      },
+      notifyDeath(snapshot) {
+        notifications.push({ raw: snapshot, snapshot: structuredClone(snapshot) });
+        if (mode === "throw") throw new Error("death presentation failed");
+      }
+    };
+  }
+
+  const originalRandom = Math.random;
+  Math.random = () => {
+    supplyRngCalls += 1;
+    return 0;
+  };
+  try {
+    assert.doesNotThrow(() => combat.damageEnemy.call(scene, enemy, 2, 100, 100, 0, 0));
+  } finally {
+    Math.random = originalRandom;
+  }
+
+  return {
+    gameplay: {
+      health: enemy.health,
+      isDying: enemy.isDying,
+      bodyEnable: enemy.body.enable,
+      velocity: { ...enemy.body.velocity },
+      killCount: scene.killCount,
+      gems,
+      children,
+      supplyDrops,
+      supplyRngCalls,
+      combatHits,
+      combatDeaths
+    },
+    presentation: { legacyTweens, notifications }
+  };
+}
+
+// Break caught: a missing/throwing void enemy controller repeats or suppresses rewards, splits, RNG, death or old feedback.
+test("absent normal and throwing enemy presentation preserve the complete lethal biomass gameplay trace", async () => {
+  const absent = await runTask5DeathEquivalence("absent");
+  const normal = await runTask5DeathEquivalence("normal");
+  const throwing = await runTask5DeathEquivalence("throw");
+
+  assert.deepEqual(normal.gameplay, absent.gameplay);
+  assert.deepEqual(throwing.gameplay, absent.gameplay);
+  assert.deepEqual(absent.gameplay, {
+    health: -1,
+    isDying: true,
+    bodyEnable: false,
+    velocity: { x: 0, y: 0 },
+    killCount: 1,
+    gems: [
+      { x: 88, y: 88, value: 1 },
+      { x: 88, y: 88, value: 1 },
+      { x: 88, y: 88, value: 1 }
+    ],
+    children: [
+      { x: 126, y: 100 },
+      { x: 87, y: 122.51666049839541 },
+      { x: 86.99999999999999, y: 77.4833395016046 }
+    ],
+    supplyDrops: 1,
+    supplyRngCalls: 1,
+    combatHits: 1,
+    combatDeaths: 1
+  });
+  assert.equal(absent.presentation.legacyTweens, 1);
+  assert.equal(normal.presentation.legacyTweens, 0);
+  assert.equal(throwing.presentation.legacyTweens, 1);
+  assert.equal(normal.presentation.notifications.length, 1);
+  assert.equal(throwing.presentation.notifications.length, 1);
+  for (const run of [normal, throwing]) {
+    const [{ raw, snapshot }] = run.presentation.notifications;
+    assert.equal(Object.isFrozen(raw), true);
+    assert.deepEqual(Object.keys(snapshot), [
+      "presentationId", "enemyType", "eliteType", "isBoss", "canSplit", "x", "y",
+      "frame", "flipX", "alpha", "depth", "scaleX", "scaleY", "lethal", "atMs"
+    ]);
+    assert.ok(Object.values(snapshot).every((value) => value === null || typeof value !== "object"));
+  }
 });

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createEnemyPresentationController } from "../src/art/enemyPresentationController.js";
 import { BALANCE } from "../src/config/balance.js";
 import {
   ENEMY_GRID_CELL_SIZE,
@@ -171,6 +172,32 @@ function createScene(enemy, mode = "real") {
         this.spawnDeathParticles(target.x, target.y, target.enemyColor);
       }
     },
+    commitEnemyDeathActor(target) {
+      events.push("commitActor");
+      target.isDying = true;
+      target.body.enable = false;
+      target.setVelocity?.(0, 0);
+    },
+    createEnemyPresentationSnapshot(target, { lethal }) {
+      return Object.freeze({
+        presentationId: target._presentationId ?? 0,
+        enemyType: target.enemyType ?? "unknown",
+        eliteType: target.eliteType ?? null,
+        isBoss: target.isBoss === true,
+        canSplit: target.canSplit === true,
+        x: target.x,
+        y: target.y,
+        frame: target.frame?.name ?? 0,
+        flipX: target.flipX === true,
+        alpha: target.alpha ?? 1,
+        depth: target.depth ?? 10,
+        scaleX: target.scaleX ?? 1,
+        scaleY: target.scaleY ?? 1,
+        lethal,
+        atMs: this.elapsedSurvivalMs ?? 0
+      });
+    },
+    playLegacyEnemyDeathVisual() { events.push("legacyActorDeath"); },
     handleBossDefeat(target) {
       events.push("bossState");
       target.isDying = true;
@@ -273,7 +300,7 @@ test("lethal normal and biomass hits commit rewards death state and kill count b
   }
 });
 
-test("real Boss defeat commits boss and victory timer state before the single lethal hit/death pair", async () => {
+test("real Boss defeat delivers terminal death and existing hit/death before the 210ms victory timer", async () => {
   const [damageEnemy, handleBossDefeat] = await Promise.all([
     loadDamageEnemy(),
     loadEnemyMethod("handleBossDefeat")
@@ -283,16 +310,40 @@ test("real Boss defeat commits boss and victory timer state before the single le
     isBoss: true,
     enemyType: "scp049",
     bossState: "normal",
-    body: { enable: true, setVelocity() {} }
+    _presentationId: 41,
+    frame: { name: 4 },
+    flipX: false,
+    alpha: 1,
+    depth: 12,
+    scaleX: 1,
+    scaleY: 1,
+    body: {
+      enable: true,
+      velocity: { x: 2, y: 3 },
+      setVelocity(x, y) { this.velocity.x = x; this.velocity.y = y; }
+    }
   });
-  const { scene, snapshots } = createScene(boss, "real");
+  const { scene, events, snapshots } = createScene(boss, "real");
   scene.handleBossDefeat = handleBossDefeat;
   scene.clearFrenzyTint = () => {};
-  scene.showTopBanner = () => {};
+  scene.showTopBanner = () => { events.push("banner"); };
+  const terminalSnapshots = [];
+  scene.enemyPresentation = {
+    notifyDeath(snapshot) {
+      events.push("enemyDeath");
+      terminalSnapshots.push(snapshot);
+      assert.equal(boss.isDying, true);
+      assert.equal(boss.bossState, "dying");
+      assert.equal(scene.killCount, 1);
+      assert.equal(scene.bossPhaseActive, false);
+      assert.equal(boss.body.enable, false);
+    }
+  };
   scene.victoryTimers = 0;
   scene.isGameOver = false;
   scene.time = {
     delayedCall(delay, callback) {
+      events.push("timer");
       scene.victoryTimers += 1;
       scene.victoryDelay = delay;
       scene.victoryCallback = callback;
@@ -306,10 +357,70 @@ test("real Boss defeat commits boss and victory timer state before the single le
   assert.equal(boss.bossState, "dying");
   assert.equal(snapshots.hit.length, 1);
   assert.equal(snapshots.death.length, 1);
+  assert.equal(terminalSnapshots.length, 1);
+  assert.equal(Object.isFrozen(terminalSnapshots[0]), true);
   assert.equal(snapshots.hitState[0].bossState, "dying");
   assert.equal(snapshots.hitState[0].bossPhaseActive, false);
-  assert.equal(snapshots.hitState[0].victoryTimers, 1);
+  assert.equal(snapshots.hitState[0].victoryTimers, 0);
   assert.equal(snapshots.deathState[0].kills, 1);
+  assert.equal(scene.victoryDelay, BALANCE.feedback.deathShrinkMs + 120);
+  assert.equal(scene.victoryDelay, 210);
+  assert.ok(events.indexOf("banner") < events.indexOf("enemyDeath"));
+  assert.ok(events.indexOf("enemyDeath") < events.indexOf("notifyHit"));
+  assert.ok(events.indexOf("notifyDeath") < events.indexOf("timer"));
+});
+
+// Break caught: throwing legacy feedback fallbacks escape the post-commit callback and cancel victory scheduling.
+test("Boss fallback failures still register one deathShrink plus 120 timer and one victory", async () => {
+  const [damageEnemy, handleBossDefeat] = await Promise.all([
+    loadDamageEnemy(),
+    loadEnemyMethod("handleBossDefeat")
+  ]);
+  const boss = createEnemy({
+    health: 1,
+    isBoss: true,
+    enemyType: "scp049",
+    bossState: "normal",
+    _presentationId: 51,
+    body: {
+      enable: true,
+      velocity: { x: 2, y: 3 },
+      setVelocity(x, y) { this.velocity.x = x; this.velocity.y = y; }
+    }
+  });
+  const { scene } = createScene(boss, "noop");
+  const timers = [];
+  let impactFallbacks = 0;
+  let deathFallbacks = 0;
+  let victories = 0;
+  scene.handleBossDefeat = handleBossDefeat;
+  scene.clearFrenzyTint = () => {};
+  scene.showTopBanner = () => {};
+  scene.enemyPresentation = { notifyDeath() {} };
+  scene.spawnImpactEffect = () => {
+    impactFallbacks += 1;
+    throw new Error("impact fallback failed");
+  };
+  scene.spawnDeathParticles = () => {
+    deathFallbacks += 1;
+    throw new Error("death fallback failed");
+  };
+  scene.time = {
+    delayedCall(delay, callback) {
+      timers.push({ delay, callback });
+      return {};
+    }
+  };
+  scene.isGameOver = false;
+  scene.triggerVictory = () => { victories += 1; };
+
+  assert.doesNotThrow(() => damageEnemy.call(scene, boss, 2, boss.x, boss.y, 0, 0));
+  assert.equal(impactFallbacks, 1);
+  assert.equal(deathFallbacks, 1);
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].delay, BALANCE.feedback.deathShrinkMs + 120);
+  timers[0].callback();
+  assert.equal(victories, 1);
 });
 
 test("lethal false missing and throwing controller paths preserve exactly one fallback per event", async () => {
@@ -545,21 +656,293 @@ test("invulnerability blinking uses visible alpha and falls back to the anchor p
   }
 });
 
-test("direct death effect keeps legacy particles by default and explicitly defers only controller-routed particles", async () => {
-  const playEnemyDeathEffect = await loadEffectsMethod("playEnemyDeathEffect");
+test("death actor commitment is gameplay-only while the legacy visual keeps its particle default", async () => {
+  const commitEnemyDeathActor = await loadEffectsMethod("commitEnemyDeathActor");
+  const playLegacyEnemyDeathVisual = await loadEffectsMethod("playLegacyEnemyDeathVisual");
   let particles = 0;
+  let tweenCalls = 0;
   const scene = {
     clearEliteWarning() {},
     spawnDeathParticles() { particles += 1; },
-    tweens: { add() {} }
+    tweens: { add() { tweenCalls += 1; } }
   };
   function enemy() {
     return {
       active: true, x: 1, y: 2, enemyColor: 0x123456,
-      body: { enable: true }, setVelocity() {}, destroy() {}
+      body: { enable: true, velocity: { x: 4, y: -3 } },
+      setVelocity(x, y) { this.body.velocity.x = x; this.body.velocity.y = y; },
+      destroy() {}
     };
   }
-  playEnemyDeathEffect.call(scene, enemy());
-  playEnemyDeathEffect.call(scene, enemy(), { spawnParticles: false });
+  const committed = enemy();
+  commitEnemyDeathActor.call(scene, committed);
+  assert.equal(committed.isDying, true);
+  assert.equal(committed.body.enable, false);
+  assert.deepEqual(committed.body.velocity, { x: 0, y: 0 });
+  assert.equal(particles, 0);
+  assert.equal(tweenCalls, 0);
+
+  playLegacyEnemyDeathVisual.call(scene, enemy());
+  playLegacyEnemyDeathVisual.call(scene, enemy(), { spawnParticles: false });
   assert.equal(particles, 1);
+  assert.equal(tweenCalls, 2);
+});
+
+function task5PresentationSnapshot(scene, enemy, lethal) {
+  return Object.freeze({
+    presentationId: enemy._presentationId,
+    enemyType: enemy.enemyType,
+    eliteType: enemy.eliteType,
+    isBoss: enemy.isBoss === true,
+    canSplit: enemy.canSplit === true,
+    x: enemy.x,
+    y: enemy.y,
+    frame: enemy.frame.name,
+    flipX: enemy.flipX,
+    alpha: enemy.alpha,
+    depth: enemy.depth,
+    scaleX: enemy.scaleX,
+    scaleY: enemy.scaleY,
+    lethal,
+    atMs: scene.elapsedSurvivalMs
+  });
+}
+
+function createTask5Enemy(overrides = {}) {
+  const enemy = createEnemy({
+    _presentationId: 17,
+    canSplit: false,
+    frame: { name: 6 },
+    flipX: true,
+    alpha: 0.85,
+    depth: 12,
+    scaleX: 1.2,
+    scaleY: 1.1,
+    body: { enable: true, velocity: { x: 8, y: -2 } },
+    setVelocity(x, y) { this.body.velocity.x = x; this.body.velocity.y = y; },
+    ...overrides
+  });
+  return enemy;
+}
+
+function createTask5DamageScene(enemy, events) {
+  return {
+    player: { x: 0, y: 0 },
+    elapsedSurvivalMs: 4_200,
+    killCount: 0,
+    bossPhaseActive: enemy.isBoss === true,
+    getEnemyDamageTakenMultiplier: () => 1,
+    flashEnemyOnHit() { events.push("flash"); },
+    spawnFloatingDamage() { events.push("number"); },
+    playSound(name) { events.push(name); },
+    handleEnemyDefeatRewards() { events.push("rewards"); },
+    playEnemyDeathEffect(target) {
+      events.push("oldDeathEffect");
+      target.isDying = true;
+      target.body.enable = false;
+      target.setVelocity(0, 0);
+    },
+    commitEnemyDeathActor(target) {
+      events.push("commitActor");
+      target.isDying = true;
+      target.body.enable = false;
+      target.setVelocity(0, 0);
+    },
+    createEnemyPresentationSnapshot(target, { lethal }) {
+      return task5PresentationSnapshot(this, target, lethal);
+    },
+    playLegacyEnemyDeathVisual() { events.push("legacyActorDeath"); },
+    spawnImpactEffect() { events.push("legacyImpact"); },
+    spawnDeathParticles() { events.push("legacyParticles"); }
+  };
+}
+
+// Break caught: the new enemy hit hook runs before health/legacy feedback commits or replaces combatFeedback.
+test("enemy presentation receives one frozen nonlethal snapshot after legacy hit cues and before combat feedback", async () => {
+  const damageEnemy = await loadDamageEnemy();
+  const enemy = createTask5Enemy();
+  const events = [];
+  const scene = createTask5DamageScene(enemy, events);
+  let received = null;
+  scene.enemyPresentation = {
+    notifyHit(snapshot) {
+      events.push("enemyHit");
+      assert.equal(enemy.health, 7);
+      received = snapshot;
+    }
+  };
+  scene.combatFeedback = {
+    notifyHit() { events.push("combatHit"); return true; }
+  };
+
+  damageEnemy.call(scene, enemy, 3, 119, 179, 0, 0);
+
+  assert.deepEqual(events, ["flash", "number", "enemyHit", "enemyHit", "combatHit"]);
+  assert.equal(Object.isFrozen(received), true);
+  assert.deepEqual(Object.keys(received), [
+    "presentationId", "enemyType", "eliteType", "isBoss", "canSplit", "x", "y",
+    "frame", "flipX", "alpha", "depth", "scaleX", "scaleY", "lethal", "atMs"
+  ]);
+  assert.ok(Object.values(received).every((value) => value === null || typeof value !== "object"));
+});
+
+// Characterization: the void enemy hit channel is gameplay-neutral when absent, successful, or throwing.
+test("enemy notifyHit absent normal and throwing modes preserve the same committed hit", async () => {
+  const damageEnemy = await loadDamageEnemy();
+  const results = [];
+  for (const mode of ["absent", "normal", "throwing"]) {
+    const enemy = createTask5Enemy();
+    const events = [];
+    const scene = createTask5DamageScene(enemy, events);
+    let notifications = 0;
+    if (mode !== "absent") {
+      scene.enemyPresentation = {
+        notifyHit(snapshot) {
+          notifications += 1;
+          assert.equal(snapshot.lethal, false);
+          assert.equal(enemy.health, 7, "health commits before the void hit channel");
+          if (mode === "throwing") throw new Error("enemy hit presentation failed");
+        }
+      };
+    }
+    scene.combatFeedback = { notifyHit() { return true; } };
+
+    assert.doesNotThrow(() => damageEnemy.call(scene, enemy, 3, 119, 179, 0, 0));
+    results.push({
+      health: enemy.health,
+      isDying: enemy.isDying,
+      bodyEnabled: enemy.body.enable,
+      killCount: scene.killCount,
+      notifications
+    });
+  }
+
+  assert.deepEqual(results, [
+    { health: 7, isDying: false, bodyEnabled: true, killCount: 0, notifications: 0 },
+    { health: 7, isDying: false, bodyEnabled: true, killCount: 0, notifications: 1 },
+    { health: 7, isDying: false, bodyEnabled: true, killCount: 0, notifications: 1 }
+  ]);
+});
+
+// Break caught: an untracked positive id is treated as delivered, leaving the committed actor stranded.
+test("an untracked positive presentation id invalidates ownership and falls back to one legacy tween", async () => {
+  const [damageEnemy, createEnemyPresentationSnapshot, commitEnemyDeathActor, playLegacyEnemyDeathVisual] = await Promise.all([
+    loadDamageEnemy(),
+    loadEffectsMethod("createEnemyPresentationSnapshot"),
+    loadEffectsMethod("commitEnemyDeathActor"),
+    loadEffectsMethod("playLegacyEnemyDeathVisual")
+  ]);
+  const enemy = createTask5Enemy({
+    health: 1,
+    destroy() { this.active = false; this.destroyed = true; }
+  });
+  const events = [];
+  const scene = createTask5DamageScene(enemy, events);
+  const tweens = [];
+  scene.textures = { exists() { return false; }, get() { return { frameTotal: 0 }; } };
+  scene.anims = { exists() { return false; } };
+  scene.tweens = { add(config) { tweens.push(config); return config; } };
+  scene.clearEliteWarning = () => {};
+  scene.createEnemyPresentationSnapshot = createEnemyPresentationSnapshot;
+  scene.commitEnemyDeathActor = commitEnemyDeathActor;
+  scene.playLegacyEnemyDeathVisual = playLegacyEnemyDeathVisual;
+  scene.combatFeedback = {
+    notifyHit() { return true; },
+    notifyDeath() { return true; }
+  };
+  const controller = createEnemyPresentationController(scene, { forceLegacy: true });
+  const staleId = controller.trackActor(enemy, { enemyType: enemy.enemyType, isBoss: false });
+  assert.ok(staleId > 0);
+  enemy._presentationId = staleId;
+  controller.untrackActor(enemy);
+  scene.enemyPresentation = controller;
+
+  assert.equal(enemy._presentationId, 0, "record removal invalidates the stale ownership id");
+  assert.doesNotThrow(() => damageEnemy.call(scene, enemy, 2, enemy.x, enemy.y, 0, 0));
+  assert.equal(tweens.length, 1, "legacy actor cleanup owns exactly one tween");
+  assert.equal(enemy.isDying, true);
+  assert.equal(enemy.body.enable, false);
+  tweens[0].onComplete();
+  assert.equal(enemy.active, false, "the committed actor is not stranded");
+  assert.equal(enemy.destroyed, true);
+});
+
+// Break caught: rewards/kill/body state are submitted after death notification or combat feedback runs first.
+test("lethal non-Boss presentation follows rewards kill and actor commitment before existing feedback", async () => {
+  const damageEnemy = await loadDamageEnemy();
+  const enemy = createTask5Enemy({ health: 1, enemyType: "biomass", eliteType: "biomass", canSplit: true });
+  const events = [];
+  const scene = createTask5DamageScene(enemy, events);
+  scene.enemyPresentation = {
+    notifyDeath(snapshot) {
+      events.push("enemyDeath");
+      assert.equal(scene.killCount, 1);
+      assert.equal(enemy.isDying, true);
+      assert.equal(enemy.body.enable, false);
+      assert.equal(snapshot.canSplit, true);
+      assert.equal(snapshot.lethal, true);
+    }
+  };
+  scene.combatFeedback = {
+    notifyHit() { events.push("combatHit"); return true; },
+    notifyDeath() { events.push("combatDeath"); return true; }
+  };
+
+  damageEnemy.call(scene, enemy, 2, 120, 180, 0, 0);
+
+  assert.deepEqual(events, [
+    "flash", "number", "enemyHit", "rewards", "commitActor",
+    "enemyDeath", "combatHit", "combatDeath"
+  ]);
+  assert.equal(scene.killCount, 1);
+});
+
+// Break caught: invulnerable overlaps emit action clips or action delivery controls contact gameplay.
+test("contact actions emit once only after real player health commits and throwing delivery remains gameplay-neutral", async () => {
+  const combat = await loadCombatMethods(
+    "handlePlayerEnemyOverlap",
+    "applyPlayerDamage"
+  );
+  for (const [enemyType, action] of [
+    ["infectedStaff", "contact"],
+    ["crawler", "pierce"],
+    ["biomassChild", "snap"]
+  ]) {
+    const snapshots = [];
+    const enemy = createTask5Enemy({ enemyType, contactDamage: 3 });
+    const scene = {
+      ...combat,
+      player: { x: 10, y: 20 },
+      elapsedSurvivalMs: 1_000,
+      playerInvulnerableUntilMs: 0,
+      health: 10,
+      triggerPlayerDamageFeedback() {},
+      updateUI() {},
+      triggerGameOver() {},
+      enemyPresentation: {
+        notifyAction(snapshot) {
+          snapshots.push(snapshot);
+          throw new Error("action presentation failed");
+        }
+      }
+    };
+
+    assert.equal(scene.applyPlayerDamage(0), true, "accepted damage returns the presentation-only commit fact");
+    scene.playerInvulnerableUntilMs = 0;
+    scene.health = 10;
+    assert.doesNotThrow(() => scene.handlePlayerEnemyOverlap(null, enemy));
+    assert.equal(scene.health, 7);
+    assert.equal(snapshots.length, 1);
+    assert.equal(Object.isFrozen(snapshots[0]), true);
+    assert.deepEqual(structuredClone(snapshots[0]), {
+      presentationId: 17,
+      action,
+      atMs: 1_000
+    });
+
+    assert.equal(scene.applyPlayerDamage(1), false);
+    assert.doesNotThrow(() => scene.handlePlayerEnemyOverlap(null, enemy));
+    assert.equal(scene.health, 7);
+    assert.equal(snapshots.length, 1, "invulnerable overlap emits no action");
+  }
 });

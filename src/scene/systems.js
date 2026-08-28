@@ -161,6 +161,11 @@ export const systemsMixin = {
     } catch {
       // Presentation pause state cannot block committed gameplay pause state.
     }
+    try {
+      this.enemyPresentation?.setPaused?.(true);
+    } catch {
+      // Enemy animation pause cannot block committed gameplay pause state.
+    }
   },
 
 
@@ -192,6 +197,11 @@ export const systemsMixin = {
     } catch {
       // Presentation resume state cannot block committed gameplay resume state.
     }
+    try {
+      this.enemyPresentation?.setPaused?.(false);
+    } catch {
+      // Enemy animation resume cannot block committed gameplay resume state.
+    }
   },
 
 
@@ -204,7 +214,17 @@ export const systemsMixin = {
     this.supplyPickups.clear(true, true);
     this.instabilityDecoys.clear(true, true);
     this.clearTransientEffects();
+    try {
+      this.enemyPresentation?.clearOrdinaryDeathCopies?.();
+    } catch {
+      // A stale ordinary death copy cannot block terminal-state actor cleanup.
+    }
     for (const enemy of trackedEnemies) {
+      try {
+        this.enemyPresentation?.untrackActor?.(enemy);
+      } catch {
+        // One stale animation record cannot block cleanup of remaining actors.
+      }
       try {
         this.combatFeedback?.untrackActor?.(enemy);
       } catch {

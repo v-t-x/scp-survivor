@@ -583,3 +583,28 @@ test("player presentation facing is driven by movement while dash fallback memor
   assert.match(movement, /this\.playerMovementFallbackAngle\s*=/);
   assert.match(presentation, /scene\.playerFacingAngle/);
 });
+
+// Break caught: the scene-owned enemy presenter starts writing gameplay, collision, AI or persistence state.
+test("enemy presentation controller has a source-level no-write boundary", async () => {
+  const source = await readFile(
+    new URL("../src/art/enemyPresentationController.js", import.meta.url),
+    "utf8"
+  );
+  const forbiddenActorFields = [
+    "health", "maxHealth", "moveSpeed", "contactDamage", "projectileDamage",
+    "nextShotAtMs", "nextActionAtMs", "warningUntilMs", "chargeUntilMs",
+    "dashUntilMs", "teleportTargetX", "teleportTargetY", "canSplit", "bossState",
+    "stateUntilMs", "nextFrenzyAtMs", "nextSummonAtMs", "isBossMinion"
+  ];
+  for (const field of forbiddenActorFields) {
+    assert.doesNotMatch(
+      source,
+      new RegExp(`(?:actor|record\\.actor)\\.${field}\\s*=(?!=)`),
+      `presentation must not assign ${field}`
+    );
+  }
+  assert.doesNotMatch(source, /(?:actor|record\.actor)\.body\.(?:width|height|radius|position|velocity)\s*=(?!=)/);
+  assert.doesNotMatch(source, /(?:setSize|setOffset|setCircle|setVelocity)\s*\(/);
+  assert.doesNotMatch(source, /localStorage/);
+  assert.doesNotMatch(source, /fireEnemyProjectile/);
+});
