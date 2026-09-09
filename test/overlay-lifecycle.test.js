@@ -27,6 +27,7 @@ import {
   createTerminalOverlay
 } from "../src/ui/terminalOverlay.js";
 import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const SHUTDOWN = "shutdown";
 const DESTROY = "destroy";
@@ -57,14 +58,14 @@ async function loadHudMixin() {
     "HUD_REGIONS", "TEXTURES", "getHudPresentation", "selectTimelineHudContainers",
     "THEME", "createTacticalHudView", "createStatusLamp", "createTacticalPanel",
     "createTerminalOverlay", "UPGRADE_PRESENTATION", "HUD_DEPTH", "FACILITY_HUD_DEPTH",
-    "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH", "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH",
+    "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH", "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH", "SITE_CODE", "SITE_CHANNELS",
     `${body}\nreturn hudMixin;`
   )(
     PHASER_STUB, 960, 540, BALANCE, UPGRADE_DEFINITIONS,
     PLAYER_WEAPON_ALLOWLIST, isPlayerUpgradeVisible, HUD_REGIONS, TEXTURES,
     getHudPresentation, selectTimelineHudContainers, THEME, createTacticalHudView,
     createStatusLamp, createTacticalPanel, createTerminalOverlay, UPGRADE_PRESENTATION,
-    45, 58, 150, 82, 92, 72
+    45, 58, 150, 82, 92, 72, SITE_CODE, SITE_CHANNELS
   );
 }
 
@@ -79,11 +80,11 @@ async function loadProgressionMixin() {
     "ENEMY_GRID_CELL_SIZE", "ENEMY_GRID_STRIDE", "BALANCE", "UPGRADE_DEFINITIONS",
     "META_PERKS", "loadMetaProgress", "saveMetaProgress", "TEXTURES",
     "createTerminalButton", "createTerminalCard", "createTerminalOverlay",
-    "UPGRADE_PRESENTATION", `${body}\nreturn progressionMixin;`
+    "UPGRADE_PRESENTATION", "SITE_CODE", "SITE_CHANNELS", `${body}\nreturn progressionMixin;`
   )(
     PHASER_STUB, false, 960, 540, 2_400, 1_800, 96, 32, BALANCE,
     UPGRADE_DEFINITIONS, META_PERKS, loadMetaProgress, saveMetaProgress, TEXTURES,
-    createTerminalButton, createTerminalCard, createTerminalOverlay, UPGRADE_PRESENTATION
+    createTerminalButton, createTerminalCard, createTerminalOverlay, UPGRADE_PRESENTATION, SITE_CODE, SITE_CHANNELS
   );
 }
 
@@ -483,6 +484,7 @@ test("three shutdown-create cycles keep one lifecycle registration and release e
     scene.pauseGame();
     scene.showGameOverOverlay();
     scene.showLevelUpOverlay();
+    scene.openPerkStore();
 
     assert.equal(scene.events.listenerCount(SHUTDOWN), 1);
     assert.equal(scene.events.listenerCount(DESTROY), 1);
@@ -507,6 +509,7 @@ test("three shutdown-create cycles keep one lifecycle registration and release e
     assert.equal(scene.resultOverlay === null, true);
     assert.equal(scene.levelUpOverlayController === null, true);
     assert.equal(scene.levelUpOverlay === null, true);
+    assert.equal(scene.perkStoreController === null, true);
     assert.equal(liveObjects(scene).length, 0);
     assert.equal(activeTweens(scene).length, 0);
     assert.equal(activeTimers(scene).length, 0);
@@ -618,4 +621,48 @@ test("unified teardown clears every overlay reference when one controller destro
   assert.equal(scene.resultOverlay === null, true);
   assert.equal(scene.buildPanelController === null, true);
   assert.equal(scene.buildPanel.visible, false);
+});
+
+// Break caught: store teardown retaining Scene ownership or stranding other
+// terminal overlays when either store destruction or armory recovery throws.
+test("store teardown failures detach ownership and still release every terminal overlay", () => {
+  for (const failureAt of ["destroy", "armory"]) {
+    const scene = createScene();
+    scene.createUI();
+    scene.createBuildPanel();
+    scene.pauseGame();
+    scene.showGameOverOverlay();
+    scene.showLevelUpOverlay();
+    scene.openPerkStore();
+
+    const storeController = scene.perkStoreController;
+    const storeObjects = [...storeController.objects];
+    const terminalObjects = [...new Set([
+      ...storeObjects,
+      ...(scene.pauseOverlayController?.objects ?? []),
+      ...(scene.resultOverlayController?.objects ?? []),
+      ...(scene.levelUpOverlayController?.objects ?? []),
+      ...(scene.buildPanelController?.objects ?? [])
+    ])];
+    if (failureAt === "destroy") {
+      const destroy = storeController.destroy.bind(storeController);
+      storeController.destroy = () => {
+        destroy();
+        throw new Error("forced late store destroy failure");
+      };
+    } else {
+      scene.startMissionButtonController = {};
+      scene.refreshWeaponSelectionVisuals = () => {
+        throw new Error("forced armory refresh failure");
+      };
+    }
+
+    assert.doesNotThrow(() => scene.teardownTerminalOverlays(), failureAt);
+    assert.equal(scene.perkStoreController, null, failureAt);
+    assert.equal(scene.pauseOverlayController, null, failureAt);
+    assert.equal(scene.resultOverlayController, null, failureAt);
+    assert.equal(scene.levelUpOverlayController, null, failureAt);
+    assertReleased(storeObjects);
+    assertReleased(terminalObjects);
+  }
 });

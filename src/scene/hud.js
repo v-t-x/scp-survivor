@@ -15,6 +15,7 @@ import {
   getHudPresentation,
   selectTimelineHudContainers
 } from "../ui/hudPresentation.js";
+import { SITE_CHANNELS } from "../ui/siteIdentity.js";
 import { THEME } from "../ui/theme.js";
 import { createTacticalHudView } from "../ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
@@ -228,7 +229,7 @@ export const hudMixin = {
         scene.applyLegacyFacilityHudPresentation({
           expanded: false,
           title: "设施稳定",
-          detail: "SITE-CN // 收容系统在线",
+          detail: SITE_CHANNELS.containmentSystem,
           tone: "contained"
         });
       },
@@ -694,7 +695,7 @@ export const hudMixin = {
         height: 470,
         depth: FACILITY_HUD_DEPTH + 1,
         scrollFactor: 0,
-        eyebrow: "SITE-19 // OPERATOR LOADOUT",
+        eyebrow: SITE_CHANNELS.operatorLoadout,
         title: "当前构筑",
         subtitle: "TAB 关闭 // 实时装备与异常协议摘要",
         tone: "standard",

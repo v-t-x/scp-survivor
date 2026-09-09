@@ -1,4 +1,5 @@
 import { THEME } from "../ui/theme.js";
+import { SITE_CHANNELS } from "../ui/siteIdentity.js";
 
 const ACTION_PALETTES = Object.freeze({
   idle: Object.freeze({ fill: THEME.title.actionFill, border: THEME.title.line, borderWidth: 2, borderAlpha: 0.72, highlightAlpha: 0.24, text: THEME.text.primary, signal: THEME.terminal.frame, status: "AUTH", statusColor: THEME.text.muted, accent: THEME.title.alarm, accentAlpha: 0.58, label: "01 / 进入设施", offsetX: 0 }),
@@ -102,7 +103,7 @@ export function createTitleAction(scene, targetArray, options) {
 
 export function createTitleScreenView(scene, targetArray, options) {
   const { credits, depth, onActivate } = options;
-  const eyebrow = scene.add.text(52, 48, "SITE-CN-03 // CONTAINMENT INCIDENT", {
+  const eyebrow = scene.add.text(52, 48, SITE_CHANNELS.containmentIncident, {
     fontFamily: THEME.font.mono, fontSize: "11px", color: THEME.text.muted
   });
   const alertRail = scene.add.rectangle(52, 72, 128, 24, THEME.title.alarm, 0.9).setOrigin(0, 0.5);

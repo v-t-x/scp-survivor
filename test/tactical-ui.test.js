@@ -250,6 +250,30 @@ test("Foundation terminal and layout tokens match the approved contract", () => 
     buttonHeight: 56,
     labelGap: 8
   });
+  assert.deepEqual(THEME.stage1.spacing, [4, 8, 12, 16, 24, 32]);
+  assert.equal(THEME.stage1.panelPadding, 16);
+  assert.equal(THEME.stage1.compactPanelPadding, 12);
+  assert.equal(THEME.stage1.primaryActionHeight, 52);
+  assert.equal(THEME.stage1.compactActionHeight, 40);
+  assert.equal(THEME.stage1.minHitTarget, 40);
+  assert.equal(THEME.stage1.enterMs, 120);
+  assert.equal(THEME.stage1.interactionMs, 120);
+  assert.equal(THEME.stage1.warningPulseMs, 800);
+  assert.equal(Object.isFrozen(THEME.stage1.spacing), true);
+  assert.equal(THEME.semantic.neutral, THEME.terminal.frame);
+  assert.equal(THEME.semantic.info, THEME.signal.info);
+  assert.equal(THEME.semantic.contained, THEME.terminal.contained);
+  assert.equal(THEME.semantic.warning, THEME.terminal.warning);
+  assert.equal(THEME.semantic.danger, THEME.terminal.danger);
+  assert.equal(THEME.semantic.disabled, THEME.terminal.disabled);
+  assert.equal(THEME.semantic.anomaly, THEME.signal.anomaly);
+  assert.equal(THEME.semanticText.neutral, THEME.text.muted);
+  assert.equal(THEME.semanticText.info, THEME.text.primary);
+  assert.equal(THEME.semanticText.contained, THEME.text.contained);
+  assert.equal(THEME.semanticText.warning, THEME.color.text.phase);
+  assert.equal(THEME.semanticText.danger, THEME.text.critical);
+  assert.equal(THEME.semanticText.disabled, THEME.text.muted);
+  assert.equal(THEME.layout.buttonHeight, 56, "legacy default remains unchanged");
 });
 
 test("terminal buttons draw clipped frames, honor display options, and clean up", () => {

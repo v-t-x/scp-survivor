@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   DEVELOPMENT_SPRITESHEET_ASSETS,
+  ATLAS_ASSETS,
   IMAGE_ASSETS,
   SPRITESHEET_ASSETS,
   TEXTURES
@@ -289,7 +290,9 @@ test("the asset register reports the exact current production manifest total", a
   const register = await fs.readFile(assetRegisterPath, "utf8");
   const match = register.match(/当前合并树的运行时 manifest 为 (\d+) 项/);
   assert.ok(match, "asset register must state the current runtime manifest total");
-  assert.equal(Number(match[1]), IMAGE_ASSETS.length + SPRITESHEET_ASSETS.length);
+  const runtimeManifestTotal = IMAGE_ASSETS.length + SPRITESHEET_ASSETS.length + ATLAS_ASSETS.length;
+  assert.equal(runtimeManifestTotal, 79);
+  assert.equal(Number(match[1]), runtimeManifestTotal);
 });
 
 test("the new contract preserves all eight legacy fallback identities and their paths", async () => {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { HUD_REGIONS } from "../src/art/openingVisualContract.js";
 import { selectTimelineHudContainers } from "../src/ui/hudPresentation.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const EVENTS = Object.freeze({ SHUTDOWN: "shutdown", DESTROY: "destroy" });
 const REF_NAMES = [
@@ -67,10 +68,10 @@ async function loadHudMixin({ factory, presentation }) {
   return Function(
     "Phaser", "GAME_WIDTH", "GAME_HEIGHT", "BALANCE", "UPGRADE_DEFINITIONS", "HUD_REGIONS",
     "TEXTURES", "getHudPresentation", "selectTimelineHudContainers", "createTacticalHudView",
-    "createStatusLamp", "createTacticalPanel", "THEME", `${body}\nreturn hudMixin;`
+    "createStatusLamp", "createTacticalPanel", "THEME", "SITE_CODE", "SITE_CHANNELS", `${body}\nreturn hudMixin;`
   )(
     { Scenes: { Events: EVENTS } }, 960, 540, { audio: { enabled: true }, facility: { events: {} }, player: { dashCooldownMs: 2200 } },
-    [], HUD_REGIONS, {}, presentation, selectTimelineHudContainers, factory, () => {}, () => {}, {}
+    [], HUD_REGIONS, {}, presentation, selectTimelineHudContainers, factory, () => {}, () => {}, {}, SITE_CODE, SITE_CHANNELS
   );
 }
 

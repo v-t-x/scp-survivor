@@ -6,6 +6,7 @@ import { HUD_REGIONS } from "../src/art/openingVisualContract.js";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { getHudPresentation } from "../src/ui/hudPresentation.js";
 import { createTacticalHudView } from "../src/ui/tacticalHudView.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 async function loadHudMixin() {
   const source = await readFile(new URL("../src/scene/hud.js", import.meta.url), "utf8");
@@ -13,7 +14,7 @@ async function loadHudMixin() {
   const start = source.indexOf(declaration);
   assert.notEqual(start, -1, "hudMixin export must exist");
   const body = source.slice(start).replace(declaration, "const hudMixin =");
-  return Function(`${body}\nreturn hudMixin;`)();
+  return Function("SITE_CODE", "SITE_CHANNELS", `${body}\nreturn hudMixin;`)(SITE_CODE, SITE_CHANNELS);
 }
 
 const hudMixin = await loadHudMixin();

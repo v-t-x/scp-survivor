@@ -18,6 +18,7 @@ import {
   createTerminalCard,
   createTerminalOverlay
 } from "../ui/terminalOverlay.js";
+import { SITE_CHANNELS } from "../ui/siteIdentity.js";
 import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
 
 const LEVEL_UP_PRESENTATION_RETRY_MS = 1000;
@@ -139,7 +140,7 @@ export const progressionMixin = {
         height: 420,
         depth: 60,
         scrollFactor: 1,
-        eyebrow: "SITE-19 / FIELD AUTHORIZATION",
+        eyebrow: SITE_CHANNELS.fieldAuthorization,
         title: "升级授权",
         subtitle: "选择一项现场强化协议",
         tone: "standard",

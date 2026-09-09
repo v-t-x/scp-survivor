@@ -13,6 +13,7 @@ import {
   createTerminalOverlay
 } from "../src/ui/terminalOverlay.js";
 import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const TEST_UPGRADES = ["moveSpeed", "damage", "pistolBoomerang"].map((key) =>
   UPGRADE_DEFINITIONS.find((upgrade) => upgrade.key === key)
@@ -65,7 +66,9 @@ async function loadProgressionMixin() {
     createTerminalButton,
     createTerminalCard,
     createTerminalOverlay,
-    UPGRADE_PRESENTATION
+    UPGRADE_PRESENTATION,
+    SITE_CODE,
+    SITE_CHANNELS
   };
   const source = await readFile(new URL("../src/scene/progression.js", import.meta.url), "utf8");
   const injected = `
@@ -75,7 +78,9 @@ async function loadProgressionMixin() {
       isPlayerUpgradeVisible,
       META_PERKS, loadMetaProgress, saveMetaProgress, TEXTURES,
       createTerminalButton, createTerminalCard, createTerminalOverlay,
-      UPGRADE_PRESENTATION
+      UPGRADE_PRESENTATION,
+      SITE_CODE,
+      SITE_CHANNELS
     } = globalThis.__levelUpProgressionDeps;
   `;
   const executable = `${injected}\n${stripImports(source)}`;
@@ -394,6 +399,7 @@ test("showLevelUpOverlay builds three world-space terminal card controllers from
   assert.equal(scene.pauseCount, 1);
   assert.ok(scene.levelUpOverlayController);
   assert.equal(scene.levelUpOverlay, scene.levelUpOverlayController.container);
+  assert.ok(findText(scene.levelUpOverlayController.objects, SITE_CHANNELS.fieldAuthorization));
   assert.deepEqual(
     { x: scene.levelUpOverlay.x, y: scene.levelUpOverlay.y },
     { x: scene.cameras.main.scrollX, y: scene.cameras.main.scrollY }

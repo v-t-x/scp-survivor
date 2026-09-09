@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { THEME } from "../src/ui/theme.js";
+import { SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 import {
   createTitleAction,
   createTitleScreenView,
@@ -160,7 +161,7 @@ test("credits formatting is finite and title view owns the approved information 
     onActivate() { activations += 1; }
   });
   const texts = scene.created.filter(({ type }) => type === "text").map(({ text }) => text);
-  assert.ok(texts.includes("SITE-CN-03 // CONTAINMENT INCIDENT"));
+  assert.ok(texts.includes(SITE_CHANNELS.containmentIncident));
   assert.ok(texts.includes("收容失效"));
   assert.ok(texts.includes("SCP"));
   assert.ok(texts.includes("幸存者"));
