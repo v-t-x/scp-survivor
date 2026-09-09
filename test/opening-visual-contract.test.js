@@ -102,7 +102,7 @@ test("opening player asset specs freeze the named legacy and response operative 
   assert.equal(Object.isFrozen(OPENING_PLAYER_ASSET_SPECS.responseOperative.motions), true);
 });
 
-test("HUD regions freeze five non-overlapping panels inside the approved viewport", () => {
+test("HUD regions freeze split instruments with only facility contained in mission", () => {
   assert.deepEqual(Object.keys(HUD_REGIONS), [
     "mission",
     "vitals",
@@ -110,12 +110,14 @@ test("HUD regions freeze five non-overlapping panels inside the approved viewpor
     "facility",
     "system"
   ]);
-  assert.deepEqual(HUD_REGIONS.system, {
-    anchor: "top-right",
-    x: 824,
-    y: 12,
-    width: 120,
-    height: 64
+  assert.deepEqual(Object.fromEntries(
+    Object.entries(HUD_REGIONS).map(([name, { x, y, width, height }]) => [name, { x, y, width, height }])
+  ), {
+    mission: { x: 12, y: 12, width: 416, height: 48 },
+    vitals: { x: 12, y: 458, width: 238, height: 70 },
+    weapon: { x: 716, y: 458, width: 232, height: 70 },
+    facility: { x: 317, y: 12, width: 111, height: 48 },
+    system: { x: 752, y: 12, width: 196, height: 40 }
   });
 
   const regions = Object.entries(HUD_REGIONS);
@@ -130,6 +132,14 @@ test("HUD regions freeze five non-overlapping panels inside the approved viewpor
     for (let otherIndex = index + 1; otherIndex < regions.length; otherIndex += 1) {
       const [name, region] = regions[index];
       const [otherName, otherRegion] = regions[otherIndex];
+      if ((name === "mission" && otherName === "facility") || (name === "facility" && otherName === "mission")) {
+        const mission = HUD_REGIONS.mission;
+        const facility = HUD_REGIONS.facility;
+        assert.ok(facility.x >= mission.x && facility.y >= mission.y, "facility begins inside mission");
+        assert.ok(facility.x + facility.width <= mission.x + mission.width, "facility fits mission width");
+        assert.ok(facility.y + facility.height <= mission.y + mission.height, "facility fits mission height");
+        continue;
+      }
       assert.equal(regionsOverlap(region, otherRegion), false, `${name} and ${otherName} do not overlap`);
     }
   }

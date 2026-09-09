@@ -253,11 +253,18 @@ export const hudMixin = {
 
 
   createLegacyHud() {
+    // Preserve the fallback layout independently of the compact U2 regions.
+    const legacyRegions = {
+      mission: { x: 16, y: 16, width: 292, height: 92 },
+      vitals: { x: 16, y: 462, width: 268, height: 62 },
+      weapon: { x: 676, y: 446, width: 268, height: 78 },
+      facility: { x: 320, y: 12, width: 320, height: 48 }
+    };
 
-    this.missionHudContainer = this.add.container(HUD_REGIONS.mission.x, HUD_REGIONS.mission.y);
-    this.vitalsHudContainer = this.add.container(HUD_REGIONS.vitals.x, HUD_REGIONS.vitals.y);
-    this.weaponHudContainer = this.add.container(HUD_REGIONS.weapon.x, HUD_REGIONS.weapon.y);
-    this.facilityHudContainer = this.add.container(HUD_REGIONS.facility.x, HUD_REGIONS.facility.y);
+    this.missionHudContainer = this.add.container(legacyRegions.mission.x, legacyRegions.mission.y);
+    this.vitalsHudContainer = this.add.container(legacyRegions.vitals.x, legacyRegions.vitals.y);
+    this.weaponHudContainer = this.add.container(legacyRegions.weapon.x, legacyRegions.weapon.y);
+    this.facilityHudContainer = this.add.container(legacyRegions.facility.x, legacyRegions.facility.y);
     this.missionHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
     this.vitalsHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
     this.weaponHudContainer.setDepth(HUD_DEPTH).setScrollFactor(0);
@@ -272,8 +279,8 @@ export const hudMixin = {
     this.missionPanel = createTacticalPanel(this, {
       x: 0,
       y: 0,
-      width: HUD_REGIONS.mission.width,
-      height: HUD_REGIONS.mission.height,
+      width: legacyRegions.mission.width,
+      height: legacyRegions.mission.height,
       depth: 0,
       scrollFactor: 0,
       fill: THEME.hud.panelFill,
@@ -316,8 +323,8 @@ export const hudMixin = {
     this.vitalsPanel = createTacticalPanel(this, {
       x: 0,
       y: 0,
-      width: HUD_REGIONS.vitals.width,
-      height: HUD_REGIONS.vitals.height,
+      width: legacyRegions.vitals.width,
+      height: legacyRegions.vitals.height,
       depth: 0,
       scrollFactor: 0,
       fill: THEME.hud.panelFill,
@@ -372,8 +379,8 @@ export const hudMixin = {
     this.weaponPanel = createTacticalPanel(this, {
       x: 0,
       y: 0,
-      width: HUD_REGIONS.weapon.width,
-      height: HUD_REGIONS.weapon.height,
+      width: legacyRegions.weapon.width,
+      height: legacyRegions.weapon.height,
       depth: 0,
       scrollFactor: 0,
       fill: THEME.hud.panelFill,
@@ -439,8 +446,8 @@ export const hudMixin = {
     this.facilityWarningPanel = createTacticalPanel(this, {
       x: 0,
       y: 0,
-      width: HUD_REGIONS.facility.width,
-      height: HUD_REGIONS.facility.height,
+      width: legacyRegions.facility.width,
+      height: legacyRegions.facility.height,
       depth: 0,
       scrollFactor: 0,
       fill: THEME.hud.panelFill,
@@ -449,8 +456,8 @@ export const hudMixin = {
     this.facilityDangerPanel = createTacticalPanel(this, {
       x: 0,
       y: 0,
-      width: HUD_REGIONS.facility.width,
-      height: HUD_REGIONS.facility.height,
+      width: legacyRegions.facility.width,
+      height: legacyRegions.facility.height,
       depth: 0,
       scrollFactor: 0,
       fill: THEME.hud.panelFill,
@@ -599,9 +606,14 @@ export const hudMixin = {
     }
     if (!BALANCE.audio.enabled) {
       this.muteText.setText("音频：关闭");
-      return;
+    } else {
+      this.muteText.setText(this.soundMuted ? "音频：静音 (M)" : "音频：开启 (M)");
     }
-    this.muteText.setText(this.soundMuted ? "音频：静音 (M)" : "音频：开启 (M)");
+    if (this.tacticalHudView
+      && this.tacticalHudView.mode !== "legacy"
+      && this.tacticalHudView.mode !== "noop") {
+      this.updateUI();
+    }
   },
 
 
@@ -1219,6 +1231,7 @@ export const hudMixin = {
     if (!this.topBannerState) {
       return;
     }
+    this.tacticalHudView?.setTopBannerActive?.(true);
     this.eventBannerTitle?.setText?.(this.topBannerState.title);
     this.eventBannerDetail?.setText?.(this.topBannerState.detail);
     this.eventBannerContainer?.setVisible?.(true);
@@ -1235,6 +1248,8 @@ export const hudMixin = {
       this.eventBannerContainer.setVisible(false);
       this.eventBannerContainer.setAlpha(1);
       this.topBannerState = null;
+      this.tacticalHudView?.setTopBannerActive?.(false);
+      this.updateUI();
       return;
     }
     const remaining = this.topBannerState.expiresAtMs - this.elapsedSurvivalMs;

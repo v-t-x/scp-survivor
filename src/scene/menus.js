@@ -1546,6 +1546,7 @@ export const menusMixin = {
     this.isPaused = true;
     this.pauseGameplaySystems();
     this.showPauseOverlay();
+    this.updateUI?.();
   },
 
 
@@ -1553,6 +1554,7 @@ export const menusMixin = {
     this.isPaused = false;
     this.hidePauseOverlay();
     this.resumeGameplaySystems();
+    this.updateUI?.();
   },
 
 

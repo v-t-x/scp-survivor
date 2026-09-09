@@ -207,6 +207,10 @@ function createDisplayObject(type, initial = {}, failure = {}) {
       this.calls.push(["clear"]);
       return this;
     },
+    fillRect(...args) {
+      this.calls.push(["fillRect", ...args]);
+      return this;
+    },
     fillStyle(...args) {
       this.calls.push(["fillStyle", ...args]);
       return this;
@@ -623,8 +627,9 @@ test("system hot areas stay inside the system region and preserve pause and mute
   const { pauseHitArea, muteHitArea } = view.controls;
   const bounds = HUD_REGIONS.system;
 
-  assert.deepEqual([pauseHitArea.width, pauseHitArea.height], [96, 30]);
-  assert.deepEqual([muteHitArea.width, muteHitArea.height], [96, 26]);
+  assert.deepEqual([pauseHitArea.width, pauseHitArea.height], [96, 40]);
+  assert.deepEqual([muteHitArea.width, muteHitArea.height], [96, 40]);
+  assert.equal((muteHitArea.x - muteHitArea.width / 2) - (pauseHitArea.x + pauseHitArea.width / 2), 4);
   for (const hitArea of [pauseHitArea, muteHitArea]) {
     assert.equal(hitArea.x - hitArea.width / 2 >= 0, true);
     assert.equal(hitArea.y - hitArea.height / 2 >= 0, true);
@@ -654,7 +659,7 @@ test("system hot areas stay inside the system region and preserve pause and mute
   }
 });
 
-test("update keeps HUD objects stable while swapping the one 48px weapon image texture", () => {
+test("update keeps HUD objects stable while swapping the single weapon image texture", () => {
   const scene = createScene();
   const view = createView(scene);
   const weaponImage = scene.objects.find((object) => object.type === "image" && object.textureKey === TEXTURES.weaponPistolIcon);
@@ -691,7 +696,11 @@ test("update keeps HUD objects stable while swapping the one 48px weapon image t
   assert.equal(scene.objects.filter((object) => object.type === "image").length, 2);
   assert.equal(scene.objects.includes(weaponImage), true);
   assert.equal(weaponImage.textureKey, TEXTURES.weaponTeslaIcon);
-  assert.deepEqual([weaponImage.displayWidth, weaponImage.displayHeight], [48, 48]);
+  assert.deepEqual([weaponImage.displayWidth, weaponImage.displayHeight], [34, 34]);
+  assert.equal(weaponImage.x - weaponImage.displayWidth / 2 >= 0, true);
+  assert.equal(weaponImage.x + weaponImage.displayWidth / 2 <= HUD_REGIONS.weapon.width, true);
+  assert.equal(weaponImage.y - weaponImage.displayHeight / 2 >= 0, true);
+  assert.equal(weaponImage.y + weaponImage.displayHeight / 2 <= HUD_REGIONS.weapon.height, true);
   assert.equal(weaponImage.calls.filter(([name]) => name === "setDisplaySize").length, 1);
   assert.equal(view.objects.length, initialViewObjects.length);
   assert.equal(view.objects.every((object, index) => object === initialViewObjects[index]), true);
@@ -729,7 +738,7 @@ test("facility keeps its single-line status while collapse only hides expanded w
   view.update(stable);
   assert.equal(view.regions.facility.container.visible, true);
   assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
-  assert.equal(view.refs.eventBannerTitle.text, `${stable.facility.title} // ${stable.facility.detail}`);
+  assert.equal(view.refs.eventBannerTitle.text, stable.facility.title);
   assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
   assert.equal(isEffectivelyVisible(view.refs.eventBannerBg), false);
 
@@ -889,3 +898,233 @@ for (const { label, failure } of [
     assertSceneRolledBack(scene);
   });
 }
+
+function named(view, name) {
+  const object = view.objects.find((entry) => entry.name === name);
+  assert.ok(object, name + ' must be rendered');
+  return object;
+}
+
+test('U2 split dash preserves icon, countdown and refill across cooldown-ready-cooldown transitions', () => {
+  const view = createView(createScene());
+  const initialObjects = [...view.objects];
+  const dashText = named(view, 'dashText');
+  const dashBar = named(view, 'dashBar');
+  let coolingIconColor;
+  let readyIconColor;
+
+  for (const [elapsedSurvivalMs, dashReadyAtMs, expectedText, expectedWidth] of [
+    [128_000, 129_200, '1.2秒', 36.6],
+    [129_200, 129_200, '', 61],
+    [129_400, 132_400, '3.0秒', 0],
+    [130_900, 132_400, '1.5秒', 30.5]
+  ]) {
+    const state = presentation({ elapsedSurvivalMs, dashReadyAtMs, dashCooldownMs: 3_000 });
+    const originalDashText = state.weapon.dashText;
+    view.update(state);
+    assert.equal(dashText.text, expectedText);
+    assert.equal(dashBar.visible, true, 'the refill track remains visible when ready');
+    assert.ok(Math.abs(dashBar.displayWidth - expectedWidth) < 0.0001);
+    const dashIcon = named(view, 'dashIcon');
+    assert.equal(isEffectivelyVisible(dashIcon), true);
+    const iconStyle = dashIcon.calls.findLast(([name]) => name === 'lineStyle' || name === 'fillStyle');
+    const iconColor = iconStyle?.[iconStyle[0] === 'lineStyle' ? 2 : 1];
+    assert.notEqual(iconColor, undefined, 'the icon has a visible drawing style');
+    if (elapsedSurvivalMs === 128_000) coolingIconColor = iconColor;
+    else if (elapsedSurvivalMs === 129_200) {
+      readyIconColor = iconColor;
+      assert.notEqual(readyIconColor, coolingIconColor, 'readiness changes the icon appearance');
+    } else assert.equal(iconColor, coolingIconColor, 'a new cooldown restores the cooling appearance');
+    assert.equal(state.weapon.dashText, originalDashText, 'rendering leaves the shared projection untouched');
+  }
+  assert.deepEqual(view.objects, initialObjects, 'state changes reuse all HUD objects');
+});
+
+test('U2 split groups keep dash with vitals while gameplay hide also hides Boss and weapon', () => {
+  const view = createView(createScene());
+  view.update(presentation({ bossPhaseActive: true, bossHealthRatio: 0.62 }));
+  const dash = named(view, 'dashHud');
+  const boss = named(view, 'bossHud');
+  assert.equal(dash.parentContainer, view.regions.vitals.container);
+  assert.deepEqual([dash.x + dash.parentContainer.x, dash.y + dash.parentContainer.y], [168, 466]);
+  assert.equal(boss.parentContainer, view.regions.mission.container);
+  assert.deepEqual([boss.x + boss.parentContainer.x, boss.y + boss.parentContainer.y], [446, 12]);
+  assert.equal(named(view, 'weaponStatus').parentContainer, view.regions.weapon.container);
+
+  for (const visible of [false, true]) {
+    view.setGameplayVisible(visible);
+    for (const object of [dash, boss, view.refs.statsText, view.refs.weaponHudText, view.refs.eventBannerTitle]) {
+      assert.equal(isEffectivelyVisible(object), visible);
+    }
+  }
+});
+
+test('U2 split notification expiry restores a compact mission without fading the independent Boss', () => {
+  const scene = createScene();
+  const view = createView(scene);
+  Object.assign(scene, view.refs, {
+    tacticalHudView: view,
+    elapsedSurvivalMs: 1_000,
+    showTopBanner: hudMixin.showTopBanner,
+    applyTopBannerOverlay: hudMixin.applyTopBannerOverlay,
+    updateTopBanner: hudMixin.updateTopBanner,
+    updateUI() {
+      view.update(presentation({ elapsedSurvivalMs: this.elapsedSurvivalMs, bossPhaseActive: true, bossHealthRatio: 0.62 }));
+    }
+  });
+  scene.updateUI();
+  view.setFacilityCollapsed(true);
+  const boss = named(view, 'bossHud');
+  const facility = view.regions.facility.container;
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
+  scene.showTopBanner('支援抵达', '医疗补给已投放', 1_500);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), true);
+  assert.equal(view.refs.eventBannerDetail.text, '医疗补给已投放');
+  const expanded = view.refs.eventBannerBg.calls
+    .filter(([name, , , , height]) => name === 'fillRect' && height > 1)
+    .at(-1);
+  assert.ok(expanded, 'expanded notifications have a backing surface');
+  const [, localX, localY, width, height] = expanded;
+  assert.deepEqual([
+    facility.x + view.refs.eventBannerContainer.x + localX,
+    facility.y + view.refs.eventBannerContainer.y + localY,
+    width,
+    height
+  ], [12, 60, 416, 24]);
+
+  scene.elapsedSurvivalMs = 2_499;
+  scene.updateTopBanner();
+  assert.equal(view.refs.eventBannerContainer.alpha < 1, true);
+  assert.equal(isEffectivelyVisible(boss), true);
+  assert.equal(boss.alpha, 1);
+  scene.elapsedSurvivalMs = 2_500;
+  scene.updateTopBanner();
+  assert.equal(scene.topBannerState, null);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
+  assert.equal(view.refs.eventBannerContainer.alpha, 1);
+  assert.equal(isEffectivelyVisible(boss), true);
+  assert.deepEqual([facility.x, facility.y], [317, 12]);
+  assert.equal(view.refs.eventBannerTitle.text, '终局收容');
+});
+
+test('U2 split weapon detail preserves levels and damage across pistol-Tesla-pistol updates', () => {
+  const view = createView(createScene());
+  for (const [selectedWeaponId, weapon, expectedLevel, expectedDetail, expectedStatus] of [
+    ['pistol', { name: '基金会勤务手枪', currentLevel: 1, damage: 20, cooldownMs: 280 }, 'Lv. 1', '伤害 20.0', '射速 3.57/秒'],
+    ['tesla', { name: '便携式特斯拉投射器', currentLevel: 3, damage: 8, chainTargets: 4, cooldownMs: 264, isChanneling: true }, 'Lv. 3', '每跳 8.0 · 链击 4', '持续电击中 · 264ms/跳'],
+    ['pistol', { name: '基金会勤务手枪', currentLevel: 4, damage: 32, cooldownMs: 250 }, 'Lv. 4', '伤害 32.0', '射速 4.00/秒']
+  ]) {
+    const state = presentation({ selectedWeaponId, weapon });
+    const originalDetail = state.weapon.detail;
+    view.update(state);
+    assert.equal(named(view, 'weaponDetail').text, expectedDetail);
+    assert.equal(named(view, 'weaponLevel').text, expectedLevel);
+    assert.equal(named(view, 'weaponStatus').text, expectedStatus);
+    assert.equal(state.weapon.detail, originalDetail);
+  }
+});
+
+test('U2 split facility collapse clears a notification already ended by the scene', () => {
+  const scene = createScene();
+  const view = createView(scene);
+  view.update(presentation());
+  scene.topBannerState = { title: '设施断电', expiresAtMs: 2_500 };
+  view.setTopBannerActive(true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), true);
+
+  scene.topBannerState = null;
+  view.setFacilityCollapsed(true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerBg), false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerTitle), true);
+  view.setFacilityCollapsed(false);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail), false, 'the ended notification cannot return');
+});
+
+test('U2 uses approved anchors and readable independent health and XP bars', () => {
+  const view = createView(createScene());
+  const healthTextColor = view.refs.statsText.style.color;
+  assert.match(healthTextColor, /^#[0-9a-f]{6}$/i);
+  assert.deepEqual([HUD_REGIONS.vitals.x, HUD_REGIONS.vitals.y, HUD_REGIONS.vitals.width, HUD_REGIONS.vitals.height], [12, 458, 238, 70]);
+  for (const [health, xp, critical] of [[35, 0, false], [34, 9, true], [100, 23, false]]) {
+    view.update(presentation({health, maxHealth:100, currentXp:xp, xpToNextLevel:23}));
+    assert.equal(named(view, 'healthBar').displayWidth, 104 * (health / 100));
+    assert.equal(view.refs.xpBarFill.displayWidth, view.refs.xpBarBackground.displayWidth * (xp / 23));
+    assert.equal(view.refs.xpBarFill.alpha, 1);
+    assert.equal(view.refs.statsText.alpha, 1, 'HP digits never pulse dim');
+    assert.equal(view.refs.statsText.color, healthTextColor, 'critical health keeps the HP digits readable');
+    assert.equal(named(view, 'lowHealthLabel').visible, critical);
+  }
+});
+
+test('U2 Boss bar waits for real Boss activity and survives facility notifications independently', () => {
+  const view = createView(createScene());
+  const boss = named(view, 'bossHud');
+  view.update(presentation({bossPhaseActive:false, missionDetail:'等待 SCP-049 进入战区'}));
+  assert.equal(boss.visible, false);
+  view.update(presentation({bossPhaseActive:true, bossHealthRatio:0.62}));
+  assert.equal(boss.visible, true);
+  assert.equal(named(view, 'bossHealthBar').displayWidth, 250 * 0.62);
+  assert.equal(named(view, 'bossPercent').text, '62%');
+  view.setTopBannerActive(true);
+  view.refs.eventBannerContainer.setAlpha(0).setVisible(false);
+  assert.equal(isEffectivelyVisible(boss), true);
+  assert.equal(boss.alpha, 1);
+  assert.equal(boss.parentContainer, view.regions.mission.container);
+  view.update(presentation({bossPhaseActive:true, isMissionActive:false}));
+  assert.equal(boss.visible, false);
+});
+
+test('U2 weapon status and live detail remain separate with no Tesla charge bar', () => {
+  const view = createView(createScene());
+  const data = presentation({ selectedWeaponId:'tesla', weapon:{name:'便携式特斯拉投射器',currentLevel:3,damage:8,chainTargets:4,cooldownMs:264,isChanneling:true} });
+  view.update(data);
+  assert.equal(named(view,'weaponStatus').text,data.weapon.statusText);
+  assert.equal(named(view,'weaponDetail').text,'每跳 8.0 · 链击 4');
+  assert.equal(named(view,'weaponLevel').text,'Lv. 3');
+  const channelColor=named(view,'weaponStatus').color;
+  assert.match(channelColor,/^#[0-9a-f]{6}$/i);
+  assert.equal(view.objects.some(o=>o.name==='weaponChargeBar'),false);
+  view.update(presentation({ selectedWeaponId:'tesla', weapon:{name:'便携式特斯拉投射器',currentLevel:3,damage:8,chainTargets:4,cooldownMs:264,isChanneling:false} }));
+  assert.equal(named(view,'weaponStatus').text,'等待锁定 · 264ms/跳');
+  assert.notEqual(named(view,'weaponStatus').color,channelColor, 'active channeling and waiting have distinct status emphasis');
+  view.update(presentation({elapsedSurvivalMs:128000,dashReadyAtMs:129200,dashCooldownMs:3000}));
+  assert.equal(named(view,'elapsedTime').text,'02:08');
+  assert.equal(named(view,'dashText').text,'1.2秒');
+  assert.equal(named(view,'dashBar').displayWidth,61 * 0.6);
+  assert.equal(named(view,'dashHud').parentContainer,view.regions.vitals.container);
+});
+
+test('U2 keeps controls readable and limits amber underlines to their own active state', () => {
+  const view=createView(createScene());
+  view.update(presentation());
+  const controlTextColor=view.refs.pauseButtonLabel.color;
+  assert.match(controlTextColor,/^#[0-9a-f]{6}$/i);
+  view.update(presentation({health:25,maxHealth:100,isPaused:true,soundMuted:true}));
+  assert.equal(view.refs.pauseButtonLabel.text,'继续');
+  assert.equal(view.refs.muteText.text,'静音');
+  assert.equal(named(view,'pauseActive').visible,true);
+  assert.equal(named(view,'muteActive').visible,true);
+  assert.equal(view.refs.pauseButtonLabel.color,controlTextColor);
+  assert.equal(view.refs.muteText.color,controlTextColor);
+  const enabled=BALANCE.audio.enabled;
+  try { BALANCE.audio.enabled=false; view.update(presentation({soundMuted:true}));
+    assert.equal(view.refs.muteText.text,'音频 关闭');
+    assert.equal(named(view,'muteActive').visible,false);
+  } finally { BALANCE.audio.enabled=enabled; }
+});
+
+test('U2 notification expansion keeps the compact facility and site anchors stable', () => {
+  const view=createView(createScene()); view.update(presentation());
+  const facility=view.regions.facility.container;
+  const site=named(view,'facilitySite');
+  assert.deepEqual([facility.x,facility.y],[317,12]);
+  const siteX=site.x;
+  assert.equal(siteX>=0 && siteX<=HUD_REGIONS.facility.width,true);
+  view.setTopBannerActive(true);
+  assert.equal(isEffectivelyVisible(view.refs.eventBannerDetail),true);
+  assert.equal(site.x,siteX);
+  assert.deepEqual([facility.x,facility.y],[317,12]);
+  view.setTopBannerActive(false);
+  assert.equal(site.x,siteX);
+});
