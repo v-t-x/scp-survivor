@@ -1,0 +1,180 @@
+{
+  "schema": 1,
+  "date": "2026-09-09",
+  "acceptance": "项目所有者已经实际体验并认可保留的 U1、左右分置 U2 及文字清晰度修复。本轮是提交集成，不重开视觉验收。",
+  "commits": {
+    "base": "a790aad952dd1da2c4a6020a89c242ee687c6955",
+    "u0u1": "92df1c6d07ef8bb0c15111a1bb0ada7a79e7f3fb",
+    "u2": "7b53fdb7b4dceb25947188cfd7116601779cd66a"
+  },
+  "reconstruction": {
+    "u1EvidenceFiles": 51,
+    "u1IncludedFiles": 49,
+    "u1ExactBackupPaths": [
+      "src/scene/hud.js",
+      "src/scene/menus.js",
+      "test/hud-lifecycle.test.js",
+      "test/tactical-hud-view.test.js"
+    ],
+    "excludedUnusedFiles": [
+      "public/assets/art/u1/armory-chassis.png",
+      "public/assets/art/u1/quartermaster-chassis.png"
+    ],
+    "excludedPolicy": "仅未纳入新分支，原 WIP 与保全副本继续保留，无删除",
+    "u2DeltaFiles": 11,
+    "acceptedImplementationFiles": 333,
+    "acceptedDesignFiles": 313,
+    "acceptedHashMismatches": 0
+  },
+  "builds": [
+    {
+      "phase": "U0/U1",
+      "tests": 695,
+      "bundle": "index-Bw2CQCmN.js",
+      "sha256": "ee8791a2b3413b00bc7dc3a8e192ebf36040c142f8f36d03889b98c69ded62a3",
+      "matchesAccepted": true
+    },
+    {
+      "phase": "U0/U1+U2",
+      "tests": 722,
+      "bundle": "index-BG1-lA3W.js",
+      "sha256": "6489fcc54324cb04b1d5151f8aadbbd7d91c980a65b6eb8224eb90c22db834ef",
+      "matchesAccepted": true
+    }
+  ],
+  "currentSmoke": {
+    "origins": [
+      "http://127.0.0.1:4225/",
+      "http://127.0.0.1:4226/"
+    ],
+    "viewport": [
+      960,
+      540
+    ],
+    "dpr": 1.5,
+    "passed": [
+      "标题进入军械库",
+      "未选择不可部署",
+      "选定武器进入永久商店",
+      "学分不足不可购买",
+      "临时150学分购买仅扣一次",
+      "返回保留武器选择",
+      "开始战斗显示120/120起始生命",
+      "ESC暂停/恢复与SVG文字显隐",
+      "M静音",
+      "构筑、升级与结算覆盖页",
+      "真实点击升级卡片",
+      "结算按钮restart并移除旧SVG、保留一个新SVG",
+      "U1所有新素材响应404时军械库/商店/开始战斗仍可用",
+      "临时移除SVG后29个Phaser文字渲染方法恢复"
+    ],
+    "constructed": [
+      "仅内存设置150测试学分",
+      "构筑、升级、结算通过现有处理函数触发",
+      "故障源仅在独立本地测试服务器阻断U1素材",
+      "仅隔离页注入检查入口和移除临时SVG"
+    ],
+    "storage": "两测试 origin 初始无存档；购买和结算仅写测试 origin，完成后恢复空白并 reload；用户原 origin 未访问或更改",
+    "errors": [],
+    "warnings": [
+      "缺少 player-response-operative-sheet，沿用此前角色 fallback"
+    ],
+    "limits": [
+      "不是完整六分钟自然通关",
+      "U1/U2视觉方向已由用户验收；本轮只做回归smoke",
+      "截图没有合成/修改，U2显示需按1.5x密度对应960×540 CSS视口"
+    ]
+  },
+  "screenshots": [
+    {
+      "file": "u1-armory.png",
+      "sourceRun": "u1-polish",
+      "sourceFile": "u1-b-armory-tesla-selected.png",
+      "description": "U1 已验收军械库，特斯拉选择状态",
+      "sha256": "ff7ce9a9363648f6328cb1a2f63076af88ded866d04de6e651da4fdf0a4800a3",
+      "pixels": [
+        960,
+        540
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    },
+    {
+      "file": "u1-store-three-states.png",
+      "sourceRun": "u1-polish",
+      "sourceFile": "u1-f-store-three-states.png",
+      "description": "U1 已验收商店，隔离临时学分构造三态",
+      "sha256": "cc8f8adb4c0d0dab239ef0679103f104405b9c2557ed275bc2a75c8e101debf2",
+      "pixels": [
+        960,
+        540
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    },
+    {
+      "file": "u2-normal.png",
+      "sourceRun": "u2-hidpi-fix-2026-09-09",
+      "sourceFile": "04-after-sameframe.png",
+      "description": "U2 清晰版常态，真实引擎配冻结测试数据",
+      "sha256": "f914c8faa83b76433a5ee24f02b50f0cf81ddd62e9d9a998f0d2642a01a724df",
+      "pixels": [
+        1440,
+        810
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    },
+    {
+      "file": "u2-low-health.png",
+      "sourceRun": "u2-hidpi-fix-2026-09-09",
+      "sourceFile": "05-low-health-dash.png",
+      "description": "U2 低生命与冷却，隔离构造状态",
+      "sha256": "ae4865406fe305b35cdb5de2d6910bfd20ac31c7e71cd6e7b62fc84e3577d27c",
+      "pixels": [
+        1440,
+        810
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    },
+    {
+      "file": "u2-boss.png",
+      "sourceRun": "u2-hidpi-fix-2026-09-09",
+      "sourceFile": "07-boss-low.png",
+      "description": "U2 Boss 与低生命，真实 Boss 配临时生命数据",
+      "sha256": "e51d7c19b9a73ba79a083c6ec59ef000701ed3ed3ae0e5de395b3e4e22ca0daa",
+      "pixels": [
+        1440,
+        810
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    },
+    {
+      "file": "u2-dense-tesla.png",
+      "sourceRun": "u2-hidpi-fix-2026-09-09",
+      "sourceFile": "11-dense-tesla.png",
+      "description": "U2 真实运行的 Tesla，构造 42 敌人与 24 敌弹，截图时 19 发",
+      "sha256": "252d2c70c0ee1d59407b83e3b989c1b4cd519ba764c5eb6df4b582cb675d5704",
+      "pixels": [
+        1440,
+        810
+      ],
+      "logicalViewport": [
+        960,
+        540
+      ]
+    }
+  ]
+}
