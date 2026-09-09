@@ -58,6 +58,14 @@ const approvedImageAssets = [
   { key: "incident-stamp-frame", path: "assets/art/ui/incident-stamp-frame.png", size: [96, 32] },
   { key: "recontainment-stamp-frame", path: "assets/art/ui/recontainment-stamp-frame.png", size: [96, 32] },
   { key: "contact-shadow", path: "assets/art/effects/contact-shadow.png", size: [32, 16] }
+  ,{ key: "u1-armory-chassis", path: "assets/art/u1/armory-chassis-rework.png", size: [1672, 941] }
+  ,{ key: "u1-quartermaster-chassis", path: "assets/art/u1/quartermaster-chassis-rework.png", size: [1672, 941] }
+  ,{ key: "u1-rifle-hero", path: "assets/art/u1/weapon-rifle-hero.png", size: [256, 192] }
+  ,{ key: "u1-tesla-hero", path: "assets/art/u1/weapon-tesla-hero.png", size: [256, 192] }
+  ,{ key: "u1-perk-armor", path: "assets/art/u1/perk-armor.png", size: [128, 128] }
+  ,{ key: "u1-perk-mobility", path: "assets/art/u1/perk-mobility.png", size: [128, 128] }
+  ,{ key: "u1-perk-armory-auth", path: "assets/art/u1/perk-armory-auth.png", size: [128, 128] }
+  ,{ key: "u1-perk-recovery-beacon", path: "assets/art/u1/perk-recovery-beacon.png", size: [128, 128] }
 ];
 
 const upgradeIconAssets = approvedImageAssets.filter(({ key }) => key.startsWith("upgrade-"));
@@ -337,10 +345,11 @@ function paethPredictor(left, above, upperLeft) {
   return upperLeft;
 }
 
-function decodeRgbaPng(buffer) {
+function decodeRgbaPng(buffer, allowRgb = false) {
   let offset = 8;
   let width = 0;
   let height = 0;
+  let bytesPerPixel = 4;
   const imageData = [];
   while (offset < buffer.length) {
     const length = buffer.readUInt32BE(offset);
@@ -350,14 +359,14 @@ function decodeRgbaPng(buffer) {
       width = data.readUInt32BE(0);
       height = data.readUInt32BE(4);
       assert.equal(data[8], 8, "production PNGs must use 8-bit channels");
-      assert.equal(data[9], 6, "production PNGs must use RGBA color type 6");
+      if (allowRgb && data[9] === 2) bytesPerPixel = 3;
+      else assert.equal(data[9], 6, "production foreground PNGs must use RGBA color type 6");
     } else if (type === "IDAT") {
       imageData.push(data);
     }
     offset += length + 12;
   }
 
-  const bytesPerPixel = 4;
   const stride = width * bytesPerPixel;
   const encoded = inflateSync(Buffer.concat(imageData));
   const pixels = Buffer.alloc(stride * height);
@@ -385,6 +394,11 @@ function decodeRgbaPng(buffer) {
       pixels[y * stride + x] = (raw + predictor) & 0xff;
     }
     sourceOffset += stride;
+  }
+  if (bytesPerPixel === 3) {
+    const rgba = Buffer.alloc(width * height * 4, 255);
+    for (let i = 0; i < width * height; i++) pixels.copy(rgba, i * 4, i * 3, i * 3 + 3);
+    return { width, height, pixels: rgba };
   }
   return { width, height, pixels };
 }
@@ -1356,6 +1370,7 @@ test("production PNGs exist at their exact approved dimensions", async () => {
 
 test("production PNGs use a limited hard-edged RGBA palette", async () => {
   for (const [key, path] of expectedImageAssetPaths) {
+    if (key.startsWith("u1-")) continue;
     const absolute = fileURLToPath(new URL(`../public/${path}`, import.meta.url));
     const { width, height, pixels } = decodeRgbaPng(await readFile(absolute));
     const colors = new Set();
@@ -1380,6 +1395,73 @@ test("production PNGs use a limited hard-edged RGBA palette", async () => {
     if (["facility-observation-window", "facility-pipe-bank"].includes(key)) {
       assert.deepEqual(alphaValues, new Set([0, 255]), `${key} must contain binary transparency`);
     }
+  }
+});
+
+// Break caught: U1 production art is blank, clips outside its canvas, or regresses chassis opacity while remaining exempt from legacy pixel-art palette gates.
+test("U1 production rasters retain their admitted dimensions, opaque chassis, and bounded foreground transparency", async () => {
+  const chassisKeys = new Set(["u1-armory-chassis", "u1-quartermaster-chassis"]);
+  for (const [key, path] of expectedImageAssetPaths) {
+    if (!key.startsWith("u1-")) continue;
+    const { width, height, pixels } = decodeRgbaPng(await readFile(fileURLToPath(new URL(`../public/${path}`, import.meta.url))), chassisKeys.has(key));
+    assert.deepEqual([width, height], expected.get(key), key);
+    let visible = 0;
+    let transparent = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const alpha = pixels[offset + 3];
+      if (alpha === 0) transparent += 1;
+      else {
+        visible += 1;
+        const pixel = offset / 4;
+        const x = pixel % width;
+        const y = Math.floor(pixel / width);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    if (chassisKeys.has(key)) assert.equal(transparent, 0, `${key} must be fully opaque`);
+    else {
+      assert.ok(visible >= Math.max(64, Math.floor(width * height * 0.001)), `${key} must have meaningful foreground pixels`);
+      assert.ok(transparent > 0, `${key} must keep transparent margin`);
+      assert.ok(minX > 0 && minY > 0 && maxX < width - 1 && maxY < height - 1, `${key} foreground must stay inside the canvas`);
+    }
+  }
+  const atlas = JSON.parse(await readFile(fileURLToPath(new URL("../public/assets/art/u1/state-parts.json", import.meta.url)), "utf8"));
+  const atlasPng = decodeRgbaPng(await readFile(fileURLToPath(new URL("../public/assets/art/u1/state-parts.png", import.meta.url))));
+  assert.deepEqual([atlasPng.width, atlasPng.height], [512, 256]);
+  assert.deepEqual(Object.keys(atlas.frames).sort(), ["action-forward", "action-purchase", "lamp-contained", "lamp-warning", "stamp-authorized", "status-check", "status-lock", "status-unlock"]);
+  for (const [name, { frame }] of Object.entries(atlas.frames)) {
+    const { x, y, w, h } = frame;
+    assert.deepEqual([w, h], [128, 128], `${name} frame size`);
+    let visible = 0;
+    let transparent = 0;
+    let minX = w;
+    let minY = h;
+    let maxX = -1;
+    let maxY = -1;
+    for (let localY = 0; localY < h; localY += 1) {
+      for (let localX = 0; localX < w; localX += 1) {
+        const alpha = atlasPng.pixels[((y + localY) * atlasPng.width + x + localX) * 4 + 3];
+        if (alpha === 0) {
+          transparent += 1;
+          continue;
+        }
+        visible += 1;
+        minX = Math.min(minX, localX);
+        minY = Math.min(minY, localY);
+        maxX = Math.max(maxX, localX);
+        maxY = Math.max(maxY, localY);
+      }
+    }
+    assert.ok(visible >= 64, `${name} must have meaningful foreground pixels`);
+    assert.ok(transparent > 0, `${name} must retain transparent background`);
+    assert.ok(minX > 0 && minY > 0 && maxX < w - 1 && maxY < h - 1, `${name} foreground must stay inside its frame`);
   }
 });
 

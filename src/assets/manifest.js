@@ -108,6 +108,15 @@ export const TEXTURES = {
   incidentStampFrame: "incident-stamp-frame",
   recontainmentStampFrame: "recontainment-stamp-frame",
   contactShadow: "contact-shadow",
+  u1ArmoryChassis: "u1-armory-chassis",
+  u1QuartermasterChassis: "u1-quartermaster-chassis",
+  u1RifleHero: "u1-rifle-hero",
+  u1TeslaHero: "u1-tesla-hero",
+  u1PerkArmor: "u1-perk-armor",
+  u1PerkMobility: "u1-perk-mobility",
+  u1PerkArmoryAuth: "u1-perk-armory-auth",
+  u1PerkRecoveryBeacon: "u1-perk-recovery-beacon",
+  u1StateParts: "u1-state-parts",
   bullet: "bullet-circle",
   enemyProjectile: "enemy-projectile",
   xpGem: "xp-gem",
@@ -162,7 +171,15 @@ export const IMAGE_ASSETS = [
   { key: TEXTURES.terminalSurfaceGrid, path: "assets/art/ui/terminal-surface-grid.png" },
   { key: TEXTURES.incidentStampFrame, path: "assets/art/ui/incident-stamp-frame.png" },
   { key: TEXTURES.recontainmentStampFrame, path: "assets/art/ui/recontainment-stamp-frame.png" },
-  { key: TEXTURES.contactShadow, path: "assets/art/effects/contact-shadow.png" }
+  { key: TEXTURES.contactShadow, path: "assets/art/effects/contact-shadow.png" },
+  { key: TEXTURES.u1ArmoryChassis, path: "assets/art/u1/armory-chassis-rework.png" },
+  { key: TEXTURES.u1QuartermasterChassis, path: "assets/art/u1/quartermaster-chassis-rework.png" },
+  { key: TEXTURES.u1RifleHero, path: "assets/art/u1/weapon-rifle-hero.png" },
+  { key: TEXTURES.u1TeslaHero, path: "assets/art/u1/weapon-tesla-hero.png" },
+  { key: TEXTURES.u1PerkArmor, path: "assets/art/u1/perk-armor.png" },
+  { key: TEXTURES.u1PerkMobility, path: "assets/art/u1/perk-mobility.png" },
+  { key: TEXTURES.u1PerkArmoryAuth, path: "assets/art/u1/perk-armory-auth.png" },
+  { key: TEXTURES.u1PerkRecoveryBeacon, path: "assets/art/u1/perk-recovery-beacon.png" }
 ];
 
 // Opening character sheets keep the original static textures above as fallback.
@@ -372,7 +389,13 @@ export const DEVELOPMENT_SPRITESHEET_ASSETS = [
   }
 ];
 
-export const ATLAS_ASSETS = [];
+export const ATLAS_ASSETS = [
+  {
+    key: TEXTURES.u1StateParts,
+    texturePath: "assets/art/u1/state-parts.png",
+    dataPath: "assets/art/u1/state-parts.json"
+  }
+];
 
 // Real audio assets to preload. Empty for now — audio is synthesized at runtime
 // by AudioManager via the Web Audio API.

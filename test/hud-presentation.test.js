@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import * as hudPresentation from "../src/ui/hudPresentation.js";
+import { SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const { getHudPresentation } = hudPresentation;
 
@@ -76,7 +77,7 @@ test("low-health pistol presentation separates frozen mission, vitals, weapon, f
   assert.deepEqual(view.facility, {
     expanded: false,
     title: "设施稳定",
-    detail: "SITE-CN // 收容系统在线",
+    detail: SITE_CHANNELS.containmentSystem,
     tone: "contained"
   });
   assert.deepEqual(view.system, {

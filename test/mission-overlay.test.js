@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { TEXTURES } from "../src/assets/manifest.js";
 import { menusMixin } from "../src/scene/menus.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 function createEmitter(target = {}, hooks = {}) {
   const handlers = new Map();
@@ -295,7 +296,8 @@ test("pause terminal preserves world-space show, hide, resume, and return-title 
   assertTextIncludes(
     scene.pauseOverlayController.objects,
     "站点编号",
-    "SITE-19",
+    SITE_CODE,
+    SITE_CHANNELS.missionControl,
     "当前任务",
     "运行时间",
     "73\\.4",
@@ -358,14 +360,16 @@ for (const result of [
     show: "showGameOverOverlay",
     tone: "danger",
     stamp: TEXTURES.incidentStampFrame,
-    status: "行动终止"
+    status: "行动终止",
+    eyebrow: SITE_CHANNELS.incidentReport
   },
   {
     name: "victory",
     show: "showVictoryOverlay",
     tone: "success",
     stamp: TEXTURES.recontainmentStampFrame,
-    status: "重新收容确认"
+    status: "重新收容确认",
+    eyebrow: SITE_CHANNELS.recontainmentReport
   }
 ]) {
   test(`${result.name} terminal uses shared stats and restarts once on first pointerdown`, () => {
@@ -392,6 +396,7 @@ for (const result of [
     assertTextIncludes(
       scene.resultOverlayController.objects,
       result.status,
+      result.eyebrow,
       "生存时间",
       "87\\.6 秒",
       "击杀数",

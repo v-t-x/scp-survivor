@@ -9,21 +9,354 @@ import {
 } from "../config/constants.js";
 import { BALANCE } from "../config/balance.js";
 import {
-  isPlayerWeaponAllowed,
-  PLAYER_WEAPON_ALLOWLIST
+  isPlayerWeaponAllowed
 } from "../config/playerWeaponAvailability.js";
 import { UPGRADE_DEFINITIONS } from "../config/upgrades.js";
 import { META_PERKS, loadMetaProgress, saveMetaProgress } from "../config/meta.js";
 import { TEXTURES } from "../assets/manifest.js";
 import { createTitleBackdrop } from "../art/titleBackdrop.js";
 import { createTitleScreenView } from "../art/titleScreenView.js";
-import { createArmorySlot } from "../art/weaponSelectionView.js";
+import { createPerkStoreWithFallback } from "../art/perkStoreView.js";
+import {
+  ARMORY_WORKBENCH_LAYOUT,
+  LEGACY_ARMORY_WORKBENCH_LAYOUT,
+  createArmoryDeploySymbol,
+  createArmoryDetailView,
+  createArmorySlot
+} from "../art/weaponSelectionView.js";
+import {
+  getArmoryPresentation,
+  getPerkStorePresentation
+} from "../ui/stage1MenuPresentation.js";
 import { THEME } from "../ui/theme.js";
 import { createTerminalButton } from "../ui/tacticalUi.js";
 import { createTerminalOverlay } from "../ui/terminalOverlay.js";
+import { SITE_CODE, SITE_CHANNELS } from "../ui/siteIdentity.js";
+import { U1_TYPE, createU1InsetButton, drawU1FoundationSeal } from "../ui/u1MaterialUi.js";
 
 const PAUSE_OVERLAY_DEPTH = 70;
 const RESULT_OVERLAY_DEPTH = 50;
+
+function releaseArmoryObjects(objects) {
+  for (const object of [...objects].reverse()) {
+    try {
+      object?.disableInteractive?.();
+    } catch {
+      // Continue releasing every object in this small construction transaction.
+    }
+    try {
+      object?.removeInteractive?.();
+    } catch {
+      // The input plugin may already be unavailable during Scene teardown.
+    }
+    try {
+      object?.removeAllListeners?.();
+    } catch {
+      // Listener cleanup is best-effort for partially initialized display objects.
+    }
+    try {
+      object?.destroy?.();
+    } catch {
+      // Continue through the remaining objects when a renderer resource is gone.
+    }
+  }
+}
+
+function createArmoryAuthorizationController(kind, controller) {
+  const objects = Object.freeze([...new Set(controller.objects ?? [])]);
+  let destroyed = false;
+  return {
+    kind,
+    insetKind: controller.kind,
+    objects,
+    hitArea: controller.hitArea,
+    label: controller.label,
+    setState: controller.setState?.bind(controller),
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      try {
+        controller.destroy?.();
+      } catch {
+        releaseArmoryObjects(objects);
+      }
+    }
+  };
+}
+
+function drawArmoryAmberFrame(graphics, { x, y, width, height, active }) {
+  const cut = 7;
+  const right = x + width;
+  const bottom = y + height;
+  graphics.clear();
+  graphics.fillStyle(THEME.terminal.panelRaised, active ? 0.94 : 0.7);
+  graphics.lineStyle(2, active ? THEME.semantic.warning : THEME.semantic.disabled, 1);
+  graphics.beginPath();
+  graphics.moveTo(x + cut, y);
+  graphics.lineTo(right - cut, y);
+  graphics.lineTo(right, y + cut);
+  graphics.lineTo(right, bottom - cut);
+  graphics.lineTo(right - cut, bottom);
+  graphics.lineTo(x + cut, bottom);
+  graphics.lineTo(x, bottom - cut);
+  graphics.lineTo(x, y + cut);
+  graphics.closePath();
+  graphics.fillPath();
+  graphics.strokePath();
+  graphics.fillStyle(active ? THEME.semantic.warning : THEME.semantic.disabled, 1);
+  graphics.fillCircle?.(right - 14, y + height / 2, 4);
+}
+
+export function createArmoryAmberAction(scene, options = {}) {
+  if (options.formalChassis) return createU1InsetButton(scene, { ...options, kind: 'authorization' });
+  const {
+    x = 0,
+    y = 0,
+    width = 140,
+    height = 40,
+    text = "永久授权",
+    state = "armed",
+    depth = 0,
+    scrollFactor = 0,
+    onActivate = () => {}
+  } = options;
+  const objects = [];
+  let destroyed = false;
+  let currentState = state;
+  const own = (object) => {
+    objects.push(object);
+    object.setScrollFactor?.(scrollFactor);
+    return object;
+  };
+
+  try {
+    const frame = own(scene.add.graphics());
+    frame.setDepth(depth);
+    const label = own(scene.add.text(x + 14, y + height / 2, text, {
+      fontFamily: THEME.font.label,
+      fontSize: "14px",
+      fontStyle: "bold",
+      color: THEME.semanticText.warning
+    }));
+    label.setOrigin(0, 0.5).setDepth(depth + 1);
+    const hitArea = own(scene.add.rectangle(
+      x + width / 2,
+      y + height / 2,
+      width,
+      height,
+      0xffffff,
+      0.001
+    ));
+    hitArea.setDepth(depth + 2);
+
+    function setState(nextState) {
+      if (destroyed) return;
+      currentState = nextState;
+      const active = nextState !== "disabled";
+      drawArmoryAmberFrame(frame, { x, y, width, height, active });
+      label.setStyle?.({
+        color: active ? THEME.semanticText.warning : THEME.semanticText.disabled
+      });
+      if (active) {
+        hitArea.setInteractive({ useHandCursor: true });
+      } else {
+        hitArea.disableInteractive();
+      }
+    }
+
+    hitArea.on("pointerover", () => {
+      if (!destroyed && currentState !== "disabled") {
+        frame.setAlpha?.(0.82);
+      }
+    });
+    hitArea.on("pointerout", () => {
+      if (!destroyed && currentState !== "disabled") {
+        frame.setAlpha?.(1);
+      }
+    });
+    hitArea.on("pointerup", () => {
+      if (!destroyed && currentState !== "disabled") onActivate();
+    });
+    setState(state);
+
+    return {
+      objects: Object.freeze([...objects]),
+      frame,
+      hitArea,
+      label,
+      setState,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        releaseArmoryObjects(objects);
+      }
+    };
+  } catch (error) {
+    destroyed = true;
+    releaseArmoryObjects(objects);
+    throw error;
+  }
+}
+
+export function createArmoryAuthorizationEntry(scene, options = {}, dependencies = {}) {
+  const { createAmberAction = createArmoryAmberAction } = dependencies;
+  let controller = null;
+  try {
+    controller = createAmberAction(scene, {
+      ...options,
+      height: 40,
+      text: options.text ?? "永久授权",
+      state: "armed"
+    });
+    return createArmoryAuthorizationController("production", controller);
+  } catch (error) {
+    try {
+      controller?.destroy?.();
+    } catch {
+      releaseArmoryObjects(controller?.objects ?? []);
+    }
+    throw error;
+  }
+}
+
+export function createLegacyArmoryAuthorizationEntry(scene, options = {}, dependencies = {}) {
+  const {
+    x = 0,
+    y = 0,
+    width = 140,
+    height = 40,
+    depth = 0,
+    scrollFactor = 0,
+    onActivate = () => {}
+  } = options;
+  const {
+    addRectangle = scene.add.rectangle.bind(scene.add),
+    addText = scene.add.text.bind(scene.add)
+  } = dependencies;
+  const objects = [];
+  let destroyed = false;
+
+  try {
+    const hitArea = addRectangle(
+      x + width / 2,
+      y + height / 2,
+      width,
+      height,
+      THEME.surface.raised,
+      1
+    );
+    objects.push(hitArea);
+    hitArea.setStrokeStyle?.(2, THEME.signal.anomaly);
+    hitArea.setDepth?.(depth);
+    hitArea.setScrollFactor?.(scrollFactor);
+    hitArea.setInteractive?.({ useHandCursor: true });
+    hitArea.on?.("pointerover", () => hitArea.setFillStyle?.(THEME.border.default, 1));
+    hitArea.on?.("pointerout", () => hitArea.setFillStyle?.(THEME.surface.raised, 1));
+    hitArea.on?.("pointerdown", onActivate);
+
+    const label = addText(x + width / 2, y + height / 2, options.text ?? "永久授权", {
+      fontFamily: THEME.font.label,
+      fontSize: "17px",
+      fontStyle: "bold",
+      color: THEME.text.secondary
+    });
+    objects.push(label);
+    label.setOrigin?.(0.5);
+    label.setDepth?.(depth + 1);
+    label.setScrollFactor?.(scrollFactor);
+
+    return {
+      kind: "legacy",
+      objects: Object.freeze([...objects]),
+      hitArea,
+      label,
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        releaseArmoryObjects(objects);
+      }
+    };
+  } catch (error) {
+    destroyed = true;
+    releaseArmoryObjects(objects);
+    throw error;
+  }
+}
+
+export function createArmoryAuthorizationEntryWithFallback(scene, options, factories = {}) {
+  const createProduction = factories.createProduction ?? createArmoryAuthorizationEntry;
+  const createLegacy = factories.createLegacy ?? createLegacyArmoryAuthorizationEntry;
+  try {
+    return createProduction(scene, options);
+  } catch {
+    try {
+      return createLegacy(scene, options);
+    } catch {
+      return null;
+    }
+  }
+}
+
+export function createArmoryDetailWithFallback(scene, options, factories = {}) {
+  const createProduction = factories.createProduction ?? createArmoryDetailView;
+  try {
+    return createProduction(scene, options);
+  } catch {
+    return null;
+  }
+}
+
+export function createArmoryDeploySymbolWithFallback(scene, options, factories = {}) {
+  const createProduction = factories.createProduction ?? createArmoryDeploySymbol;
+  try {
+    return createProduction(scene, options);
+  } catch {
+    return null;
+  }
+}
+
+export function createDeployCallback(scene) {
+  return () => {
+    if (isPlayerWeaponAllowed(scene.pendingSelectedWeaponId)) {
+      scene.startMissionWithWeapon(scene.pendingSelectedWeaponId);
+    }
+  };
+}
+
+export function openPerkStoreController(
+  scene,
+  createStore = createPerkStoreWithFallback
+) {
+  if (scene.perkStoreController) return scene.perkStoreController;
+  const controller = createStore(scene, {
+    presentation: getPerkStorePresentation(scene.meta),
+    onPurchase: (perkKey) => scene.purchasePerk(perkKey),
+    onClose: () => scene.closePerkStore()
+  });
+  scene.perkStoreController = controller ?? null;
+  return scene.perkStoreController;
+}
+
+export function closePerkStoreController(scene) {
+  const controller = scene.perkStoreController;
+  if (!controller) return false;
+  scene.perkStoreController = null;
+  try {
+    controller.destroy?.();
+  } catch {
+    // Scene ownership is already detached; armory recovery still runs.
+  } finally {
+    scene.weaponSelectHoveredCardId = null;
+    if (scene.startMissionButtonController) {
+      try {
+        scene.refreshWeaponSelectionVisuals();
+      } catch {
+        // Store is already closed; armory refresh failure cannot reattach it.
+      }
+    }
+  }
+  return true;
+}
 
 function releaseMissionDisplayObject(object) {
   if (!object) return;
@@ -186,7 +519,7 @@ function createPauseTerminalController(scene) {
       height: 420,
       depth: PAUSE_OVERLAY_DEPTH,
       scrollFactor: 1,
-      eyebrow: "SITE-19 // MISSION CONTROL",
+      eyebrow: SITE_CHANNELS.missionControl,
       title: "行动暂停",
       subtitle: "任务时序冻结 // 等待操作员指令",
       tone: "standard",
@@ -200,7 +533,7 @@ function createPauseTerminalController(scene) {
       color: THEME.text.secondary
     };
     const lines = [
-      `站点编号 // SITE-19`,
+      `站点编号 // ${SITE_CODE}`,
       `当前任务 // ${getPauseObjective(scene)}`,
       `运行时间 // ${scene.getFinalSurvivalTimeSeconds()} 秒`,
       `设施状态 // ${getPauseFacilityStatus(scene)}`
@@ -606,413 +939,351 @@ export const menusMixin = {
   },
 
 
-  createWeaponSelectionScreen() {
+  createWeaponSelectionScreen(dependencies = {}) {
+    this.destroyWeaponSelectionScreen?.();
     this.setGameplayHudVisible(false);
     this.cameras.main.setBackgroundColor(THEME.surface.facility);
     this.weaponSelectOverlay = null;
     this.weaponSelectUiObjects = [];
-    this.weaponSelectHoveredCardId = null;
-    this.weaponSelectButtonHovered = false;
-
-    const armoryBackdrop = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEXTURES.armoryRackBackdrop);
-    armoryBackdrop.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    armoryBackdrop.setDepth(0);
-    const contrastVeil = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      THEME.surface.facility,
-      0.24
-    );
-    contrastVeil.setDepth(1);
-    const commandRail = this.add.rectangle(
-      GAME_WIDTH / 2,
-      48,
-      GAME_WIDTH,
-      96,
-      THEME.terminal.panelFill,
-      0.9
-    );
-    commandRail.setDepth(10);
-    const lowerRail = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT - 39,
-      GAME_WIDTH,
-      78,
-      THEME.terminal.panelFill,
-      0.94
-    );
-    lowerRail.setDepth(10);
-    this.weaponSelectUiObjects.push(armoryBackdrop, contrastVeil, commandRail, lowerRail);
-
-    const title = this.add.text(GAME_WIDTH / 2, 34, "军械库 / 主武器授权", {
-      fontFamily: THEME.font.display,
-      fontSize: "30px",
-      fontStyle: "bold",
-      color: THEME.text.primary
-    });
-    title.setShadow(0, 2, "#05080f", 5, false, true);
-    title.setOrigin(0.5);
-    title.setDepth(21);
-    this.weaponSelectUiObjects.push(title);
-
-    const subtitle = this.add.text(
-      GAME_WIDTH / 2,
-      70,
-      "选择装备槽位，锁定后确认部署。",
-      {
-        fontFamily: THEME.font.body,
-        fontSize: "14px",
-        color: THEME.text.secondary
-      }
-    );
-    subtitle.setOrigin(0.5);
-    subtitle.setDepth(21);
-    this.weaponSelectUiObjects.push(subtitle);
-
     this.weaponSelectCards = [];
-    const optionMetadata = {
-      pistol: {
-        textureKey: TEXTURES.weaponPistolIcon,
-        role: "可靠的中远距离单体武器",
-        stats: [
-          { label: "伤害", value: `${BALANCE.weapons.pistol.baseDamage}` },
-          { label: "冷却", value: `${BALANCE.weapons.pistol.baseCooldownMs} ms` },
-          { label: "射程", value: `${BALANCE.weapons.pistol.range}` }
-        ]
-      },
-      tesla: {
-        textureKey: TEXTURES.weaponTeslaIcon,
-        role: "持续锁定目标并传导链式电击",
-        stats: [
-          { label: "每跳伤害", value: `${BALANCE.weapons.tesla.baseDamage}` },
-          { label: "伤害间隔", value: `${BALANCE.weapons.tesla.baseCooldownMs} ms` },
-          { label: "链击", value: `${BALANCE.weapons.tesla.baseChainTargets}` }
-        ]
-      }
-    };
-    const options = PLAYER_WEAPON_ALLOWLIST.map((id) => ({
-      id,
-      ...optionMetadata[id]
-    }));
+    this.weaponSelectHoveredCardId = null;
+    this.armoryDetailController = null;
+    this.armoryDeploySymbolController = null;
+    this.weaponSelectStoreEntryController = null;
+    this.weaponSelectCreditsLabel = null;
+    this.startMissionButtonController = null;
+    this.startMissionButton = null;
+    this.startMissionButtonLabel = null;
 
-    const slotWidth = 228;
-    const slotHeight = 316;
-    const slotGap = 270;
-    const startX = GAME_WIDTH / 2 - ((options.length - 1) * slotGap) / 2;
-    options.forEach((option, index) => {
-      const slotX = startX + index * slotGap;
-      const slotY = 286;
-      const slot = createArmorySlot(this, {
-        x: slotX,
-        y: slotY,
-        width: slotWidth,
-        height: slotHeight,
-        textureKey: option.textureKey,
-        name: BALANCE.weapons[option.id].name,
-        role: option.role,
-        stats: option.stats,
+    const createSlot = dependencies.createSlot ?? createArmorySlot;
+    const createDeployButton = dependencies.createDeployButton ?? ((scene, options) => (
+      options.formalChassis ? createU1InsetButton(scene, { ...options, kind: 'deploy' }) : createTerminalButton(scene, options)
+    ));
+    let layout = ARMORY_WORKBENCH_LAYOUT;
+    const ownRaw = (object) => {
+      this.weaponSelectUiObjects.push(object);
+      object.setScrollFactor?.(0);
+      return object;
+    };
+
+    try {
+      const presentation = getArmoryPresentation({
+        meta: this.meta,
+        pendingSelectedWeaponId: this.pendingSelectedWeaponId,
+        hoveredWeaponId: this.weaponSelectHoveredCardId
+      });
+
+      let formalChassis = false;
+      let armoryBackdrop = null;
+      if (this.textures?.exists?.(presentation.chassisTextureKey) ?? true) {
+        let candidate = null;
+        try {
+          candidate = this.add.image(
+            GAME_WIDTH / 2,
+            GAME_HEIGHT / 2,
+            presentation.chassisTextureKey
+          );
+          candidate.setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(0);
+          armoryBackdrop = ownRaw(candidate);
+          formalChassis = true;
+        } catch {
+          const candidateIndex = this.weaponSelectUiObjects.indexOf(candidate);
+          if (candidateIndex >= 0) this.weaponSelectUiObjects.splice(candidateIndex, 1);
+          releaseMissionDisplayObject(candidate);
+        }
+      }
+      if (!formalChassis) {
+        layout = LEGACY_ARMORY_WORKBENCH_LAYOUT;
+        armoryBackdrop = ownRaw(
+          this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEXTURES.armoryRackBackdrop)
+        );
+        armoryBackdrop.setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(0);
+        const contrastVeil = ownRaw(this.add.rectangle(
+          GAME_WIDTH / 2,
+          GAME_HEIGHT / 2,
+          GAME_WIDTH,
+          GAME_HEIGHT,
+          THEME.surface.facility,
+          0.3
+        ));
+        contrastVeil.setDepth(1);
+        const headerPanel = ownRaw(this.add.rectangle(
+          layout.header.x + layout.header.width / 2,
+          layout.header.y + layout.header.height / 2,
+          layout.header.width,
+          layout.header.height,
+          0x05080d,
+          1
+        ));
+        headerPanel.setStrokeStyle(3, 0x010205, 1).setDepth(10);
+        const headerInset = ownRaw(this.add.rectangle(
+          layout.header.x + layout.header.width / 2,
+          layout.header.y + layout.header.height / 2,
+          layout.header.width - 8,
+          layout.header.height - 8,
+          THEME.terminal.panelFill,
+          0.98
+        ));
+        headerInset.setStrokeStyle(1, THEME.terminal.frame, 0.9).setDepth(11);
+        const headerHighlight = ownRaw(this.add.rectangle(
+          layout.header.x + layout.header.width / 2,
+          layout.header.y + 7,
+          layout.header.width - 24,
+          2,
+          THEME.terminal.frameFocus,
+          0.34
+        ));
+        headerHighlight.setDepth(12);
+        for (const [boltX, boltY] of [
+          [layout.header.x + 10, layout.header.y + 10],
+          [layout.header.x + layout.header.width - 10, layout.header.y + 10],
+          [layout.header.x + 10, layout.header.y + layout.header.height - 10],
+          [layout.header.x + layout.header.width - 10, layout.header.y + layout.header.height - 10]
+        ]) {
+          const bolt = ownRaw(this.add.circle(boltX, boltY, 2, 0x76808a, 0.78));
+          bolt.setDepth(13);
+        }
+      }
+
+      const siteCode = ownRaw(this.add.text(
+        formalChassis ? 92 : layout.header.x + 16,
+        formalChassis ? 38 : layout.header.y + 16,
+        SITE_CODE,
+        {
+          fontFamily: formalChassis ? U1_TYPE.code : THEME.font.label,
+          fontSize: formalChassis ? "17px" : "12px",
+          color: formalChassis ? U1_TYPE.label : THEME.text.muted
+        }
+      ));
+      siteCode.setOrigin(0, 0.5).setDepth(21);
+      const title = ownRaw(this.add.text(
+        formalChassis ? 230 : layout.header.x + 16,
+        formalChassis ? 37 : layout.header.y + 43,
+        "军械库",
+        {
+          fontFamily: U1_TYPE.steel,
+          fontSize: "28px",
+          fontStyle: "bold",
+          color: U1_TYPE.label
+        }
+      ));
+      title.setOrigin(0, 0.5).setDepth(21);
+      if (formalChassis) {
+        const seal = ownRaw(this.add.graphics());
+        seal.setDepth(20);
+        drawU1FoundationSeal(seal, 43, 38);
+        siteCode.setResolution?.(2); title.setResolution?.(2);
+      }
+      this.weaponSelectCreditsLabel = ownRaw(this.add.text(
+        formalChassis ? 610 : layout.header.x + 596,
+        formalChassis ? 38 : layout.header.y + layout.header.height / 2,
+        presentation.creditsDisplayLabel,
+        {
+          fontFamily: U1_TYPE.code,
+          fontSize: "15px",
+          fontStyle: "normal",
+          color: U1_TYPE.label
+        }
+      ));
+      this.weaponSelectCreditsLabel.setOrigin(0, 0.5).setDepth(31);
+
+      this.weaponSelectStoreEntryController = createArmoryAuthorizationEntryWithFallback(this, {
+        x: formalChassis ? 772 : layout.header.x + layout.header.width - 180,
+        y: formalChassis ? 16 : layout.header.y + 12,
+        width: formalChassis ? 148 : 164,
+        height: 40,
+        text: formalChassis ? presentation.authorizationEntryLabel.replace(/\s*>$/, '') : presentation.authorizationEntryLabel,
+        depth: 31,
+        scrollFactor: 0,
+        formalChassis,
+        onActivate: () => this.openPerkStore()
+      }, dependencies.authorizationFactories ?? {});
+
+      presentation.slots.forEach((slotPresentation, index) => {
+        const slotX = layout.selector.x + layout.selector.width / 2;
+        const slotY = layout.selector.y
+          + index * (layout.selector.height + layout.selector.gap)
+          + layout.selector.height / 2;
+        const slot = createSlot(this, {
+          x: slotX,
+          y: slotY,
+          width: layout.selector.width,
+          height: layout.selector.height,
+          textureKey: formalChassis && (this.textures?.exists?.(slotPresentation.heroTextureKey) ?? false)
+            ? slotPresentation.heroTextureKey : slotPresentation.textureKey,
+          fallbackTextureKey: slotPresentation.textureKey,
+          name: slotPresentation.name,
+          formalChassis,
+          depth: 20,
+          scrollFactor: 0,
+          nameStyle: {
+            fontFamily: THEME.font.display,
+            fontSize: "18px",
+            fontStyle: "bold",
+            color: THEME.text.primary,
+            wordWrap: { width: 132 }
+          },
+          statusStyle: {
+            fontFamily: THEME.font.label,
+            fontSize: "12px",
+            fontStyle: "bold",
+            color: THEME.semanticText.neutral
+          },
+          onActivate: () => {
+            this.pendingSelectedWeaponId = slotPresentation.id;
+            this.refreshWeaponSelectionVisuals();
+          }
+        });
+        this.weaponSelectCards.push({ id: slotPresentation.id, slot });
+        slot.hitArea.on("pointerover", () => {
+          this.weaponSelectHoveredCardId = slotPresentation.id;
+          this.refreshWeaponSelectionVisuals();
+        });
+        slot.hitArea.on("pointerout", () => {
+          this.weaponSelectHoveredCardId = null;
+          this.refreshWeaponSelectionVisuals();
+        });
+      });
+
+      this.armoryDetailController = createArmoryDetailWithFallback(this, {
         depth: 20,
         scrollFactor: 0,
+        formalChassis,
+        emptyStyle: {
+          fontFamily: THEME.font.label,
+          fontSize: "16px",
+          color: THEME.text.muted
+        },
         nameStyle: {
           fontFamily: THEME.font.display,
           fontSize: "20px",
           fontStyle: "bold",
           color: THEME.text.primary,
-          align: "center",
-          wordWrap: { width: 196 }
+          wordWrap: { width: layout.dossier.width - 36 }
         },
-        roleStyle: {
-          fontFamily: THEME.font.body,
+        statusStyle: {
+          fontFamily: THEME.font.label,
           fontSize: "13px",
-          color: THEME.text.secondary,
-          align: "center",
-          wordWrap: { width: 188 }
+          color: THEME.semanticText.contained
         },
         statsStyle: {
           fontFamily: THEME.font.mono,
           fontSize: "13px",
-          color: THEME.text.primary,
-          align: "left",
-          lineSpacing: 5
-        },
-        lockedStyle: {
-          fontFamily: THEME.font.label,
-          fontSize: "12px",
-          fontStyle: "bold",
-          color: THEME.text.contained
-        },
-        onActivate: () => {
-          this.pendingSelectedWeaponId = option.id;
-          this.refreshWeaponSelectionVisuals();
+          color: THEME.text.secondary,
+          lineSpacing: 8
         }
-      });
-      slot.hitArea.on("pointerover", () => {
-        this.weaponSelectHoveredCardId = option.id;
-        this.refreshWeaponSelectionVisuals();
-      });
-      slot.hitArea.on("pointerout", () => {
-        this.weaponSelectHoveredCardId = null;
-        this.refreshWeaponSelectionVisuals();
-      });
-      this.weaponSelectCards.push({ id: option.id, slot });
-      this.weaponSelectUiObjects.push(...slot.objects);
-    });
+      }, dependencies.detailFactories ?? {});
 
-    this.startMissionButtonController = createTerminalButton(this, {
-      x: GAME_WIDTH / 2 - 125,
-      y: GAME_HEIGHT - 66,
-      width: 250,
-      height: 52,
-      text: "请选择武器",
-      state: "idle",
-      depth: 30,
-      scrollFactor: 0,
-      onActivate: () => {
-        if (this.pendingSelectedWeaponId) {
-          this.startMissionWithWeapon(this.pendingSelectedWeaponId);
-        }
-      }
-    });
-    this.startMissionButton = this.startMissionButtonController.hitArea;
-    this.startMissionButtonLabel = this.startMissionButtonController.label;
-    this.startMissionButton.on("pointerover", () => {
-      this.weaponSelectButtonHovered = true;
+      this.startMissionButtonController = createDeployButton(this, {
+        x: layout.deploy.x,
+        y: layout.deploy.y,
+        width: layout.deploy.width,
+        height: layout.deploy.height,
+        text: "部署",
+        state: "disabled",
+        formalChassis,
+        depth: 30,
+        scrollFactor: 0,
+        onActivate: createDeployCallback(this)
+      });
+      this.startMissionButton = this.startMissionButtonController.hitArea;
+      this.startMissionButtonLabel = this.startMissionButtonController.label;
+      if (!formalChassis) this.startMissionButtonController.signal?.setVisible?.(false);
+      this.armoryDeploySymbolController = formalChassis ? null : createArmoryDeploySymbolWithFallback(this, {
+        ...layout.deploy,
+        depth: 32,
+        scrollFactor: 0,
+        symbol: "lock",
+        state: "disabled"
+      }, dependencies.deploySymbolFactories ?? {});
+
       this.refreshWeaponSelectionVisuals();
-    });
-    this.startMissionButton.on("pointerout", () => {
-      this.weaponSelectButtonHovered = false;
-      this.refreshWeaponSelectionVisuals();
-    });
-    this.weaponSelectUiObjects.push(...this.startMissionButtonController.objects);
-
-    // Meta progression: credits display + unlock-store entry.
-    this.weaponSelectCreditsLabel = this.add.text(
-      28,
-      108,
-      `学分：${this.meta.credits}`,
-      {
-        fontFamily: THEME.font.label,
-        fontSize: "18px",
-        fontStyle: "bold",
-        color: THEME.text.secondary
-      }
-    );
-    this.weaponSelectCreditsLabel.setOrigin(0, 0.5);
-    this.weaponSelectCreditsLabel.setDepth(31);
-
-    const unlockButton = this.add.rectangle(
-      GAME_WIDTH - 94,
-      108,
-      140,
-      40,
-      THEME.surface.raised,
-      1
-    );
-    unlockButton.setStrokeStyle(2, THEME.signal.anomaly);
-    unlockButton.setDepth(31);
-    unlockButton.setInteractive({ useHandCursor: true });
-    unlockButton.on("pointerover", () => unlockButton.setFillStyle(THEME.border.default, 1));
-    unlockButton.on("pointerout", () => unlockButton.setFillStyle(THEME.surface.raised, 1));
-    unlockButton.on("pointerdown", () => this.openPerkStore());
-
-    const unlockLabel = this.add.text(
-      GAME_WIDTH - 94,
-      108,
-      "解锁商店",
-      {
-        fontFamily: THEME.font.label,
-        fontSize: "17px",
-        fontStyle: "bold",
-        color: THEME.text.secondary
-      }
-    );
-    unlockLabel.setOrigin(0.5);
-    unlockLabel.setDepth(32);
-
-    this.weaponSelectUiObjects.push(
-      this.weaponSelectCreditsLabel,
-      unlockButton,
-      unlockLabel
-    );
-
-    // The camera follows the player at world center, so all selection UI must
-    // be pinned to the screen to stay visible and centered.
-    for (const object of this.weaponSelectUiObjects) {
-      object.setScrollFactor?.(0);
+    } catch (error) {
+      this.destroyWeaponSelectionScreen?.();
+      throw error;
     }
-    this.refreshWeaponSelectionVisuals();
   },
 
 
   refreshWeaponSelectionVisuals() {
+    const presentation = getArmoryPresentation({
+      meta: this.meta,
+      pendingSelectedWeaponId: this.pendingSelectedWeaponId,
+      hoveredWeaponId: this.weaponSelectHoveredCardId
+    });
     for (const entry of this.weaponSelectCards) {
-      const selected = this.pendingSelectedWeaponId === entry.id;
-      const hovered = this.weaponSelectHoveredCardId === entry.id;
-      entry.slot.setState({ selected, hovered });
+      const slotPresentation = presentation.slots.find(({ id }) => id === entry.id);
+      entry.slot.setState({
+        selected: slotPresentation?.selected ?? false,
+        hovered: slotPresentation?.hovered ?? false
+      });
     }
 
-    const canStart = isPlayerWeaponAllowed(this.pendingSelectedWeaponId);
-    const terminalState = canStart
-      ? this.weaponSelectButtonHovered
-        ? "hover"
-        : "armed"
-      : "disabled";
-    this.startMissionButtonController.setState(terminalState);
-    this.startMissionButtonLabel.setText(canStart ? "开始任务" : "请选择武器");
+    this.armoryDetailController?.refresh(
+      presentation.showcase,
+      presentation.dossier
+    );
+    this.weaponSelectStoreEntryController?.label?.setText(
+      this.weaponSelectStoreEntryController?.insetKind === 'authorization'
+        ? presentation.authorizationEntryLabel.replace(/\s*>$/, '') : presentation.authorizationEntryLabel
+    );
+    this.weaponSelectCreditsLabel.setText(
+      presentation.creditsDisplayLabel
+    );
+    this.startMissionButtonController.setState(presentation.deploy.state);
+    this.startMissionButtonLabel.setText(presentation.deploy.label);
+    this.armoryDeploySymbolController?.refresh(
+      presentation.deploy.symbol,
+      presentation.deploy.state
+    );
   },
 
 
   destroyWeaponSelectionScreen() {
     this.closePerkStore();
-    if (!this.weaponSelectUiObjects) {
-      return;
-    }
-    for (const object of this.weaponSelectUiObjects) {
-      if (object?.active) {
-        object.destroy();
-      }
-    }
+    const slotControllers = this.weaponSelectCards?.map(({ slot }) => slot) ?? [];
+    const detailController = this.armoryDetailController;
+    const deploySymbolController = this.armoryDeploySymbolController;
+    const authorizationEntryController = this.weaponSelectStoreEntryController;
+    const deployButtonController = this.startMissionButtonController;
+    const rawObjects = this.weaponSelectUiObjects ?? [];
     this.weaponSelectUiObjects = [];
     this.weaponSelectCards = [];
     this.weaponSelectOverlay = null;
+    this.armoryDetailController = null;
+    this.armoryDeploySymbolController = null;
+    this.weaponSelectStoreEntryController = null;
+    this.weaponSelectCreditsLabel = null;
+    this.weaponSelectPerkProgressLabel = null;
     this.startMissionButtonController = null;
     this.startMissionButton = null;
     this.startMissionButtonLabel = null;
+    for (const controller of [
+      deployButtonController,
+      authorizationEntryController,
+      deploySymbolController,
+      detailController,
+      ...slotControllers.reverse()
+    ]) {
+      try {
+        controller?.destroy?.();
+      } catch {
+        // Continue tearing down each independently owned controller.
+      }
+    }
+    for (const object of [...rawObjects].reverse()) {
+      releaseMissionDisplayObject(object);
+    }
   },
 
 
   openPerkStore() {
-    if (this.perkStoreObjects) {
-      return;
-    }
-    this.perkStoreObjects = [];
-
-    const panelW = 560;
-    const panelH = 420;
-    const cx = GAME_WIDTH / 2;
-    const cy = GAME_HEIGHT / 2;
-
-    const backdrop = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6);
-    backdrop.setDepth(60);
-    backdrop.setInteractive();
-    const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x141c2f, 1);
-    panel.setStrokeStyle(2, 0x8f78c8);
-    panel.setDepth(61);
-
-    const title = this.add.text(cx, cy - panelH / 2 + 30, "解锁商店（永久起始加成）", {
-      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-      fontSize: "24px",
-      fontStyle: "bold",
-      color: "#e2c6ff"
-    });
-    title.setOrigin(0.5);
-    title.setDepth(62);
-
-    this.perkStoreCreditsLabel = this.add.text(
-      cx,
-      cy - panelH / 2 + 60,
-      `学分：${this.meta.credits}`,
-      {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-        fontSize: "18px",
-        color: "#ffe08a"
-      }
-    );
-    this.perkStoreCreditsLabel.setOrigin(0.5);
-    this.perkStoreCreditsLabel.setDepth(62);
-
-    this.perkStoreObjects.push(backdrop, panel, title, this.perkStoreCreditsLabel);
-
-    const rowStartY = cy - panelH / 2 + 100;
-    const rowHeight = 64;
-    this.perkStoreRows = [];
-    META_PERKS.forEach((perk, index) => {
-      const rowY = rowStartY + index * rowHeight;
-
-      const nameText = this.add.text(cx - panelW / 2 + 26, rowY, perk.name, {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-        fontSize: "18px",
-        fontStyle: "bold",
-        color: "#f2f6ff"
-      });
-      nameText.setOrigin(0, 0.5);
-      nameText.setDepth(62);
-
-      const descText = this.add.text(
-        cx - panelW / 2 + 26,
-        rowY + 20,
-        `${perk.description}  （${perk.cost} 学分）`,
-        {
-          fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-          fontSize: "14px",
-          color: "#9fb2d8"
-        }
-      );
-      descText.setOrigin(0, 0.5);
-      descText.setDepth(62);
-
-      const actionButton = this.add.rectangle(cx + panelW / 2 - 70, rowY + 8, 96, 40, 0x2d3a55, 1);
-      actionButton.setDepth(62);
-      const actionLabel = this.add.text(cx + panelW / 2 - 70, rowY + 8, "", {
-        fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-        fontSize: "16px",
-        fontStyle: "bold",
-        color: "#dfe8ff"
-      });
-      actionLabel.setOrigin(0.5);
-      actionLabel.setDepth(63);
-      actionButton.setInteractive({ useHandCursor: true });
-      actionButton.on("pointerdown", () => this.purchasePerk(perk.key));
-
-      this.perkStoreRows.push({ perk, actionButton, actionLabel });
-      this.perkStoreObjects.push(nameText, descText, actionButton, actionLabel);
-    });
-
-    const closeButton = this.add.rectangle(cx, cy + panelH / 2 - 34, 160, 44, 0x3f4a63, 1);
-    closeButton.setStrokeStyle(2, 0x6a7796);
-    closeButton.setDepth(62);
-    closeButton.setInteractive({ useHandCursor: true });
-    closeButton.on("pointerover", () => closeButton.setFillStyle(0x4d5a78, 1));
-    closeButton.on("pointerout", () => closeButton.setFillStyle(0x3f4a63, 1));
-    closeButton.on("pointerdown", () => this.closePerkStore());
-    const closeLabel = this.add.text(cx, cy + panelH / 2 - 34, "返回", {
-      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, Helvetica, sans-serif',
-      fontSize: "18px",
-      color: "#ffffff"
-    });
-    closeLabel.setOrigin(0.5);
-    closeLabel.setDepth(63);
-    this.perkStoreObjects.push(closeButton, closeLabel);
-
-    for (const object of this.perkStoreObjects) {
-      object.setScrollFactor?.(0);
-    }
-    this.refreshPerkStore();
+    return openPerkStoreController(this);
   },
 
 
   refreshPerkStore() {
-    if (!this.perkStoreRows) {
-      return;
-    }
-    this.perkStoreCreditsLabel.setText(`学分：${this.meta.credits}`);
-    for (const row of this.perkStoreRows) {
-      const owned = !!this.meta.perks[row.perk.key];
-      const affordable = this.meta.credits >= row.perk.cost;
-      if (owned) {
-        row.actionButton.setFillStyle(0x2f4a3a, 1);
-        row.actionLabel.setText("已解锁");
-        row.actionLabel.setColor("#9fe6b8");
-        row.actionButton.disableInteractive();
-      } else {
-        row.actionButton.setFillStyle(affordable ? 0x35527a : 0x2a3242, 1);
-        row.actionLabel.setText("解锁");
-        row.actionLabel.setColor(affordable ? "#dfe8ff" : "#6f7a90");
-        row.actionButton.setInteractive({ useHandCursor: true });
-      }
-    }
+    this.perkStoreController?.refresh?.(getPerkStorePresentation(this.meta));
   },
 
 
@@ -1024,26 +1295,26 @@ export const menusMixin = {
     this.meta.credits -= perk.cost;
     this.meta.perks[perkKey] = true;
     saveMetaProgress(this.meta);
-    this.playSound("levelUp");
-    if (this.weaponSelectCreditsLabel?.active) {
-      this.weaponSelectCreditsLabel.setText(`学分：${this.meta.credits}`);
+    try {
+      this.playSound("levelUp");
+    } catch {
+      // Purchase is already committed; optional audio cannot roll it back.
     }
-    this.refreshPerkStore();
+    try {
+      this.refreshPerkStore();
+    } catch {
+      // A committed purchase remains authoritative if optional presentation fails.
+    }
+    try {
+      this.refreshWeaponSelectionVisuals();
+    } catch {
+      // Armory presentation failure cannot repeat or roll back the purchase.
+    }
   },
 
 
   closePerkStore() {
-    if (!this.perkStoreObjects) {
-      return;
-    }
-    for (const object of this.perkStoreObjects) {
-      if (object?.active) {
-        object.destroy();
-      }
-    }
-    this.perkStoreObjects = null;
-    this.perkStoreRows = null;
-    this.perkStoreCreditsLabel = null;
+    return closePerkStoreController(this);
   },
 
 
@@ -1083,7 +1354,7 @@ export const menusMixin = {
     return this.showMissionResultOverlay({
       type: "failure",
       tone: "danger",
-      eyebrow: "SITE-19 // INCIDENT REPORT",
+      eyebrow: SITE_CHANNELS.incidentReport,
       statusText: "行动终止",
       subtitle: "任务记录已封存 // 等待重新部署",
       stampTextureKey: TEXTURES.incidentStampFrame
@@ -1105,7 +1376,7 @@ export const menusMixin = {
     return this.showMissionResultOverlay({
       type: "victory",
       tone: "success",
-      eyebrow: "SITE-19 // RECONTAINMENT REPORT",
+      eyebrow: SITE_CHANNELS.recontainmentReport,
       statusText: "重新收容确认",
       subtitle: "SCP-049 已重新收容 // 行动记录完成",
       stampTextureKey: TEXTURES.recontainmentStampFrame
@@ -1275,6 +1546,7 @@ export const menusMixin = {
     this.isPaused = true;
     this.pauseGameplaySystems();
     this.showPauseOverlay();
+    this.updateUI?.();
   },
 
 
@@ -1282,6 +1554,7 @@ export const menusMixin = {
     this.isPaused = false;
     this.hidePauseOverlay();
     this.resumeGameplaySystems();
+    this.updateUI?.();
   },
 
 
@@ -1300,7 +1573,8 @@ export const menusMixin = {
       this.destroyLevelUpOverlay,
       this.hidePauseOverlay,
       this.destroyResultOverlay,
-      this.destroyBuildPanel
+      this.destroyBuildPanel,
+      this.closePerkStore
     ]) {
       try {
         teardown?.call(this);

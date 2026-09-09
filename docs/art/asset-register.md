@@ -2,9 +2,42 @@
 
 项目所有者于 2026-08-27 明确接受 Gate 5。本记录不伪称已经捕获此前缺少的逐类型连续动作、完整 SCP-049 状态、普通胜利和第二次完整重启证据；因此下列九项统一标注为“Gate 5 2026-08-27 项目所有者明确接受（证据覆盖限制见前言）”。
 
-本表记录正式素材的真实生产信息。v1.6.0 源码发布中，本表列出的项目生成视觉素材统一按 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 所述 CC BY-SA 3.0 提供；各行的“候选/商业复核”描述生产准入历史与未来商业尽调状态，不改变本次源码发布许可证。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。v1.6.0 基线登记共计 53 项，其中 51 项由运行时 manifest 加载；当前合并树的运行时 manifest 为 70 项，玩家素材的现行边界以下方 2026-08-21 稳定化裁决为准。`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
+本表记录正式素材的真实生产信息。v1.6.0 源码发布中，本表列出的项目生成视觉素材统一按 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 所述 CC BY-SA 3.0 提供；各行的“候选/商业复核”描述生产准入历史与未来商业尽调状态，不改变本次源码发布许可证。既有 20 项静态门禁候选历史记录保留不变；R-17 七套动画素材已通过独立的四帧 production gate 并正式准入；设施环境纵切 Task 1 的六张模块 PNG 已通过素材合同、二值 alpha、色数、接缝和视觉审查；终端覆盖层 Task 2 的 16 张升级图标与 3 张终端表面素材已通过尺寸、二值 alpha、色数和逐张视觉审查，其中 6 张 `tone=weapon` 图标已在独立审查后换为明确琥珀版本；战斗反馈 Task 1 的 contact-shadow 已通过尺寸、二值 alpha、灰黑色板、manifest/fallback 同键及视觉审查。v1.6.0 基线登记共计 53 项，其中 51 项由运行时 manifest 加载；当前合并树的运行时 manifest 为 79 项，玩家素材的现行边界以下方 2026-08-21 稳定化裁决为准。`infected-staff.png` 与 `infected-opening-sheet.png` 是不由运行时 preload 的历史/溯源保留素材。
 
 登记中的 `.superpowers/...` 仅是**不随 Release 分发**的本地审计归档标识；运行时加载、公开署名和许可合规均不得依赖该目录。`local-generation-archive:<generation-id>/<filename>` 同样仅标识本地生成归档位置，并保留 generation id 与文件名，不是公开分发路径。
+
+## 2026-09-05 U1 按原蓝图返工（2026-09-09 收口）
+
+项目所有者批准“按你说的返工”，继续适用此前新增 U1 专属正式资产及 manifest 接入授权。本节覆盖下方 2026-09-04 两张 chassis 的当前运行路径与 hero 使用范围。2026-09-09 项目所有者确认保留此版 U1，并形成收口提交 `92df1c6`；集成记录与便携实机证据见 [U0、U1 与 U2 表现收口](./2026-09-09-u1-u2-closeout.md)。旧哈希和历史审查记录保留，不将旧 PASS 泛化为后续版本的用户验收或发布批准。
+
+| Runtime key | 当前文件（public 相对路径） | 原始格式 / SHA-256 | 来源、处理和使用范围 |
+|---|---|---|---|
+| `u1-armory-chassis` | `assets/art/u1/armory-chassis-rework.png` | 1672×941；8-bit RGB，全不透明；`F424BF440808B14FEAD7432EBF78B22370677DB1B6ED744F63FCCDD3443FAF19` | 内置 ImageGen；唯一输入为本项目已批准的军械库 Tesla 960×540 蓝图；去掉前景武器、文字、状态及徽记，保留窄左栏、大中央展示、纸面档案和实体按钮槽；输出原始字节直接复制，无后处理 |
+| `u1-quartermaster-chassis` | `assets/art/u1/quartermaster-chassis-rework.png` | 1672×941；8-bit RGB，全不透明；`5CB7065943633DC40E6C5F4492BA4BF7B413049F8483C48456B4486DA8249227` | 内置 ImageGen；唯一输入为本项目已批准的军需商店 960×540 蓝图；保留四卡、状态导轨和底部返回分隔；移除图标、文字、购买状态及徽记；输出原始字节直接复制，无后处理 |
+
+- 生成归档：`local-generation-archive:01a05cfa-8b74-7513-bdb1-a26932277c49/exec-05ded346-fcf2-4180-8665-582f96612113.png`（军械库）、`local-generation-archive:01a05cfa-8b74-7513-bdb1-a26932277c49/exec-50d6d885-f6d5-4f08-815d-f9e15475dea6.png`（商店）。仅引用本项目已有蓝图，无第三方图像输入。生成工具未暴露模型名称。
+- Phaser 将整张底盘显示为 960×540；素材原始尺寸不冒充验收截图尺寸。验收图从实际运行的 960×540 canvas 渲染帧取得，不对截图裁切或缩放。
+- 现有 `u1-rifle-hero` / `u1-tesla-hero` 字节不变，使用范围由“仅中央展示”扩为“U1 左栏缩略图 + 中央展示”；共享武器 selector/HUD key 和 fallback factory 不变，缺图继续用原 selector 图。
+- 四张 perk、atlas PNG/JSON 均不改；两张旧 chassis 不再由 manifest 加载，仅保留在原实现 WIP，本次收口不将其加入 Git；下方行继续保留来源记录。名称、数值、状态、按钮文案仍由运行时绘制，底盘没有烘焙 live data。
+- 站点及纸面徽记为 U1 局部代码绘制的三向收容印记；未添加第三方字体文件，字体只使用系统字体栈。沿用 `LICENSE-MAP.md` 的 SCP 衍生内容署名与 CC BY-SA 3.0 分发边界。素材由本项目委托生成，不表示商用法律审查已经完成；未来商业发行仍需复核服务条款、输出权利与项目整体署名。
+
+## 2026-09-04 U1 军械库与军需授权正式素材准入（历史）
+
+本批次向运行时 manifest 加入 8 张 image 与 1 项 atlas；`state-parts.json` 是该 atlas 的数据文件，不单独计为 runtime asset。素材由项目委托的内置 `image_gen` 独立生成，再经本地确定性裁切、缩放、透明背景提取或无损 RGBA 格式归一化。三张仓库外高保真稿只作构图与材质参考，不是 source image、runtime asset 或 production 截图。逐项原尺寸复核确认无文字、伪文字、水印、商标、logo、live data 或预绘按钮文案；两张 chassis 为全画布 RGBA、alpha 恒为 255，hero、perk 与 atlas 为真实透明 RGBA 且有安全边。使用范围只限 U1 军械库/军需页面，不重定向共享 selector、HUD 或 U3 texture key。
+
+本批次沿用本表前言与 [`LICENSE-MAP.md`](../../LICENSE-MAP.md) 的源码发布许可表述；没有第三方图片输入或已知第三方署名义务。未来商业发行仍须复核 OpenAI 输出权利、服务条款与项目整体许可，不把本次 production admission 表述为商业许可最终批准。
+
+| Runtime key | Type / production path | Final dimensions and alpha | Production / review record | Final SHA-256 | Admission and scope |
+|---|---|---|---|---|---|
+| `u1-armory-chassis` | PNG image — `assets/art/u1/armory-chassis.png` | 960×540 RGBA；全画布 opaque，alpha=255 | 内置 `image_gen`；确定性 `ImageOps.fit` 到 960×540；随后仅作 RGB→RGBA 格式归一化，RGB 像素、几何、裁切与采样均不变；已复核无文字/伪文字/水印/商标/live data | `647B4235E05890D8A24D5D02DF4193458AAF46EE27351C89B1FD144C01478147` | U1 armory-only production chassis；独立素材复审 PASS；商业复核待完成 |
+| `u1-quartermaster-chassis` | PNG image — `assets/art/u1/quartermaster-chassis.png` | 960×540 RGBA；全画布 opaque，alpha=255 | 内置 `image_gen`；确定性 `ImageOps.fit` 到 960×540；随后仅作 RGB→RGBA 格式归一化，RGB 像素、几何、裁切与采样均不变；已复核无文字/伪文字/水印/商标/live data | `D598DD5FAFB9892B63F8F896B79AD7F0F0FBD434A1345AFA4A200184365B01CB` | U1 quartermaster-only production chassis；独立素材复审 PASS；商业复核待完成 |
+| `u1-rifle-hero` | PNG image — `assets/art/u1/weapon-rifle-hero.png` | 256×192 RGBA；透明背景与安全边 | 内置 `image_gen` + background extraction；按 alpha bbox 确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `3D54D70EF07CD7E4B8A2208256EF9E70AEFF41784EA87AA4DD5265E272B5E514` | U1 armory central showcase-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-tesla-hero` | PNG image — `assets/art/u1/weapon-tesla-hero.png` | 256×192 RGBA；透明背景与安全边 | 内置 `image_gen` + background extraction；按 alpha bbox 确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `326E622460C5154028727B46E2976D023E78A6123012F6EAF167183E7221CE51` | U1 armory central showcase-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-perk-armor` | PNG image — `assets/art/u1/perk-armor.png` | 128×128 RGBA；透明背景、非空与安全边 | 内置 `image_gen` + background extraction；确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `8754C36F337228B64817B38776ABE8C543C98C8B92F3CC317C6934837308019F` | U1 quartermaster 强化装甲 item-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-perk-mobility` | PNG image — `assets/art/u1/perk-mobility.png` | 128×128 RGBA；透明背景、非空与安全边 | 内置 `image_gen` + background extraction；确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `5CF77440FCD4C950A74842A08C42B2FF336CDFBE6747EB608C91FF00B5CC2A02` | U1 quartermaster 轻量护具 item-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-perk-armory-auth` | PNG image — `assets/art/u1/perk-armory-auth.png` | 128×128 RGBA；透明背景、非空与安全边 | 内置 `image_gen` + background extraction；确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `FD185A15BCC9FEE48E689A8733B320E5B06F46375DE6F45CB6CDFFABFD6AFFA0` | U1 quartermaster 军械授权 item-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-perk-recovery-beacon` | PNG image — `assets/art/u1/perk-recovery-beacon.png` | 128×128 RGBA；透明背景、非空与安全边 | 内置 `image_gen` + background extraction；确定性 Lanczos fit 并居中；已复核无文字/伪文字/水印/商标/live data | `C5AB77C0793835D23ECA68DCC24F25278C1577A66F1C50A5EF6B8FFEC58E3E3B` | U1 quartermaster 回收信标 item-only；独立素材复审 PASS；商业复核待完成 |
+| `u1-state-parts` | Phaser atlas — `assets/art/u1/state-parts.png` + `assets/art/u1/state-parts.json` | 512×256 RGBA；4×2 个 128×128 透明安全单元；JSON image metadata 512×256 | 内置 `image_gen` + background extraction；初版八部件确定性重切并居中；2026-09-04 针对已被视觉审查否决的闭锁 `status-unlock` 做定向 ImageGen 重绘、近白预览网格确定性透明提取及 128×128 Lanczos 归一化，只替换 top-row second frame；其余七帧 RGBA 像素哈希保持不变；标准 Phaser atlas JSON 的冻结 row-major 坐标不变；已复核无文字/伪文字/水印/商标/live data | PNG `B529B067E3A7C9AE2C765DB24ACDDDAD9720B22F22C3184D9F0ACF70B91588DA`；JSON `6EC09B0515714288AFE1721BDFE26B390291BAE912F14702E26C14168DDA6EA0` | U1 quartermaster state/action/stamp/lamp-only atlas；本轮开锁语义 128px/32px 独立复审 PASS；商业复核待完成 |
 
 ## 2026-08-21 Player Overhaul 稳定化裁决（当前优先）
 

@@ -11,6 +11,7 @@ import {
 import { createTacticalHudView } from "../src/ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../src/ui/tacticalUi.js";
 import { UIManager } from "../src/ui/UIManager.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const SCENE_EVENTS = Object.freeze({ SHUTDOWN: "shutdown", DESTROY: "destroy" });
 
@@ -126,10 +127,11 @@ function createDisplayObject(scene, type, initial = {}) {
     },
     clear() { return this; },
     fillStyle() { return this; },
+    fillRect() { return this; },
     lineStyle() { return this; },
     beginPath() { return this; },
     moveTo() { return this; },
-    lineTo() { return this; },
+    lineTo(x, y) { (this.pathPoints ??= []).push([x, y]); return this; },
     closePath() { return this; },
     fillPath() { return this; },
     strokePath() { return this; },
@@ -250,7 +252,7 @@ async function loadHudMixin(tacticalFactory = createTacticalHudView) {
     "HUD_REGIONS", "TEXTURES", "getHudPresentation", "selectTimelineHudContainers",
     "createTacticalHudView", "createStatusLamp", "createTacticalPanel", "THEME",
     "HUD_DEPTH", "FACILITY_HUD_DEPTH", "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH",
-    "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH",
+    "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH", "SITE_CODE", "SITE_CHANNELS",
     `${body}\nreturn hudMixin;`
   )(
     { Scenes: { Events: SCENE_EVENTS } }, 960, 540, BALANCE, [], HUD_REGIONS, TEXTURES,
@@ -267,7 +269,7 @@ async function loadHudMixin(tacticalFactory = createTacticalHudView) {
       border: { default: 17, warning: 18 },
       layout: { cornerCut: 4 }
     },
-    45, 58, 150, 82, 92, 72
+    45, 58, 150, 82, 92, 72, SITE_CODE, SITE_CHANNELS
   );
 }
 
@@ -539,15 +541,15 @@ test("top banner survives the real frame update order and restores facility pres
   assert.equal(scene.eventBannerBg.visible, false);
   assert.equal(scene.eventBannerDetail.visible, false);
   assert.equal(scene.eventBannerContainer.alpha, 1);
-  assert.equal(scene.eventBannerTitle.text, "设施稳定 // SITE-CN // 收容系统在线");
-  assert.equal(scene.eventBannerDetail.text, "SITE-CN // 收容系统在线");
+  assert.equal(scene.eventBannerTitle.text, "设施稳定");
+  assert.equal(scene.eventBannerDetail.text, SITE_CHANNELS.containmentSystem);
 });
 
 test("direct facility updates preserve active banners and restore facility presentation after expiry", async (t) => {
   const facility = {
     expanded: false,
     title: "设施稳定",
-    detail: "SITE-CN // 收容系统在线",
+    detail: SITE_CHANNELS.containmentSystem,
     tone: "contained"
   };
   const cases = [
@@ -583,11 +585,11 @@ test("direct facility updates preserve active banners and restore facility prese
       assert.equal(scene.eventBannerContainer.visible, false);
       assert.equal(scene.eventBannerContainer.alpha, 1);
       if (mode === "tactical") {
-        assert.equal(scene.eventBannerTitle.text, "设施稳定 // SITE-CN // 收容系统在线");
-        assert.equal(scene.eventBannerDetail.text, "SITE-CN // 收容系统在线");
+        assert.equal(scene.eventBannerTitle.text, "设施稳定");
+        assert.equal(scene.eventBannerDetail.text, SITE_CHANNELS.containmentSystem);
       } else {
         assert.equal(scene.facilityTitleText.text, "设施稳定");
-        assert.equal(scene.facilityDetailText.text, "SITE-CN // 收容系统在线");
+        assert.equal(scene.facilityDetailText.text, SITE_CHANNELS.containmentSystem);
       }
     });
   }
@@ -635,4 +637,17 @@ test("partial facility update waits without a cached tactical presentation and p
       alpha: scene[name].alpha
     }, before[name], `${name} remains unchanged`);
   }
+});
+
+test('U2 fallback retains its original reading surfaces and corruption reset anchors', async () => {
+  const scene=createScene();
+  Object.assign(scene,await loadHudMixin(()=>{throw new Error('tactical unavailable');}));
+  scene.createUI();
+  assert.equal(scene.tacticalHudView.mode,'legacy');
+  assert.deepEqual(scene.timelineHudBasePositions.map(([,x,y])=>[x,y]),[[16,16],[16,462],[676,446],[320,12]]);
+  const missionHeight=Math.max(...scene.missionPanel.frame.pathPoints.map(([,y])=>y));
+  assert.equal(missionHeight,92);
+  assert.equal(scene.missionBossBarBackground.y + scene.missionBossBarBackground.height <= missionHeight,true);
+  assert.equal(Math.max(...scene.facilityWarningPanel.frame.pathPoints.map(([x])=>x)),320);
+  assert.equal(Math.max(...scene.facilityWarningPanel.frame.pathPoints.map(([,y])=>y)),48);
 });

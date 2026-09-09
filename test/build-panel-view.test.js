@@ -15,6 +15,7 @@ import { createTacticalHudView } from "../src/ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../src/ui/tacticalUi.js";
 import { createTerminalOverlay } from "../src/ui/terminalOverlay.js";
 import { UPGRADE_PRESENTATION } from "../src/ui/upgradePresentation.js";
+import { SITE_CODE, SITE_CHANNELS } from "../src/ui/siteIdentity.js";
 
 const SCENE_EVENTS = Object.freeze({ SHUTDOWN: "shutdown", DESTROY: "destroy" });
 
@@ -30,14 +31,14 @@ async function loadHudMixin() {
     "HUD_REGIONS", "TEXTURES", "getHudPresentation", "selectTimelineHudContainers",
     "THEME", "createTacticalHudView", "createStatusLamp", "createTacticalPanel",
     "createTerminalOverlay", "UPGRADE_PRESENTATION", "HUD_DEPTH", "FACILITY_HUD_DEPTH",
-    "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH", "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH",
+    "HEALTH_BAR_WIDTH", "XP_BAR_WIDTH", "WEAPON_STATUS_BAR_WIDTH", "DASH_BAR_WIDTH", "SITE_CODE", "SITE_CHANNELS",
     `${body}\nreturn hudMixin;`
   )(
     { Scenes: { Events: SCENE_EVENTS } }, 960, 540, BALANCE, UPGRADE_DEFINITIONS,
     PLAYER_WEAPON_ALLOWLIST, isPlayerUpgradeVisible,
     HUD_REGIONS, TEXTURES, getHudPresentation, selectTimelineHudContainers,
     THEME, createTacticalHudView, createStatusLamp, createTacticalPanel,
-    createTerminalOverlay, UPGRADE_PRESENTATION, 45, 58, 150, 82, 92, 72
+    createTerminalOverlay, UPGRADE_PRESENTATION, 45, 58, 150, 82, 92, 72, SITE_CODE, SITE_CHANNELS
   );
 }
 
@@ -357,6 +358,7 @@ test("build panel uses one screen-fixed terminal controller and TAB changes visi
   ));
 
   const content = visibleText(scene.buildPanelController.objects);
+  assert.ok(content.includes(SITE_CHANNELS.operatorLoadout));
   assert.match(content, /主武器/);
   assert.match(content, /常规强化/);
   assert.match(content, /异常突变/);

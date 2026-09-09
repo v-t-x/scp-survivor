@@ -154,5 +154,39 @@ export const THEME = {
     hudPaddingTop: 12,
     weaponHudLineSpacing: 3,
     panelLineSpacing: 6
+  },
+
+  semantic: {
+    neutral: 0x53677d,
+    info: 0x6f91d8,
+    contained: 0x6fd6b4,
+    warning: 0xd2a34b,
+    danger: 0xb9474f,
+    anomaly: 0xc8a0ff,
+    disabled: 0x48525d
+  },
+
+  // Phaser Text.setColor requires CSS strings; keep this separate from
+  // numeric shape/graphics semantics and equal to the existing text aliases.
+  semanticText: {
+    neutral: "#8fa2c8",
+    info: "#e2e8ff",
+    contained: "#a7f3d0",
+    warning: "#ffdf9a",
+    danger: "#ff8a8a",
+    disabled: "#8fa2c8"
+  },
+
+  stage1: {
+    spacing: Object.freeze([4, 8, 12, 16, 24, 32]),
+    panelPadding: 16,
+    compactPanelPadding: 12,
+    cornerCut: 8,
+    primaryActionHeight: 52,
+    compactActionHeight: 40,
+    minHitTarget: 40,
+    enterMs: 120,
+    interactionMs: 120,
+    warningPulseMs: 800
   }
 };

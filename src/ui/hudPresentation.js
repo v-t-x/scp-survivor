@@ -1,5 +1,6 @@
 import { TEXTURES } from "../assets/manifest.js";
 import { isPlayerWeaponAllowed } from "../config/playerWeaponAvailability.js";
+import { SITE_CHANNELS } from "./siteIdentity.js";
 
 const WEAPON_ICONS = Object.freeze({
   pistol: TEXTURES.weaponPistolIcon,
@@ -163,7 +164,7 @@ function getFacilityPresentation(state) {
   return Object.freeze({
     expanded: false,
     title: "设施稳定",
-    detail: "SITE-CN // 收容系统在线",
+    detail: SITE_CHANNELS.containmentSystem,
     tone: "contained"
   });
 }

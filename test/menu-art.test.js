@@ -59,7 +59,7 @@ test("facility menu backdrop creates non-interactive screen-fixed facility layer
   }
 });
 
-test("weapon selection uses formal weapon textures instead of symbol text", async () => {
+test("weapon selection composes formal armory presentation instead of local weapon metadata", async () => {
   const source = await readFile(menusPath, "utf8");
 
   for (const symbol of ["\u25A0", "\u25B2", "\u2248"]) {
@@ -70,17 +70,21 @@ test("weapon selection uses formal weapon textures instead of symbol text", asyn
     );
   }
 
-  for (const textureName of ["weaponPistolIcon", "weaponTeslaIcon"]) {
-    assert.match(
-      source,
-      new RegExp(`textureKey\\s*:\\s*TEXTURES\\.${textureName}`),
-      `weapon selection must reference TEXTURES.${textureName}`
-    );
-  }
+  assert.match(source, /getArmoryPresentation/);
+  assert.match(source, /ARMORY_WORKBENCH_LAYOUT/);
+  assert.match(source, /createArmoryDetailView/);
+  assert.match(source, /createTerminalButton/);
+  assert.doesNotMatch(source, /const optionMetadata\s*=/);
+  assert.doesNotMatch(source, /id:\s*["']shotgun["']/);
   assert.doesNotMatch(source, /textureKey\s*:\s*TEXTURES\.weaponBreacherIcon/);
 
-  assert.match(source, /createArmorySlot\(this,\s*\{/);
-  assert.match(source, /textureKey:\s*option\.textureKey/);
+  assert.match(source, /const createSlot = dependencies\.createSlot \?\? createArmorySlot/);
+  assert.match(source, /createSlot\(this,\s*\{/);
+  assert.match(source, /\? slotPresentation\.heroTextureKey : slotPresentation\.textureKey/);
+  assert.doesNotMatch(source, /const slotWidth = 228/);
+  assert.doesNotMatch(source, /const slotHeight = 316/);
+  assert.doesNotMatch(source, /选择装备槽位，锁定后确认部署/);
+  assert.doesNotMatch(source, /SITE_CHANNELS\.armoryControl/);
 
   assert.match(
     source,

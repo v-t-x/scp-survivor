@@ -19,13 +19,16 @@ function makeDisplayObject(type, initial = {}) {
     setInteractive(options) { this.interactive = options; return this; },
     disableInteractive() { this.interactive = false; return this; },
     setVisible(value) { this.visible = value; return this; },
+    setTexture(textureKey) { this.textureKey = textureKey; return this; },
     setFillStyle(...value) { this.fill = value; return this; },
     setStrokeStyle(...value) { this.stroke = value; return this; },
     setStyle(value) { this.style = { ...this.style, ...value }; return this; },
     setText(value) { this.text = value; return this; },
+    setColor(value) { this.color = value; return this; },
     on(event, handler) { this.handlers.set(event, handler); return this; },
     clear() { return this; },
     fillStyle() { return this; },
+    fillRect() { return this; },
     lineStyle() { return this; },
     beginPath() { return this; },
     moveTo() { return this; },
@@ -34,7 +37,8 @@ function makeDisplayObject(type, initial = {}) {
     fillPath() { return this; },
     strokePath() { return this; },
     fillCircle() { return this; },
-    strokeCircle() { return this; }
+    strokeCircle() { return this; },
+    lineBetween() { return this; }
   };
 }
 
@@ -90,8 +94,10 @@ test("weapon selection describes Tesla as 6 damage per 300 ms channel tick while
 
   menusMixin.createWeaponSelectionScreen.call(scene);
 
-  const teslaStats = scene.weaponSelectCards.find(({ id }) => id === "tesla").slot.objects[4].text;
-  const rifleStats = scene.weaponSelectCards.find(({ id }) => id === "pistol").slot.objects[4].text;
+  scene.weaponSelectCards.find(({ id }) => id === "tesla").slot.hitArea.handlers.get("pointerdown")();
+  const teslaStats = scene.armoryDetailController.statsText.text;
+  scene.weaponSelectCards.find(({ id }) => id === "pistol").slot.hitArea.handlers.get("pointerdown")();
+  const rifleStats = scene.armoryDetailController.statsText.text;
   assert.match(teslaStats, /每跳伤害\s+6(?:\.0)?/);
   assert.match(teslaStats, /伤害间隔\s+300 ms/);
   assert.doesNotMatch(teslaStats, /冷却/);

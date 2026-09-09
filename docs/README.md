@@ -10,10 +10,11 @@
 - [开发策略](./development-strategy.md)：批准的开发路线、分支关系与授权边界。
 - [UI、美术、音频与资源方向](./art-and-asset-direction.md)：表现目标与混合资源策略。
 - [许可与商业化准备](./licensing-and-commercialization.md)：许可事实、素材门禁与发布风险。
-- [正式素材来源登记](./art/asset-register.md)：53 项正式素材的来源、修改、准入、许可候选状态和署名要求。
+- [正式素材来源登记](./art/asset-register.md)：正式素材的来源、修改、准入、许可状态和署名要求；53/51 是 v1.6.0 历史数量。
 - [许可证总览](../LICENSE)：代码、SCP 衍生内容与项目素材的分层许可入口。
 - [署名清单](../ATTRIBUTION.md)：SCP、SCP-049 与项目素材候选署名的公开入口。
 - [更新日志](../CHANGELOG.md)：已发布版本与 `main` 尚未发布的候选变化。
+- [U0、U1 与 U2 表现收口](./art/2026-09-09-u1-u2-closeout.md)：当前认可方案、被替代历史、提交、验证与便携实机证据；U3 未启动。
 
 ## 版本发布资料
 
@@ -65,7 +66,8 @@ Agent 手册只定义权限和交付要求，产品方向仍以本页列出的�
 - `src/art/`：玩家、R-17、设施、菜单和战斗反馈的展示规则与适配器。
 - `src/audio/AudioManager.js`：Web Audio 程序化音频管理。
 - `src/ui/UIManager.js`：UI 转发接口。
-- `src/ui/tacticalHudView.js`：五区战术 HUD 视图。
+- `src/ui/tacticalHudView.js`：左右分置战术 HUD 视图，保留五个公共状态区域。
+- `src/ui/hudTextOverlay.js`：战斗 HUD 的 HiDPI 文字呈现与 canvas 回退。
 - `src/ui/terminalOverlay.js`：暂停、升级、失败和胜利共用的终端覆盖层。
 - `src/ui/theme.js`：UI Theme token 目录。
 

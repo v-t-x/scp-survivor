@@ -630,10 +630,19 @@ test("real timeline HUD and pause overlay compose inside 960x540 without input c
     assert.ok(firstRegion.x + firstRegion.width <= OPENING_VIEWPORT.width, `${firstName} fits viewport width`);
     assert.ok(firstRegion.y + firstRegion.height <= OPENING_VIEWPORT.height, `${firstName} fits viewport height`);
     for (let second = first + 1; second < regions.length; second += 1) {
+      const [secondName, secondRegion] = regions[second];
+      if ((firstName === "mission" && secondName === "facility") || (firstName === "facility" && secondName === "mission")) {
+        const mission = HUD_REGIONS.mission;
+        const facility = HUD_REGIONS.facility;
+        assert.ok(facility.x >= mission.x && facility.y >= mission.y, "facility begins inside mission");
+        assert.ok(facility.x + facility.width <= mission.x + mission.width, "facility fits mission width");
+        assert.ok(facility.y + facility.height <= mission.y + mission.height, "facility fits mission height");
+        continue;
+      }
       assert.equal(
-        rectanglesOverlap(firstRegion, regions[second][1]),
+        rectanglesOverlap(firstRegion, secondRegion),
         false,
-        `${firstName} must not overlap ${regions[second][0]}`
+        `${firstName} must not overlap ${secondName}`
       );
     }
   }
@@ -654,6 +663,8 @@ test("real timeline HUD and pause overlay compose inside 960x540 without input c
     regions: HUD_REGIONS,
     onTogglePause: () => { pauseClicks += 1; }
   });
+  assert.equal(view.regions.mission.container.parentContainer, null, "mission remains an independent timeline root");
+  assert.equal(view.regions.facility.container.parentContainer, null, "facility shares mission bounds without container nesting");
   scene.tacticalHudView = view;
   const { hudLifecycle } = await loadPresentationLifecycleMixins();
   hudLifecycle.installHudAliases.call(scene, view);

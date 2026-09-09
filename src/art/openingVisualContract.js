@@ -95,11 +95,11 @@ export const OPENING_ASSET_SPECS = Object.freeze({
 });
 
 export const HUD_REGIONS = Object.freeze({
-  mission: Object.freeze({ anchor: "top-left", x: 16, y: 16, width: 292, height: 92 }),
-  vitals: Object.freeze({ anchor: "bottom-left", x: 16, y: 462, width: 268, height: 62 }),
-  weapon: Object.freeze({ anchor: "bottom-right", x: 676, y: 446, width: 268, height: 78 }),
-  facility: Object.freeze({ anchor: "top-center", x: 320, y: 12, width: 320, height: 48 }),
-  system: Object.freeze({ anchor: "top-right", x: 824, y: 12, width: 120, height: 64 })
+  mission: Object.freeze({ anchor: "top-left", x: 12, y: 12, width: 416, height: 48 }),
+  vitals: Object.freeze({ anchor: "bottom-left", x: 12, y: 458, width: 238, height: 70 }),
+  weapon: Object.freeze({ anchor: "bottom-right", x: 716, y: 458, width: 232, height: 70 }),
+  facility: Object.freeze({ anchor: "top-center", x: 317, y: 12, width: 111, height: 48 }),
+  system: Object.freeze({ anchor: "top-right", x: 752, y: 12, width: 196, height: 40 })
 });
 
 export const OPENING_FACILITY_ZONES = Object.freeze({
