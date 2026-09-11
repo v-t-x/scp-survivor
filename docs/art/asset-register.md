@@ -1871,3 +1871,7 @@ Gate 4 locomotion 的四方向 prompt、修正 prompt、每次调用的 raw/orig
 ### P84 SCP-049 Gate 4 action exact prompt ledger
 
 Gate 4 action 的 frenzy-enter、frenzy-loop、hit-overlay 与 recontain prompt、修正 prompt、每次调用的 raw/original SHA-256、selected/rejected disposition 和唯一静态 SCP-049 输入均完整持久化于外部 evidence：`gate-4/logs/scp-049-action-prompt-ledger.md`（SHA-256 `DE7D3B221D59162A762A431DCF7FE985772363B0B072A40649B8F8C6CC13E352`）。唯一引用输入同 [P83](#p83-scp-049-gate-4-locomotion-exact-prompt-ledger)；最终 source/final hashes、处理和 rejected lineage 见 P82。本登记不转录或重建未在仓库持久化的 prompt payload，以 evidence ledger 为唯一权威原文。
+
+## U3 五页局部材质（2026-09-10）
+
+U3 正式入库六张无文字 PNG：工业钢板、灰绿设备外壳、报告纸面及弹药/生命/收容技术图。逐项来源、尺寸、SHA-256、许可、局部 Vite 加载与回退见 [U3 最终素材登记](u3/final-assets.md)。未使用的初稿外壳及历史制作资料仅保留在本机。U3 武器展示复用既有 U1 步枪与 Tesla hero，不改变原文件或游戏武器外观。五张已确认概念蓝图只作设计归档，不是运行时整屏底图。原 U1/U2 生产素材、manifest 和 Preload 接口均保持。

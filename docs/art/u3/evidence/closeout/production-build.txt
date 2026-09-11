@@ -1,0 +1,23 @@
+
+> scp-survivor@1.6.0 build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 70 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 0.77 kB │ gzip:   0.46 kB
+dist/assets/u3-containment-v2-DbfWqwA7.png  1,588.70 kB
+dist/assets/u3-ammunition-v2-Y-OjZwg9.png   1,659.70 kB
+dist/assets/u3-vitals-v2-ZnB6VAjo.png       1,911.92 kB
+dist/assets/u3-chassis-v2-C_6DVm15.png      1,950.67 kB
+dist/assets/u3-paper-v2-B1PJTNNS.png        2,309.50 kB
+dist/assets/u3-steel-Byewm92q.png           2,991.53 kB
+dist/assets/index-o8XHIgYr.js               1,638.10 kB │ gzip: 458.94 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.99s

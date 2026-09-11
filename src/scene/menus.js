@@ -33,6 +33,11 @@ import { createTerminalButton } from "../ui/tacticalUi.js";
 import { createTerminalOverlay } from "../ui/terminalOverlay.js";
 import { SITE_CODE, SITE_CHANNELS } from "../ui/siteIdentity.js";
 import { U1_TYPE, createU1InsetButton, drawU1FoundationSeal } from "../ui/u1MaterialUi.js";
+import {
+  createU3PauseView,
+  createU3ResultModel,
+  createU3ResultView
+} from "../ui/u3MissionViews.js";
 
 const PAUSE_OVERLAY_DEPTH = 70;
 const RESULT_OVERLAY_DEPTH = 50;
@@ -1403,7 +1408,10 @@ export const menusMixin = {
       runCredits: this.lastRunCreditsEarned ?? 0,
       totalCredits: this.meta.credits
     };
+    const resultModel = createU3ResultModel(this, type, { finalTime });
     let controller = null;
+    let activeU3Controller = null;
+    let runtimeFallbackController = null;
     let restarted = false;
     const restart = () => {
       if (restarted) return;
@@ -1414,19 +1422,59 @@ export const menusMixin = {
       this.scene.restart();
     };
 
-    try {
-      controller = createResultTerminalController(this, {
-        tone,
-        eyebrow,
-        statusText,
-        subtitle,
-        stampTextureKey,
-        ...stats,
-        onRestart: restart
-      });
-    } catch {
+    const createLegacyController = () => {
       try {
-        controller = createMinimalResultFallback(this, { tone, onRestart: restart });
+        return createResultTerminalController(this, {
+          tone,
+          eyebrow,
+          statusText,
+          subtitle,
+          stampTextureKey,
+          ...stats,
+          onRestart: restart
+        });
+      } catch {
+        return createMinimalResultFallback(this, { tone, onRestart: restart });
+      }
+    };
+
+    const recoverU3Result = () => {
+      if (activeU3Controller && this.resultOverlayController !== activeU3Controller) return;
+      activeU3Controller?.destroy?.();
+      this.resultOverlayController = null;
+      this.resultOverlay = null;
+      try {
+        runtimeFallbackController = createLegacyController();
+      } catch {
+        runtimeFallbackController = null;
+      }
+      controller = runtimeFallbackController;
+      if (!controller) {
+        restart();
+        return;
+      }
+      controller.resultType = type;
+      this.resultOverlayController = controller;
+      this.resultOverlay = controller.container;
+    };
+
+    try {
+      activeU3Controller = createU3ResultView(this, {
+        type,
+        model: resultModel,
+        onRestart: restart,
+        onFailure: recoverU3Result
+      });
+      controller = activeU3Controller ?? runtimeFallbackController;
+    } catch {
+      activeU3Controller?.destroy?.();
+      activeU3Controller = null;
+      controller = runtimeFallbackController;
+    }
+
+    if (!controller) {
+      try {
+        controller = createLegacyController();
       } catch {
         restart();
         controller = null;
@@ -1487,13 +1535,54 @@ export const menusMixin = {
     }
 
     let controller = null;
+    let activeU3Controller = null;
+    let runtimeFallbackController = null;
+    let legacyAttempted = false;
+    const recoverU3Pause = () => {
+      if (activeU3Controller && this.pauseOverlayController !== activeU3Controller) return;
+      activeU3Controller?.destroy?.();
+      this.pauseOverlayController = null;
+      this.pauseOverlay = null;
+      try {
+        runtimeFallbackController = createPauseTerminalController(this);
+        controller = runtimeFallbackController;
+        this.pauseOverlayController = controller;
+        this.pauseOverlay = controller.container;
+      } catch {
+        runtimeFallbackController = null;
+        const gameplayWasPaused = this.isPaused === true;
+        this.isPaused = false;
+        if (gameplayWasPaused) this.resumeGameplaySystems();
+        this.updateUI?.();
+      }
+    };
     try {
-      controller = createPauseTerminalController(this);
+      activeU3Controller = createU3PauseView(this, {
+        onResume: () => this.resumeFromPause(),
+        onQuit: () => this.quitToTitle(),
+        onFailure: recoverU3Pause
+      });
+      controller = activeU3Controller ?? runtimeFallbackController;
+      if (!controller) {
+        legacyAttempted = true;
+        controller = createPauseTerminalController(this);
+      }
       this.pauseOverlayController = controller;
       this.pauseOverlay = controller.container;
       return controller;
     } catch {
       controller?.destroy();
+      if (!legacyAttempted) {
+        try {
+          legacyAttempted = true;
+          controller = createPauseTerminalController(this);
+          this.pauseOverlayController = controller;
+          this.pauseOverlay = controller.container;
+          return controller;
+        } catch {
+          // Both presentation paths are unavailable; restore live gameplay below.
+        }
+      }
       this.pauseOverlayController = null;
       this.pauseOverlay = null;
       const gameplayWasPaused = this.isPaused === true;
@@ -1534,6 +1623,10 @@ export const menusMixin = {
     if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive) {
       return;
     }
+    if (this.isBuildPanelPaused) {
+      this.hideBuildPanel();
+      return;
+    }
     if (this.isPaused) {
       this.resumeFromPause();
     } else {
@@ -1543,6 +1636,7 @@ export const menusMixin = {
 
 
   pauseGame() {
+    this.hideBuildPanel?.({ resume: false });
     this.isPaused = true;
     this.pauseGameplaySystems();
     this.showPauseOverlay();
@@ -1551,6 +1645,7 @@ export const menusMixin = {
 
 
   resumeFromPause() {
+    this.hideBuildPanel?.({ resume: false });
     this.isPaused = false;
     this.hidePauseOverlay();
     this.resumeGameplaySystems();
@@ -1560,6 +1655,7 @@ export const menusMixin = {
 
   quitToTitle() {
     // Return to the title screen; a fresh create() resets all run state.
+    this.hideBuildPanel?.({ resume: false });
     this.isPaused = false;
     this.hidePauseOverlay();
     this.destroyLevelUpOverlay();
@@ -1610,7 +1706,7 @@ export const menusMixin = {
     this.isResolvingLevelUp = false;
     this.isPaused = false;
     this.hidePauseOverlay();
-    this.hideBuildPanel();
+    this.hideBuildPanel({ resume: false });
     this.pickupRadiusIndicator.clear();
   }
 };

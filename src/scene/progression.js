@@ -20,6 +20,7 @@ import {
 } from "../ui/terminalOverlay.js";
 import { SITE_CHANNELS } from "../ui/siteIdentity.js";
 import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
+import { createU3UpgradeView } from "../ui/u3UpgradeView.js";
 
 const LEVEL_UP_PRESENTATION_RETRY_MS = 1000;
 
@@ -126,35 +127,88 @@ export const progressionMixin = {
 
     this.isLevelUpActive = true;
     this.isResolvingLevelUp = false;
-    this.hideBuildPanel();
+    this.hideBuildPanel({ resume: false });
     this.pauseGameplaySystems();
 
     this.destroyLevelUpOverlay();
 
-    let choices;
+    const choices = this.getLevelUpChoices();
+    if (typeof createU3UpgradeView === "function") {
+      try {
+        const controller = createU3UpgradeView(this, {
+          choices,
+          onSelect: (upgrade, card) => this.applyUpgrade(upgrade, card),
+          onReroll: () => this.rerollLevelUpChoices(),
+          onSkip: () => this.skipLevelUpChoice(),
+          onFailure: () => this.handleU3LevelUpPresentationFailure()
+        });
+        if (controller) {
+          this.levelUpOverlayController = controller;
+          this.levelUpOverlay = controller.container;
+          this.syncU3LevelUpOwnership();
+          return;
+        }
+      } catch {
+        this.destroyLevelUpOverlay();
+      }
+    }
+
     try {
-      this.levelUpOverlayController = createTerminalOverlay(this, {
-        x: 0,
-        y: 0,
-        width: 760,
-        height: 420,
-        depth: 60,
-        scrollFactor: 1,
-        eyebrow: SITE_CHANNELS.fieldAuthorization,
-        title: "升级授权",
-        subtitle: "选择一项现场强化协议",
-        tone: "standard",
-        surfaceTextureKey: TEXTURES.terminalSurfaceGrid
-      });
-      this.levelUpOverlay = this.levelUpOverlayController.container;
-      // Keep this overlay in world space so visuals and Phaser hit areas share
-      // the same camera transform.
-      this.syncScreenOverlayPosition(this.levelUpOverlay);
-      choices = this.getLevelUpChoices();
-      this.renderLevelUpCards(choices);
-      this.createLevelUpButtons();
+      this.createTerminalLevelUpOverlay(choices);
     } catch {
       this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices);
+    }
+  },
+
+
+  createTerminalLevelUpOverlay(choices) {
+    this.levelUpOverlayController = createTerminalOverlay(this, {
+      x: 0,
+      y: 0,
+      width: 760,
+      height: 420,
+      depth: 60,
+      scrollFactor: 1,
+      eyebrow: SITE_CHANNELS.fieldAuthorization,
+      title: "升级授权",
+      subtitle: "选择一项现场强化协议",
+      tone: "standard",
+      surfaceTextureKey: TEXTURES.terminalSurfaceGrid
+    });
+    this.levelUpOverlay = this.levelUpOverlayController.container;
+    // Keep the Phaser fallback in world space so its visuals and hit areas
+    // share the same camera transform. The U3 DOM container ignores position.
+    this.syncScreenOverlayPosition(this.levelUpOverlay);
+    this.renderLevelUpCards(choices);
+    this.createLevelUpButtons();
+  },
+
+
+  syncU3LevelUpOwnership() {
+    const controller = this.levelUpOverlayController;
+    if (controller?.mode !== "u3-upgrade") return;
+    this.levelUpCards = controller.cards;
+    this.levelUpCardObjects = [];
+    this.levelUpButtonControllers = [controller.reroll, controller.skip];
+    this.levelUpButtonObjects = [];
+    this.levelUpRerollButtonController = controller.reroll;
+    this.levelUpRerollButton = controller.reroll.hitArea;
+    this.levelUpRerollLabel = controller.reroll.label;
+    this.levelUpSkipButtonController = controller.skip;
+    this.levelUpSkipButton = controller.skip.hitArea;
+  },
+
+
+  handleU3LevelUpPresentationFailure() {
+    const controller = this.levelUpOverlayController;
+    if (controller?.mode !== "u3-upgrade") return false;
+    const choices = controller.choices;
+    this.destroyLevelUpOverlay();
+    try {
+      this.createTerminalLevelUpOverlay(choices);
+      return true;
+    } catch {
+      return this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices);
     }
   },
 
@@ -284,6 +338,12 @@ export const progressionMixin = {
 
   renderLevelUpCards(choices = this.getLevelUpChoices()) {
     this.destroyLevelUpCards();
+
+    if (this.levelUpOverlayController?.mode === "u3-upgrade") {
+      this.levelUpOverlayController.refresh(choices);
+      this.syncU3LevelUpOwnership();
+      return;
+    }
 
     if (!this.levelUpOverlayController) {
       this.renderLegacyLevelUpCards(choices);
@@ -569,7 +629,9 @@ export const progressionMixin = {
       choices = this.getLevelUpChoices();
       this.renderLevelUpCards(choices);
     } catch {
-      if (this.levelUpOverlayController) {
+      if (this.levelUpOverlayController?.mode === "u3-upgrade") {
+        if (!this.handleU3LevelUpPresentationFailure()) return;
+      } else if (this.levelUpOverlayController) {
         if (!this.replaceFailedTerminalWithLegacyLevelUpOverlay(choices)) return;
       } else {
         this.handleLevelUpPresentationFailure();

@@ -1,0 +1,10 @@
+{
+  "origin": "http://127.0.0.1:49183",
+  "stateSource": "隔离上下文内构造升级选项，真实键盘输入",
+  "checks": [
+    "Upgrade Tab focus and Space activate once; combat Tab press toggles paused build",
+    "Pause Tab/Shift+Tab cycle within modal, Enter resumes",
+    "Result Space returns to preparation with modal cleaned"
+  ],
+  "errors": []
+}

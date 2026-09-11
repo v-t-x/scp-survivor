@@ -1,0 +1,9 @@
+{
+  "origin": "http://127.0.0.1:49183",
+  "stateSource": "独立浏览器上下文；军需资金、设施事件、Boss和低生命为测试构造；点击键盘为真实输入",
+  "checks": [
+    "U1 formal store: insufficient/owned; real pointer purchase once; return and Tesla deployment; existing perk applies",
+    "U2 low health/facility/Boss HUD; pause reads true event and clock; three pause/resume loops no native text leaks or duplicate roots"
+  ],
+  "errors": []
+}

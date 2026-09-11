@@ -1,0 +1,172 @@
+{
+  "capturedAt": "2026-09-11T10:33:23.910Z",
+  "baseHead": "1ecb76839ca774aee4e87d98c35e867e79e6f7f6",
+  "branch": "codex/ui-art-u3-implementation",
+  "status": "用户已试玩，满意，暂时无修改意见。封包未改变已验收源码、测试、QA 或运行 PNG。此哈希在收尾时采集，不伪称历史截图生成时已有提交哈希。",
+  "files": [
+    {
+      "path": "scripts/qa/u3-browser-support.mjs",
+      "sha256": "c9340042081e0fec646fecf57c0f9c720d80fa573f3ac553f41a41fbd6505299"
+    },
+    {
+      "path": "scripts/qa/u3-cadence-check.mjs",
+      "sha256": "fdc1fff864400ee9cf759e14158e997a7f8d874d3d2b76d8a110a323389034f3"
+    },
+    {
+      "path": "scripts/qa/u3-display-matrix.mjs",
+      "sha256": "c754b8e4e4b9184aa2eef924ad3e941316489482127192980774681e1e51660f"
+    },
+    {
+      "path": "scripts/qa/u3-extra-states.mjs",
+      "sha256": "d77d2dddaefc357b7f2b50d9217822d15dfab5bade46e934510cd53436eaa357"
+    },
+    {
+      "path": "scripts/qa/u3-interaction-checks.mjs",
+      "sha256": "e44377db0d9d7c5847517527b0e46c12b30ec7a693557d554b9f156a9a1290e4"
+    },
+    {
+      "path": "scripts/qa/u3-keyboard-check.mjs",
+      "sha256": "0b295d28af7893239f59db52fabd8fb80fff0d3255283a24769ca30bf1cd0592"
+    },
+    {
+      "path": "scripts/qa/u3-natural-play.mjs",
+      "sha256": "36b1d154cf73873412b0b6e0ba794b183a16d7ccf0558c14f0a93042836e0436"
+    },
+    {
+      "path": "scripts/qa/u3-pause-sequence-check.mjs",
+      "sha256": "377c90932d2f7d3b1e34826493628529fe3b12a8417dcdf7ba47c886c5a1774b"
+    },
+    {
+      "path": "scripts/qa/u3-production-smoke.mjs",
+      "sha256": "9a460b8f21c31e9f98146368f440dff44810b7f037df7082d9b8a3d7b419d0cb"
+    },
+    {
+      "path": "scripts/qa/u3-regression-check.mjs",
+      "sha256": "1116ecdb7676b0bb6ba4a3e47c809e37f808dc5ad9e9031129c006c8793f5e63"
+    },
+    {
+      "path": "scripts/qa/u3-tab-toggle-check.mjs",
+      "sha256": "9c745c079b6fc22bead13a940dd2f98f56be70be1117ab3d44d0a1066aebfa48"
+    },
+    {
+      "path": "scripts/qa/u3-weapon-fit-check.mjs",
+      "sha256": "57a4d9fec86628faa16e21d25a7d95c32e469a5446017c0e909d869ea4aa91a1"
+    },
+    {
+      "path": "src/scene/hud.js",
+      "sha256": "80d8671fc3bea7516179f6aa0c9e9e129ed30513c7c203497920c0fe1bd2ebaf"
+    },
+    {
+      "path": "src/scene/menus.js",
+      "sha256": "6f102f30cee07c2f030bdc16ddc47733018b6d1d6c50e27250a7095e75b9bd2c"
+    },
+    {
+      "path": "src/scene/progression.js",
+      "sha256": "846e1fc4fc7499d04776fd143071cf069e91d6be373029ef72a817db898db5a9"
+    },
+    {
+      "path": "src/scene/systems.js",
+      "sha256": "5eda3309720f7716c5f20bc5a391de4abce5806acb771e14d4e89271a936263b"
+    },
+    {
+      "path": "src/ui/assets/u3-ammunition-v2.png",
+      "sha256": "355cb700d6f875631345e3f780f2b2199447a290a2eddeaa9de0f1a924a773af"
+    },
+    {
+      "path": "src/ui/assets/u3-chassis-v2.png",
+      "sha256": "1a9409530f400ae4583a6dd5b3fe152d690e2439f930ae3b5f25fde6ad254d5a"
+    },
+    {
+      "path": "src/ui/assets/u3-containment-v2.png",
+      "sha256": "c27af4f6b0ef75d0db229c8d20d6581ab72f873de4f70b0219db0c323ea68b14"
+    },
+    {
+      "path": "src/ui/assets/u3-paper-v2.png",
+      "sha256": "35899474e14353c91776bd4c164e2eafd5c7599bb768c61cad8799ac1294168d"
+    },
+    {
+      "path": "src/ui/assets/u3-steel.png",
+      "sha256": "cdd888b270927037c570ba041cd1f6119f5892b60449d70f3827e8cbde1c94bc"
+    },
+    {
+      "path": "src/ui/assets/u3-vitals-v2.png",
+      "sha256": "d9eabfa4faee858d0c5afd3ed7508f1805abc2ea6bb75053382ff78393c3a3b0"
+    },
+    {
+      "path": "src/ui/u3BuildView.js",
+      "sha256": "d16dc74428242b6b86bcda667bb58ba5f438f7ebd7a39907d605cc60eaf41582"
+    },
+    {
+      "path": "src/ui/u3DomOverlay.js",
+      "sha256": "92600aa3d17152e60a60245d7fa49a5981937582c936de727b5c3a735ce3bfe4"
+    },
+    {
+      "path": "src/ui/u3FrameArt.js",
+      "sha256": "bcf296b28f0b4f42db4eb1b511cdec368f056b6981be686ef12e875f7881d215"
+    },
+    {
+      "path": "src/ui/u3Illustrations.js",
+      "sha256": "49831bb789a7d4c1a104615ddb04b037d239f05286b7c8a51f7b8e4f3fc9c953"
+    },
+    {
+      "path": "src/ui/u3Materials.js",
+      "sha256": "fc9e6dc956415cc6ea8d20fdb66088ff47394752da110bf0383f566abf57255f"
+    },
+    {
+      "path": "src/ui/u3MissionViews.js",
+      "sha256": "84d01640c6f0b4649d4de03d89be06d1eed63dc540cc43f2bdb8ebe049a431ae"
+    },
+    {
+      "path": "src/ui/u3UpgradeModel.js",
+      "sha256": "27e0a93c46f792d4024fe01ca7444d2347a00c1221258d81464e85b23d057713"
+    },
+    {
+      "path": "src/ui/u3UpgradeView.js",
+      "sha256": "1b4fba060d3cc14eb4f2f46e65f3b14cda620d58f934dbc0859ef8771edb9933"
+    },
+    {
+      "path": "test/build-panel-view.test.js",
+      "sha256": "5ae64397bb9f212125666543df72818b09214ef484cd3bf6db5445342a52de02"
+    },
+    {
+      "path": "test/u3-build-hud.test.js",
+      "sha256": "323cfca6fbe180a3abaa6dd4e6f2b79f9841b69b7f16ab7b211e3237141e2571"
+    },
+    {
+      "path": "test/u3-build-model.test.js",
+      "sha256": "4bbff628865e0df261d7f49607fd557fb733854152dbf6a9611ec9152c30ecb6"
+    },
+    {
+      "path": "test/u3-build-view.test.js",
+      "sha256": "05761587e6c39b78770c5f7c20a060d08dc126910c409e157e146d3e542c2d0a"
+    },
+    {
+      "path": "test/u3-dom-overlay.test.js",
+      "sha256": "beb362c862ddf8e92d2c6b363c26b9610c76aa5b4f488ed2a401812c8f591f29"
+    },
+    {
+      "path": "test/u3-mission-model.test.js",
+      "sha256": "79f570050e8c9f0b9d97334cacbb14aa1618c2203fbfc03d97f095f81ea0a438"
+    },
+    {
+      "path": "test/u3-mission-views.test.js",
+      "sha256": "4cee85c4b43333704c285c90238f84323e5b2a9428525a0bddc947946d296042"
+    },
+    {
+      "path": "test/u3-pause-input.test.js",
+      "sha256": "a1e8ad396b96aa0bc44e42aec4dc530e92e2f818a30ca3c51c6e1306285b97a9"
+    },
+    {
+      "path": "test/u3-upgrade-flow.test.js",
+      "sha256": "51be24ff80e6d592be8a0017d0e435b7b68d19f680f08e6b0363abca7fe531ee"
+    },
+    {
+      "path": "test/u3-upgrade-model.test.js",
+      "sha256": "9f8ff942e6b2fc5ab003943a86671de77da360e425d9ce63fcc4c7bcb5c0178f"
+    },
+    {
+      "path": "test/u3-upgrade-view.test.js",
+      "sha256": "bf897088a4a9e59b2f881b7046d5e02d8cc6886b44955233a3f51b566979bab0"
+    }
+  ]
+}

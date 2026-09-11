@@ -1,0 +1,262 @@
+{
+  "checkedAt": "2026-09-11T10:37:41.401Z",
+  "passed": true,
+  "explicitFileListMatches": true,
+  "stagedFiles": 91,
+  "relativeLinksChecked": 82,
+  "brokenLinks": [],
+  "exportedSourceMatchesFinalIndex": [
+    {
+      "path": "scripts/qa/u3-browser-support.mjs",
+      "indexBlob": "faa2423b50a3e8be23f6d5fb20b6fffb05a22249",
+      "exportBlob": "faa2423b50a3e8be23f6d5fb20b6fffb05a22249",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-cadence-check.mjs",
+      "indexBlob": "e05a588c902ef1a5a2e489845160316d214899e4",
+      "exportBlob": "e05a588c902ef1a5a2e489845160316d214899e4",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-display-matrix.mjs",
+      "indexBlob": "e6e84d96519b2df3084797e9614bb1c21a2b0ac9",
+      "exportBlob": "e6e84d96519b2df3084797e9614bb1c21a2b0ac9",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-extra-states.mjs",
+      "indexBlob": "8d7463f3b27320fa7e279b6408b3ef2eec971b6b",
+      "exportBlob": "8d7463f3b27320fa7e279b6408b3ef2eec971b6b",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-interaction-checks.mjs",
+      "indexBlob": "eee07a4f26b714d72e7f62d27ef60b5f97a3e79c",
+      "exportBlob": "eee07a4f26b714d72e7f62d27ef60b5f97a3e79c",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-keyboard-check.mjs",
+      "indexBlob": "7f32056afc0f8ba190c5f04f97e6792780043f01",
+      "exportBlob": "7f32056afc0f8ba190c5f04f97e6792780043f01",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-natural-play.mjs",
+      "indexBlob": "c19df3a83967b3af3570c691ef3c74982c468ae1",
+      "exportBlob": "c19df3a83967b3af3570c691ef3c74982c468ae1",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-pause-sequence-check.mjs",
+      "indexBlob": "186e8ba969647d1f8a08c1f6746b5254bc143f1d",
+      "exportBlob": "186e8ba969647d1f8a08c1f6746b5254bc143f1d",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-production-smoke.mjs",
+      "indexBlob": "e3dd5e2f742f1b1a86163b73d7be4bc8bdbdf3fa",
+      "exportBlob": "e3dd5e2f742f1b1a86163b73d7be4bc8bdbdf3fa",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-regression-check.mjs",
+      "indexBlob": "fc3bb24dbef0c8ae4d8361c14f71237f30f70176",
+      "exportBlob": "fc3bb24dbef0c8ae4d8361c14f71237f30f70176",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-tab-toggle-check.mjs",
+      "indexBlob": "dd49c988d85f504d177c90d7abf8cbb466117ab4",
+      "exportBlob": "dd49c988d85f504d177c90d7abf8cbb466117ab4",
+      "matched": true
+    },
+    {
+      "path": "scripts/qa/u3-weapon-fit-check.mjs",
+      "indexBlob": "1da98fe58f443bcc0c56f97b90b38dd3307a2dc0",
+      "exportBlob": "1da98fe58f443bcc0c56f97b90b38dd3307a2dc0",
+      "matched": true
+    },
+    {
+      "path": "src/scene/hud.js",
+      "indexBlob": "bc0ec569e431960ce281d2715b05d96c9a5184e8",
+      "exportBlob": "bc0ec569e431960ce281d2715b05d96c9a5184e8",
+      "matched": true
+    },
+    {
+      "path": "src/scene/menus.js",
+      "indexBlob": "796e280b1d2eb7d33ed45e014bc3978f3f64c8e6",
+      "exportBlob": "796e280b1d2eb7d33ed45e014bc3978f3f64c8e6",
+      "matched": true
+    },
+    {
+      "path": "src/scene/progression.js",
+      "indexBlob": "17a2785069723f61cb047257d95e64b3c9ad1bc8",
+      "exportBlob": "17a2785069723f61cb047257d95e64b3c9ad1bc8",
+      "matched": true
+    },
+    {
+      "path": "src/scene/systems.js",
+      "indexBlob": "e7302b8e07a8a5ab92b2a44d346ac67b4a53c57e",
+      "exportBlob": "e7302b8e07a8a5ab92b2a44d346ac67b4a53c57e",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-ammunition-v2.png",
+      "indexBlob": "75d13c1f6abad885dbc7e799b72da622f8e268ae",
+      "exportBlob": "75d13c1f6abad885dbc7e799b72da622f8e268ae",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-chassis-v2.png",
+      "indexBlob": "9ae2f8855bfd97c03dd9ccd0a93b493c3db6c207",
+      "exportBlob": "9ae2f8855bfd97c03dd9ccd0a93b493c3db6c207",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-containment-v2.png",
+      "indexBlob": "3d6575354340ad946ea5ac437e8b44e393d490d4",
+      "exportBlob": "3d6575354340ad946ea5ac437e8b44e393d490d4",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-paper-v2.png",
+      "indexBlob": "4c72e094d1fd9552d493c0daac35eec4a970bb9f",
+      "exportBlob": "4c72e094d1fd9552d493c0daac35eec4a970bb9f",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-steel.png",
+      "indexBlob": "6ee06d670071497eae7bb8f9d60271a580c85cfb",
+      "exportBlob": "6ee06d670071497eae7bb8f9d60271a580c85cfb",
+      "matched": true
+    },
+    {
+      "path": "src/ui/assets/u3-vitals-v2.png",
+      "indexBlob": "ec39bec67c6c59846e7407deb9626b640bfe906e",
+      "exportBlob": "ec39bec67c6c59846e7407deb9626b640bfe906e",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3BuildView.js",
+      "indexBlob": "a15228750c511fc0c3e6f3c502f6fed17478c2e5",
+      "exportBlob": "a15228750c511fc0c3e6f3c502f6fed17478c2e5",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3DomOverlay.js",
+      "indexBlob": "a5bccd86c9828a316163b5a8405650164da5943f",
+      "exportBlob": "a5bccd86c9828a316163b5a8405650164da5943f",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3FrameArt.js",
+      "indexBlob": "b50b6db46088e0f4bde2b84456a717e7b11cca07",
+      "exportBlob": "b50b6db46088e0f4bde2b84456a717e7b11cca07",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3Illustrations.js",
+      "indexBlob": "9a392bd00236795a483efdfc6347664273bc779f",
+      "exportBlob": "9a392bd00236795a483efdfc6347664273bc779f",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3Materials.js",
+      "indexBlob": "789c1440bb068f8dd0ccaa6b5ebe1b9b1f918e7a",
+      "exportBlob": "789c1440bb068f8dd0ccaa6b5ebe1b9b1f918e7a",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3MissionViews.js",
+      "indexBlob": "e454c3d6d5ca64a80b7cedde720e667613b0dc4f",
+      "exportBlob": "e454c3d6d5ca64a80b7cedde720e667613b0dc4f",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3UpgradeModel.js",
+      "indexBlob": "2606cc5da720c61c27a00367c90d0b694ecd27e2",
+      "exportBlob": "2606cc5da720c61c27a00367c90d0b694ecd27e2",
+      "matched": true
+    },
+    {
+      "path": "src/ui/u3UpgradeView.js",
+      "indexBlob": "fd2291b920542f595708675ef3e76270997bf32b",
+      "exportBlob": "fd2291b920542f595708675ef3e76270997bf32b",
+      "matched": true
+    },
+    {
+      "path": "test/build-panel-view.test.js",
+      "indexBlob": "aeea7e7bdd2d68248e3be2313f036cf7c317550a",
+      "exportBlob": "aeea7e7bdd2d68248e3be2313f036cf7c317550a",
+      "matched": true
+    },
+    {
+      "path": "test/u3-build-hud.test.js",
+      "indexBlob": "b50721a8c47f808bf2dae2c56fac95b8edf74d54",
+      "exportBlob": "b50721a8c47f808bf2dae2c56fac95b8edf74d54",
+      "matched": true
+    },
+    {
+      "path": "test/u3-build-model.test.js",
+      "indexBlob": "44cd9dd64e22604b4d2a354b75f10d133b8bdca7",
+      "exportBlob": "44cd9dd64e22604b4d2a354b75f10d133b8bdca7",
+      "matched": true
+    },
+    {
+      "path": "test/u3-build-view.test.js",
+      "indexBlob": "bec0e7f90da039cefeb80998f60ce4f051fa0d94",
+      "exportBlob": "bec0e7f90da039cefeb80998f60ce4f051fa0d94",
+      "matched": true
+    },
+    {
+      "path": "test/u3-dom-overlay.test.js",
+      "indexBlob": "edbf9b8decbc5656a1acee90e5cff56db30a1d57",
+      "exportBlob": "edbf9b8decbc5656a1acee90e5cff56db30a1d57",
+      "matched": true
+    },
+    {
+      "path": "test/u3-mission-model.test.js",
+      "indexBlob": "59ec7b5b29bb130fd877de6bb98fc50437f187c1",
+      "exportBlob": "59ec7b5b29bb130fd877de6bb98fc50437f187c1",
+      "matched": true
+    },
+    {
+      "path": "test/u3-mission-views.test.js",
+      "indexBlob": "0286246181acffaff3a9092c90148967565504e8",
+      "exportBlob": "0286246181acffaff3a9092c90148967565504e8",
+      "matched": true
+    },
+    {
+      "path": "test/u3-pause-input.test.js",
+      "indexBlob": "43c475c4b0c551e60f6e935651390ad1b79c7b8d",
+      "exportBlob": "43c475c4b0c551e60f6e935651390ad1b79c7b8d",
+      "matched": true
+    },
+    {
+      "path": "test/u3-upgrade-flow.test.js",
+      "indexBlob": "07f873c3d657e1f6d641254bec1552d5826ec7f4",
+      "exportBlob": "07f873c3d657e1f6d641254bec1552d5826ec7f4",
+      "matched": true
+    },
+    {
+      "path": "test/u3-upgrade-model.test.js",
+      "indexBlob": "516d697ef091a4a7255227d745bcbde30c596c0d",
+      "exportBlob": "516d697ef091a4a7255227d745bcbde30c596c0d",
+      "matched": true
+    },
+    {
+      "path": "test/u3-upgrade-view.test.js",
+      "indexBlob": "ece1b56d33f78a708cc5507d57bd5175728bd80a",
+      "exportBlob": "ece1b56d33f78a708cc5507d57bd5175728bd80a",
+      "matched": true
+    }
+  ],
+  "productionAssets": true,
+  "npmCiRecorded": true,
+  "tests": 777,
+  "passedTests": 777,
+  "failedTests": 0,
+  "diffCheck": "git diff --cached --check and git diff --check exit 0, rechecked before commit"
+}

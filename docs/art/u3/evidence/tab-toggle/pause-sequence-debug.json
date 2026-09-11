@@ -1,0 +1,961 @@
+[
+  {
+    "label": "build opened",
+    "build": true,
+    "pause": false,
+    "paused": true,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      9,
+      "keyup",
+      2257.3999999910593
+    ],
+    "queue": [],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      }
+    ]
+  },
+  {
+    "label": "build closed by escape",
+    "build": false,
+    "pause": false,
+    "paused": false,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      27,
+      "keyup",
+      2361.7999999970198
+    ],
+    "queue": [
+      {
+        "key": "Escape",
+        "type": "keydown",
+        "cancel": 0,
+        "time": 2360.7999999970198
+      },
+      {
+        "key": "Escape",
+        "type": "keyup",
+        "cancel": 0,
+        "time": 2361.7999999970198
+      }
+    ],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      }
+    ]
+  },
+  {
+    "label": "build reopened",
+    "build": true,
+    "pause": false,
+    "paused": true,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      9,
+      "keyup",
+      2457.8999999910593
+    ],
+    "queue": [
+      {
+        "key": "Escape",
+        "type": "keydown",
+        "cancel": 0,
+        "time": 2360.7999999970198
+      },
+      {
+        "key": "Escape",
+        "type": "keyup",
+        "cancel": 0,
+        "time": 2361.7999999970198
+      },
+      {
+        "key": "Tab",
+        "type": "keydown",
+        "cancel": 0,
+        "time": 2457
+      },
+      {
+        "key": "Tab",
+        "type": "keyup",
+        "cancel": 0,
+        "time": 2457.8999999910593
+      }
+    ],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      }
+    ]
+  },
+  {
+    "label": "build closed by tab",
+    "build": false,
+    "pause": false,
+    "paused": false,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      9,
+      "keyup",
+      2553.5
+    ],
+    "queue": [],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2552.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2553.5,
+        "phase": "capture",
+        "paused": false
+      }
+    ]
+  },
+  {
+    "label": "first pause",
+    "build": false,
+    "pause": true,
+    "paused": true,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      27,
+      "keyup",
+      2648.2000000029802
+    ],
+    "queue": [],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2552.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2553.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2645.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2648.2000000029802,
+        "phase": "capture",
+        "paused": true
+      }
+    ]
+  },
+  {
+    "label": "space resume",
+    "build": false,
+    "pause": false,
+    "paused": false,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      32,
+      "keyup",
+      3048.3999999910593
+    ],
+    "queue": [
+      {
+        "key": " ",
+        "type": "keyup",
+        "cancel": 0,
+        "time": 3048.3999999910593
+      }
+    ],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2552.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2553.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2645.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2648.2000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 3040.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 3043.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": " ",
+        "time": 3044.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "resumeFromPause",
+        "paused": true,
+        "time": 3046.8999999910593
+      },
+      {
+        "type": "keyup",
+        "key": " ",
+        "time": 3048.3999999910593,
+        "phase": "capture",
+        "paused": false
+      }
+    ]
+  },
+  {
+    "label": "immediate escape",
+    "build": false,
+    "pause": true,
+    "paused": true,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      27,
+      "keyup",
+      3057.8999999910593
+    ],
+    "queue": [],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2552.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2553.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2645.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2648.2000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 3040.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 3043.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": " ",
+        "time": 3044.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "resumeFromPause",
+        "paused": true,
+        "time": 3046.8999999910593
+      },
+      {
+        "type": "keyup",
+        "key": " ",
+        "time": 3048.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 3056.2999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 3056.5
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 3056.5
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 3057.8999999910593,
+        "phase": "capture",
+        "paused": true
+      }
+    ]
+  },
+  {
+    "label": "later escape",
+    "build": false,
+    "pause": false,
+    "paused": false,
+    "mission": true,
+    "over": false,
+    "upgrade": false,
+    "prev": [
+      27,
+      "keyup",
+      3338.5
+    ],
+    "queue": [],
+    "trace": [
+      {
+        "type": "keydown",
+        "key": "d",
+        "time": 1909.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "d",
+        "time": 2236.7000000029802,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2237.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2257.3999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2360.7999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 2361
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2361.7999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2457,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2457.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 2552.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 2553.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 2645.5,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 2645.7000000029802
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 2648.2000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Tab",
+        "time": 3040.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keyup",
+        "key": "Tab",
+        "time": 3043.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": " ",
+        "time": 3044.7000000029802,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "resumeFromPause",
+        "paused": true,
+        "time": 3046.8999999910593
+      },
+      {
+        "type": "keyup",
+        "key": " ",
+        "time": 3048.3999999910593,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 3056.2999999970198,
+        "phase": "capture",
+        "paused": false
+      },
+      {
+        "method": "togglePause",
+        "paused": false,
+        "time": 3056.5
+      },
+      {
+        "method": "pauseGame",
+        "paused": false,
+        "time": 3056.5
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 3057.8999999910593,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "type": "keydown",
+        "key": "Escape",
+        "time": 3337.2999999970198,
+        "phase": "capture",
+        "paused": true
+      },
+      {
+        "method": "togglePause",
+        "paused": true,
+        "time": 3337.5999999940395
+      },
+      {
+        "method": "resumeFromPause",
+        "paused": true,
+        "time": 3337.5999999940395
+      },
+      {
+        "type": "keyup",
+        "key": "Escape",
+        "time": 3338.5,
+        "phase": "capture",
+        "paused": false
+      }
+    ]
+  }
+]

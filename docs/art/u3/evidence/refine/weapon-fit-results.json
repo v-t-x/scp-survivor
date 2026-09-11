@@ -1,0 +1,49 @@
+{
+  "source": "真实游戏与正式PNG alpha轮廓；构造武器状态，真实Tab输入",
+  "cases": [
+    {
+      "weapon": "rifle",
+      "alpha": {
+        "left": 11,
+        "top": 46,
+        "right": 246,
+        "bottom": 146,
+        "width": 256,
+        "height": 192
+      },
+      "geometry": {
+        "top": 7.7094929296137025,
+        "bottom": 6.820959168741865,
+        "left": 68.61690872971366,
+        "right": 67.71949745142183,
+        "frame": {
+          "width": 344.9375,
+          "height": 103.296875
+        }
+      },
+      "errors": []
+    },
+    {
+      "weapon": "tesla",
+      "alpha": {
+        "left": 10,
+        "top": 38,
+        "right": 246,
+        "bottom": 153,
+        "width": 256,
+        "height": 192
+      },
+      "geometry": {
+        "top": 7.709770384224186,
+        "bottom": 6.9379001761519135,
+        "left": 81.89263777059324,
+        "right": 81.12127746635247,
+        "frame": {
+          "width": 344.9375,
+          "height": 103.296875
+        }
+      },
+      "errors": []
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "source": "49183 独立临时浏览器上下文，真实键盘；升级/结算/故障为测试构造，未写用户存档",
+  "checks": [
+    {
+      "weapon": "pistol",
+      "dpr": 1,
+      "passed": true,
+      "frozen": {
+        "owner": true,
+        "paused": true,
+        "physics": true,
+        "visible": true,
+        "time": 137.51000000000005,
+        "x": 960,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 280,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      },
+      "running": {
+        "owner": false,
+        "paused": false,
+        "physics": false,
+        "visible": false,
+        "time": 400.0299999999994,
+        "x": 992.9999999999997,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 280,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      }
+    },
+    {
+      "weapon": "pistol",
+      "dpr": 2,
+      "passed": true,
+      "frozen": {
+        "owner": true,
+        "paused": true,
+        "physics": true,
+        "visible": true,
+        "time": 129.23999999999992,
+        "x": 960,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 280,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      },
+      "running": {
+        "owner": false,
+        "paused": false,
+        "physics": false,
+        "visible": false,
+        "time": 402.6199999999995,
+        "x": 992.9999999999997,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 280,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      }
+    },
+    {
+      "weapon": "tesla",
+      "dpr": 1,
+      "passed": true,
+      "frozen": {
+        "owner": true,
+        "paused": true,
+        "physics": true,
+        "visible": true,
+        "time": 141.69000000000003,
+        "x": 960,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 300,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      },
+      "running": {
+        "owner": false,
+        "paused": false,
+        "physics": false,
+        "visible": false,
+        "time": 429.1899999999994,
+        "x": 996.6666666666663,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 300,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      }
+    },
+    {
+      "weapon": "tesla",
+      "dpr": 2,
+      "passed": true,
+      "frozen": {
+        "owner": true,
+        "paused": true,
+        "physics": true,
+        "visible": true,
+        "time": 141.67000000000004,
+        "x": 960,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 300,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      },
+      "running": {
+        "owner": false,
+        "paused": false,
+        "physics": false,
+        "visible": false,
+        "time": 414.68999999999926,
+        "x": 996.6666666666663,
+        "y": 960,
+        "health": 100,
+        "kills": 0,
+        "cooldown": 300,
+        "dashReady": 0,
+        "dashUntil": 0,
+        "invulnerable": 0
+      }
+    },
+    {
+      "fallback": "terminal",
+      "passed": true
+    },
+    {
+      "fallback": "legacy",
+      "passed": true
+    },
+    {
+      "fallback": "none",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "passed": true
+}

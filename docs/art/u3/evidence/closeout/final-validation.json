@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-09-11T10:37:36.890Z",
+  "userAcceptance": "用户已试玩，满意，暂时无修改意见",
+  "baseHead": "1ecb76839ca774aee4e87d98c35e867e79e6f7f6",
+  "branch": "codex/ui-art-u3-implementation",
+  "candidateSource": "git checkout-index --all 导出明确暂存候选；输出目录无旧WIP、历史未入库素材或报告。依赖重新 npm ci。",
+  "nodeVersion": "v24.18.0",
+  "npmVersion": "11.16.0",
+  "npmCi": {
+    "exitCode": 0
+  },
+  "tests": {
+    "command": "npm test",
+    "exitCode": 0,
+    "total": 777,
+    "passed": 777,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "exitCode": 0,
+    "modules": 70,
+    "bundle": "dist/assets/index-o8XHIgYr.js",
+    "bundleSha256": "2f07c1116568da930cfbc1c7124f12ff3e6e8b28355de1706bc292a40bd887ab",
+    "acceptedPreviewBundleSha256": "2f07c1116568da930cfbc1c7124f12ff3e6e8b28355de1706bc292a40bd887ab",
+    "identicalToAcceptedPreview": true
+  },
+  "diffCheck": {
+    "cached": 0,
+    "worktree": 0
+  },
+  "assets": {
+    "runtimePng": 6,
+    "reusedU1Hero": 2,
+    "allBuiltHashesMatch": true
+  },
+  "browserEvidence": "复用tab-toggle最终实机记录；cadence与refine只按README的版本边界补充。没有重新设计或改动已验收源码。",
+  "preservationBeforeCommit": {
+    "originalWorktrees": 12,
+    "dirtyFiles": 122,
+    "mainOldWip": 10,
+    "stagedDiffsUnchanged": true,
+    "historicalFilesUnchanged": 486,
+    "sourceAndQaUnchanged": true
+  },
+  "review": "独立只读封包审查未发现阻断；最终明确路径及引用检查见candidate-checks.json。",
+  "limitations": [
+    "原有大bundle警告",
+    "未变更依赖锁的nanoid和PostCSS共2项high npm审计提示，未擅自升级",
+    "完整45格显示矩阵为refine历史版本，最终Tab与节奏专项分别有后续实机证据"
+  ],
+  "gitIntegration": "本记录是提交前候选验证。PR及远端合并结果由Git平台记录与最终收尾消息给出；保留分支和worktree，无tag、Release或部署。"
+}
