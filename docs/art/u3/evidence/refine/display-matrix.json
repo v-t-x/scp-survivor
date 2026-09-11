@@ -1,0 +1,591 @@
+{
+  "stateSource": "测试构造状态；所有图像来自实际运行游戏，未修改截图内容",
+  "cases": [
+    {
+      "name": "960x540-dpr1-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 85,
+        "y": 34,
+        "w": 790,
+        "h": 472
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1-build",
+      "kind": "build",
+      "bounds": {
+        "x": 50,
+        "y": 30,
+        "w": 860,
+        "h": 480
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 190,
+        "y": 65,
+        "w": 580,
+        "h": 410
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1.5-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 85,
+        "y": 34,
+        "w": 790,
+        "h": 472
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1.5-build",
+      "kind": "build",
+      "bounds": {
+        "x": 50,
+        "y": 30,
+        "w": 860,
+        "h": 480
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1.5-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 190,
+        "y": 65,
+        "w": 580,
+        "h": 410
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1.5-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr1.5-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr2-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 85,
+        "y": 34,
+        "w": 790,
+        "h": 472
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr2-build",
+      "kind": "build",
+      "bounds": {
+        "x": 50,
+        "y": 30,
+        "w": 860,
+        "h": 480
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr2-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 190,
+        "y": 65,
+        "w": 580,
+        "h": 410
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr2-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "960x540-dpr2-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 85,
+        "y": 44,
+        "w": 790,
+        "h": 452
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 127.5,
+        "y": 51,
+        "w": 1185,
+        "h": 708
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1-build",
+      "kind": "build",
+      "bounds": {
+        "x": 75,
+        "y": 45,
+        "w": 1290,
+        "h": 720
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 285,
+        "y": 97.5,
+        "w": 870,
+        "h": 615
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1.5-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 127.5,
+        "y": 51,
+        "w": 1185,
+        "h": 708
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1.5-build",
+      "kind": "build",
+      "bounds": {
+        "x": 75,
+        "y": 45,
+        "w": 1290,
+        "h": 720
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1.5-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 285,
+        "y": 97.5,
+        "w": 870,
+        "h": 615
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1.5-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr1.5-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr2-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 127.5,
+        "y": 51,
+        "w": 1185,
+        "h": 708
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr2-build",
+      "kind": "build",
+      "bounds": {
+        "x": 75,
+        "y": 45,
+        "w": 1290,
+        "h": 720
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr2-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 285,
+        "y": 97.5,
+        "w": 870,
+        "h": 615
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr2-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1440x810-dpr2-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 127.5,
+        "y": 66,
+        "w": 1185,
+        "h": 678
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 170,
+        "y": 68,
+        "w": 1580,
+        "h": 944
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1-build",
+      "kind": "build",
+      "bounds": {
+        "x": 100,
+        "y": 60,
+        "w": 1720,
+        "h": 960
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 380,
+        "y": 130,
+        "w": 1160,
+        "h": 820
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1.5-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 170,
+        "y": 68,
+        "w": 1580,
+        "h": 944
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1.5-build",
+      "kind": "build",
+      "bounds": {
+        "x": 100,
+        "y": 60,
+        "w": 1720,
+        "h": 960
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1.5-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 380,
+        "y": 130,
+        "w": 1160,
+        "h": 820
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1.5-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr1.5-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr2-upgrade",
+      "kind": "upgrade",
+      "bounds": {
+        "x": 170,
+        "y": 68,
+        "w": 1580,
+        "h": 944
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr2-build",
+      "kind": "build",
+      "bounds": {
+        "x": 100,
+        "y": 60,
+        "w": 1720,
+        "h": 960
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr2-pause",
+      "kind": "pause",
+      "bounds": {
+        "x": 380,
+        "y": 130,
+        "w": 1160,
+        "h": 820
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr2-victory",
+      "kind": "victory",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    {
+      "name": "1920x1080-dpr2-failure",
+      "kind": "failure",
+      "bounds": {
+        "x": 170,
+        "y": 88,
+        "w": 1580,
+        "h": 904
+      },
+      "overflow": [],
+      "frame": true,
+      "font": "\"Microsoft YaHei\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    }
+  ],
+  "errors": []
+}

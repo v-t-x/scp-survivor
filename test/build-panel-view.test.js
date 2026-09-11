@@ -208,6 +208,7 @@ function createScene(options = {}) {
     cameras: { main: { width: 960, height: 540 } },
     textures: { exists: () => true },
     isGameOver: false,
+    isMissionActive: true,
     isLevelUpActive: false,
     isPaused: false,
     pauseCount: 0,
@@ -297,6 +298,7 @@ function createScene(options = {}) {
     )
   };
   Object.assign(scene, hudMixin);
+  scene.updateUI = () => {};
   return scene;
 }
 
@@ -335,7 +337,7 @@ function gameplaySnapshot(scene) {
   });
 }
 
-test("build panel uses one screen-fixed terminal controller and TAB changes visibility only", () => {
+test("build panel uses one screen-fixed terminal controller and TAB pauses without changing the loadout", () => {
   const scene = createScene();
   const before = gameplaySnapshot(scene);
 
@@ -380,9 +382,10 @@ test("build panel uses one screen-fixed terminal controller and TAB changes visi
 
   scene.toggleBuildPanel();
   assert.equal(scene.buildPanel.visible, true);
+  assert.equal(scene.isPaused, true);
   scene.toggleBuildPanel();
   assert.equal(scene.buildPanel.visible, false);
-  assert.deepEqual(gameplaySnapshot(scene), before);
+  assert.deepEqual(gameplaySnapshot(scene), { ...before, pauseCount: 1, resumeCount: 1 });
 });
 
 test("build panel updates icon-adjacent levels and short values in place", () => {
@@ -478,7 +481,7 @@ test("terminal and legacy construction failure install a safe inert build panel"
     scene.buildPanel.destroy();
   });
   assert.equal(scene.buildPanel.visible, false);
-  assert.deepEqual(gameplaySnapshot(scene), before);
+  assert.deepEqual(gameplaySnapshot(scene), { ...before, pauseCount: 1, resumeCount: 1 });
 });
 
 test("terminal row listener failure releases every other owned build object", () => {

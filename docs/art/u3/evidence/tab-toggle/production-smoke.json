@@ -1,0 +1,41 @@
+{
+  "origin": "http://127.0.0.1:49185",
+  "source": "生产 dist，真实指针键盘，无响应改写、无游戏状态注入、独立临时浏览器上下文",
+  "checks": [
+    "Production HTTP 200, steel plus all five v2 hashed U3 assets 200, DPR2 real display",
+    "Pointer title/selection/deployment, keyboard movement and Tab-toggle paused build",
+    "Eight immediate Space/Enter resume then Escape re-pause cycles; pointer quit returns title, no duplicate native roots"
+  ],
+  "errors": [],
+  "materials": [
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-steel-Byewm92q.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-chassis-v2-C_6DVm15.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-ammunition-v2-Y-OjZwg9.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-vitals-v2-ZnB6VAjo.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-paper-v2-B1PJTNNS.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-chassis-v2-C_6DVm15.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:49185/assets/u3-containment-v2-DbfWqwA7.png",
+      "status": 200
+    }
+  ],
+  "passed": true
+}

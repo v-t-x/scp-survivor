@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-09-11T18:14:29.4939532+08:00",
+  "branch": "codex/ui-art-u3-implementation",
+  "head": "1ecb76839ca774aee4e87d98c35e867e79e6f7f6",
+  "testsPassed": 777,
+  "testsFailed": 0,
+  "productionBuild": "passed",
+  "tabToggleBrowser": "7 groups passed: 2 weapons x 2 DPR plus 3 fallback paths",
+  "interaction": "passed",
+  "keyboard": "passed",
+  "escapeSequence": "passed",
+  "u1u2Regression": "passed",
+  "productionSmoke": "passed",
+  "diffCheck": "passed",
+  "originalWorktrees": 12,
+  "preservedFileHashes": 122,
+  "mainWipFiles": 10,
+  "gitPublishing": "none"
+}

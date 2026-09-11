@@ -1,0 +1,134 @@
+{
+  "origin": "http://127.0.0.1:49183",
+  "browser": "Microsoft Edge (Playwright channel msedge, headless)",
+  "storage": "fresh ephemeral contexts, never the user browser profile",
+  "stateSource": "test-only response instrumentation and isolated in-memory scene state; config modules are not mutated",
+  "checks": [
+    {
+      "name": "Tesla normal upgrade wording and availability",
+      "passed": true,
+      "detail": {
+        "cards": [
+          "伤害提升，每跳伤害+20%，6 到 7.2",
+          "攻击节奏，攻击间隔-15%，300 到 255ms",
+          "额外链击，链击目标+1，3 到 4"
+        ],
+        "expectedSemantics": [
+          "damage is per tick",
+          "attack cadence is settlement interval",
+          "chain selection reports target count"
+        ]
+      }
+    },
+    {
+      "name": "Late Tesla build contains all rows and active field with reachable top/bottom content",
+      "passed": true,
+      "detail": {
+        "expectedNames": [
+          "伤害提升",
+          "攻击速度",
+          "移动速度",
+          "最大生命值",
+          "额外弹丸",
+          "弹丸穿透",
+          "拾取范围",
+          "紧急治疗",
+          "额外链击",
+          "快速放电",
+          "回旋弹",
+          "常驻电场"
+        ],
+        "topGeometry": {
+          "clientHeight": 145,
+          "scrollHeight": 531,
+          "scrollTop": 0,
+          "firstRowVisible": true,
+          "allRowsWithinScrollableExtent": true,
+          "horizontalOverflow": [],
+          "rowCount": 10
+        },
+        "bottomGeometry": {
+          "scrollTop": 386,
+          "maxScrollTop": 386,
+          "lastRowVisible": true
+        },
+        "weaponGeometry": {
+          "clientHeight": 236,
+          "scrollHeight": 236,
+          "scrollTop": 0,
+          "maxScrollTop": 0,
+          "allWeaponsReachable": true,
+          "lastWeaponVisible": true
+        }
+      }
+    },
+    {
+      "name": "Rifle 80 ms cap and already-used mutation are unavailable",
+      "passed": true,
+      "detail": {
+        "disabled": [
+          true,
+          true,
+          false
+        ],
+        "status": [
+          "80 ms cap",
+          "mutation active and irreversible this run"
+        ]
+      }
+    },
+    {
+      "name": "Long cloned Chinese description wraps without covering values or buttons",
+      "passed": true,
+      "detail": {
+        "configMutation": false,
+        "characterCount": 77,
+        "issues": [],
+        "geometry": {
+          "description": {
+            "top": 293,
+            "right": 338.65625,
+            "bottom": 396.0625,
+            "left": 118,
+            "width": 220.65625,
+            "height": 103.0625,
+            "clientHeight": 103,
+            "scrollHeight": 103,
+            "lineHeight": 15,
+            "approximateLines": 6.870833333333334,
+            "whiteSpace": "pre-line"
+          },
+          "comparison": {
+            "top": 396.0625,
+            "right": 335.65625,
+            "bottom": 422.8125,
+            "left": 121,
+            "width": 214.65625,
+            "height": 26.75
+          },
+          "card": {
+            "top": 138,
+            "right": 348.65625,
+            "bottom": 435.8125,
+            "left": 108,
+            "width": 240.65625,
+            "height": 297.8125
+          },
+          "footer": {
+            "top": 444.8125,
+            "right": 852,
+            "bottom": 488,
+            "left": 108,
+            "width": 744,
+            "height": 43.1875
+          },
+          "descriptionBeforeComparison": true,
+          "comparisonInsideCard": true,
+          "cardBeforeFooter": true
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "passed": true
+}

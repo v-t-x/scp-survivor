@@ -20,6 +20,7 @@ import { THEME } from "../ui/theme.js";
 import { createTacticalHudView } from "../ui/tacticalHudView.js";
 import { createStatusLamp, createTacticalPanel } from "../ui/tacticalUi.js";
 import { createTerminalOverlay } from "../ui/terminalOverlay.js";
+import { createU3BuildView } from "../ui/u3BuildView.js";
 import { UPGRADE_PRESENTATION } from "../ui/upgradePresentation.js";
 
 const HUD_DEPTH = 45;
@@ -644,13 +645,25 @@ export const hudMixin = {
     this.destroyBuildPanel();
 
     let controller = null;
-    try {
-      controller = this.createTerminalBuildPanel();
-    } catch {
+    if (typeof createU3BuildView === "function") {
       try {
-        controller = this.createLegacyBuildPanel();
+        controller = createU3BuildView(this, {
+          onFailure: (_error, detail) => this.replaceFailedU3BuildPanel?.(detail?.visible)
+        });
       } catch {
         controller = null;
+      }
+    }
+
+    if (!controller) {
+      try {
+        controller = this.createTerminalBuildPanel();
+      } catch {
+        try {
+          controller = this.createLegacyBuildPanel();
+        } catch {
+          controller = null;
+        }
       }
     }
 
@@ -664,6 +677,40 @@ export const hudMixin = {
 
     this.buildPanelText = null;
     this.buildPanel = this.createNoopBuildPanel();
+  },
+
+
+  replaceFailedU3BuildPanel(requestedVisible) {
+    const failed = this.buildPanelController;
+    if (failed?.mode !== "u3") return;
+    const wasVisible = typeof requestedVisible === "boolean"
+      ? requestedVisible
+      : failed.container?.visible === true;
+    try {
+      failed.destroy?.();
+    } catch {
+      // Continue into the established Phaser fallbacks.
+    }
+
+    this.buildPanelController = null;
+    for (const createFallback of [this.createTerminalBuildPanel, this.createLegacyBuildPanel]) {
+      let controller = null;
+      try {
+        controller = createFallback.call(this);
+        this.buildPanelController = controller;
+        this.buildPanel = controller.container;
+        this.buildPanelText = controller.summaryText ?? null;
+        controller.update?.();
+        controller.setVisible(wasVisible);
+        return;
+      } catch {
+        try { controller?.destroy?.(); } catch { /* Continue to the next exit. */ }
+        this.buildPanelController = null;
+      }
+    }
+    this.buildPanelText = null;
+    this.buildPanel = this.createNoopBuildPanel();
+    this.hideBuildPanel();
   },
 
 
@@ -709,7 +756,7 @@ export const hudMixin = {
         scrollFactor: 0,
         eyebrow: SITE_CHANNELS.operatorLoadout,
         title: "当前构筑",
-        subtitle: "TAB 关闭 // 实时装备与异常协议摘要",
+        subtitle: "行动已暂停 // TAB / ESC 关闭并继续",
         tone: "standard",
         surfaceTextureKey: TEXTURES.terminalSurfaceGrid
       });
@@ -975,22 +1022,48 @@ export const hudMixin = {
 
 
   toggleBuildPanel() {
-    if (this.isGameOver || this.isLevelUpActive) {
+    if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive) {
       return;
     }
-
-    if (!this.buildPanel?.setVisible) {
+    // Visibility can be lost when a DOM renderer fails; the pause owner still
+    // provides a reliable keyboard exit in that state.
+    if (this.isBuildPanelPaused) {
+      this.hideBuildPanel();
       return;
     }
-    this.buildPanel.setVisible(this.buildPanel.visible !== true);
-    if (this.buildPanel.visible) {
+    if (this.isPaused || !this.buildPanel?.setVisible) {
+      return;
+    }
+    this.isBuildPanelPaused = true;
+    this.isPaused = true;
+    try {
+      this.pauseGameplaySystems();
+      this.buildPanel.setVisible(true);
       this.updateBuildPanelText();
+      if (!this.buildPanel.visible) this.hideBuildPanel();
+    } catch {
+      this.hideBuildPanel();
     }
+    this.updateUI?.();
   },
 
 
-  hideBuildPanel() {
-    this.buildPanel?.setVisible?.(false);
+  hideBuildPanel({ resume = true } = {}) {
+    const ownedPause = this.isBuildPanelPaused === true;
+    this.isBuildPanelPaused = false;
+    try {
+      this.buildPanel?.setVisible?.(false);
+    } catch {
+      this.destroyBuildPanel();
+    }
+    if (!ownedPause) return;
+    this.isPaused = !!this.pauseOverlay;
+    // Upgrades and terminal states have their own pause. Closing a build view
+    // during their takeover must not resume physics, spawning or animations.
+    if (resume && this.isMissionActive && !this.isGameOver && !this.isLevelUpActive && !this.pauseOverlay) {
+      this.resumeGameplaySystems();
+    }
+    this.updateUI?.();
   },
 
 
@@ -1000,6 +1073,8 @@ export const hudMixin = {
 
 
   destroyBuildPanel() {
+    if (this.isBuildPanelPaused) this.isPaused = !!this.pauseOverlay;
+    this.isBuildPanelPaused = false;
     const controller = this.buildPanelController;
     const panel = this.buildPanel;
     this.buildPanelController = null;

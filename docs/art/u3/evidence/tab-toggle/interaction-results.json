@@ -1,0 +1,51 @@
+{
+  "origin": "http://127.0.0.1:49183",
+  "storage": "fresh ephemeral contexts, never the user browser profile",
+  "checks": [
+    {
+      "name": "U1 title → armory → rifle selection → deployment through pointer input",
+      "passed": true
+    },
+    {
+      "name": "Tab toggles a pause-owning build; keyup keeps it open; Esc or second Tab closes and resumes",
+      "passed": true,
+      "detail": {
+        "timeA": 716.6499999999999,
+        "timeB": 716.6499999999999
+      }
+    },
+    {
+      "name": "Esc pause freezes time; aligned resume and quit hit areas after camera movement",
+      "passed": true
+    },
+    {
+      "name": "Rifle apply once, sequential pending upgrades, 3 rerolls exhausted, skip clamps to max health",
+      "passed": true
+    },
+    {
+      "name": "Dense build retains all weapon protocols/mutations and scroll while its owned pause freezes combat",
+      "passed": true
+    },
+    {
+      "name": "Tesla real minimum interval clamp, 6 damage unchanged, mutation one-shot, cap and mutation disabled states",
+      "passed": true
+    },
+    {
+      "name": "Four victory/failure restarts: exact persisted reward once; replaying UI/clicks does not award twice; run resets",
+      "passed": true
+    },
+    {
+      "name": "Visible paused build DOM detaches → visible terminal fallback; second Tab closes and resumes",
+      "passed": true
+    },
+    {
+      "name": "texture unavailable: upgrade/pause/result recover with operable exit",
+      "passed": true
+    },
+    {
+      "name": "dom unavailable: upgrade/pause/result recover with operable exit",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

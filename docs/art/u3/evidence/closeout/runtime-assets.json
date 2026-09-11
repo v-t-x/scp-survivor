@@ -1,0 +1,47 @@
+{
+  "source": "2026-09-10 OpenAI 内置 ImageGen，生成原图直接复制，CC BY-SA 3.0",
+  "files": [
+    {
+      "path": "src/ui/assets/u3-steel.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2991530,
+      "sha256": "cdd888b270927037c570ba041cd1f6119f5892b60449d70f3827e8cbde1c94bc"
+    },
+    {
+      "path": "src/ui/assets/u3-ammunition-v2.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1659695,
+      "sha256": "355cb700d6f875631345e3f780f2b2199447a290a2eddeaa9de0f1a924a773af"
+    },
+    {
+      "path": "src/ui/assets/u3-vitals-v2.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1911917,
+      "sha256": "d9eabfa4faee858d0c5afd3ed7508f1805abc2ea6bb75053382ff78393c3a3b0"
+    },
+    {
+      "path": "src/ui/assets/u3-paper-v2.png",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 2309496,
+      "sha256": "35899474e14353c91776bd4c164e2eafd5c7599bb768c61cad8799ac1294168d"
+    },
+    {
+      "path": "src/ui/assets/u3-chassis-v2.png",
+      "width": 1586,
+      "height": 992,
+      "bytes": 1950666,
+      "sha256": "1a9409530f400ae4583a6dd5b3fe152d690e2439f930ae3b5f25fde6ad254d5a"
+    },
+    {
+      "path": "src/ui/assets/u3-containment-v2.png",
+      "width": 1122,
+      "height": 1402,
+      "bytes": 1588695,
+      "sha256": "c27af4f6b0ef75d0db229c8d20d6581ab72f873de4f70b0219db0c323ea68b14"
+    }
+  ]
+}

@@ -29,14 +29,16 @@ export const systemsMixin = {
       this.tryStartDash();
     });
 
+    const handledBuildEvents = new WeakSet();
     this.input.keyboard.on("keydown-TAB", (event) => {
       event.preventDefault();
+      if (event.repeat || handledBuildEvents.has(event)) return;
+      handledBuildEvents.add(event);
       this.toggleBuildPanel();
     });
 
     this.input.keyboard.on("keyup-TAB", (event) => {
       event.preventDefault();
-      this.hideBuildPanel();
     });
 
     this.input.keyboard.on("keydown-M", () => {
@@ -47,7 +49,14 @@ export const systemsMixin = {
       this.updateMuteText();
     });
 
-    this.input.keyboard.on("keydown-ESC", () => {
+    // Phaser can replay the same native event while processing an in-frame queue.
+    // One event must produce one toggle, including when the DOM pause view closes.
+    const handledPauseEvents = new WeakSet();
+    this.input.keyboard.on("keydown-ESC", (event) => {
+      if (event) {
+        if (handledPauseEvents.has(event)) return;
+        handledPauseEvents.add(event);
+      }
       this.togglePause();
     });
 
@@ -106,7 +115,7 @@ export const systemsMixin = {
 
 
   tryStartDash() {
-    if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive) {
+    if (!this.isMissionActive || this.isGameOver || this.isLevelUpActive || this.isPaused) {
       return;
     }
     if (this.elapsedSurvivalMs < this.dashReadyAtMs) {

@@ -1,0 +1,1405 @@
+{
+  "source": "实际运行游戏，49183 独立临时上下文；测试构造升级选项/封顶数值，不改用户存档或截图",
+  "cases": [
+    {
+      "name": "pistol-960-dpr1",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-960-dpr1",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-960-dpr1.5",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-960-dpr1.5",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-960-dpr2",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-960-dpr2",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-1440-dpr1",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-1440-dpr1",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-1440-dpr1.5",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-1440-dpr1.5",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-1440-dpr2",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-1440-dpr2",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 207,
+        "bottom": 653.71875,
+        "left": 916.9921875,
+        "right": 1278
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 222,
+          "bottom": 271.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 277.5,
+          "bottom": 424.5,
+          "left": 933.4921875,
+          "right": 1261.5,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 430.5,
+          "bottom": 523.5,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 523.5,
+          "bottom": 588.46875,
+          "left": 931.9921875,
+          "right": 1263,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 588.46875,
+          "bottom": 634.21875,
+          "left": 936.4921875,
+          "right": 1258.5,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 1.2000000000000002,
+        "scaleY": 1.2000000000000002
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-attackSpeed-90-to-80",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−11.1%\n\n开火更快\n每次少等 10 ms\n\n间隔\n90 → 80 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 90
+        },
+        {
+          "spacing": 24.888888888888886,
+          "interval": 80
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-attackSpeed-80-to-80",
+      "disabled": true,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n0%\n\n已达间隔下限\n本项无法继续强化\n\n间隔\n80 → 80 ms\n已达上限",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 80
+        },
+        {
+          "spacing": 28,
+          "interval": 80
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-rifle-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-attackSpeed-200-to-180",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−10%\n\n电击结算更密集\n每次少等 20 ms\n\n间隔\n200 → 180 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 200
+        },
+        {
+          "spacing": 25.2,
+          "interval": 180
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-teslaCooldown-190-to-180",
+      "disabled": false,
+      "text": "快速放电\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−5.3%\n\n电击结算更密集\n每次少等 10 ms\n\n间隔\n190 → 180 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 190
+        },
+        {
+          "spacing": 26.52631578947368,
+          "interval": 180
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "tesla-teslaCooldown-180-to-180",
+      "disabled": true,
+      "text": "快速放电\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n0%\n\n已达间隔下限\n本项无法继续强化\n\n间隔\n180 → 180 ms\n已达上限",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 180
+        },
+        {
+          "spacing": 28,
+          "interval": 180
+        }
+      ],
+      "weapon": {
+        "url": "/assets/art/u1/weapon-tesla-hero.png",
+        "scaleX": 0.8,
+        "scaleY": 0.8
+      },
+      "fallbackVisible": false
+    },
+    {
+      "name": "pistol-missing-weapon",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n射击节奏\n当前\n强化后\n攻击间隔缩短\n−15%\n\n开火更快\n每次少等 42 ms\n\n间隔\n280 → 238 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 280
+        },
+        {
+          "spacing": 23.8,
+          "interval": 238
+        }
+      ],
+      "weapon": null,
+      "fallbackVisible": true
+    },
+    {
+      "name": "tesla-missing-weapon",
+      "disabled": false,
+      "text": "攻击节奏\n03\n武器协议 // 武器 Lv 1\n电击节奏\n当前\n强化后\n结算间隔缩短\n−15%\n\n电击结算更密集\n每次少等 45 ms\n\n间隔\n300 → 255 ms",
+      "bounds": {
+        "top": 138,
+        "bottom": 435.8125,
+        "left": 611.328125,
+        "right": 852
+      },
+      "blocks": [
+        {
+          "name": "u3-upgrade-card-head",
+          "top": 148,
+          "bottom": 181,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 32,
+          "clientHeight": 32
+        },
+        {
+          "name": "u3-upgrade-visual",
+          "top": 185,
+          "bottom": 283,
+          "left": 622.328125,
+          "right": 841,
+          "scrollHeight": 96,
+          "clientHeight": 96
+        },
+        {
+          "name": "u3-upgrade-benefit",
+          "top": 287,
+          "bottom": 349,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "name": "u3-upgrade-description",
+          "top": 349,
+          "bottom": 392.3125,
+          "left": 621.328125,
+          "right": 842,
+          "scrollHeight": 43,
+          "clientHeight": 43
+        },
+        {
+          "name": "u3-upgrade-comparisons",
+          "top": 392.3125,
+          "bottom": 422.8125,
+          "left": 624.328125,
+          "right": 839,
+          "scrollHeight": 30,
+          "clientHeight": 30
+        }
+      ],
+      "trace": [
+        {
+          "spacing": 28,
+          "interval": 300
+        },
+        {
+          "spacing": 23.8,
+          "interval": 255
+        }
+      ],
+      "weapon": null,
+      "fallbackVisible": true
+    }
+  ],
+  "errors": [],
+  "passed": true
+}

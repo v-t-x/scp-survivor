@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-09-11T10:36:49.188Z",
+  "source": "从明确暂存清单导出的干净候选执行 npm ci / npm run build；不使用本地未入库文件",
+  "files": [
+    {
+      "source": "src/ui/assets/u3-steel.png",
+      "sourceSha256": "cdd888b270927037c570ba041cd1f6119f5892b60449d70f3827e8cbde1c94bc",
+      "built": "dist/assets/u3-steel-Byewm92q.png",
+      "matched": true
+    },
+    {
+      "source": "src/ui/assets/u3-ammunition-v2.png",
+      "sourceSha256": "355cb700d6f875631345e3f780f2b2199447a290a2eddeaa9de0f1a924a773af",
+      "built": "dist/assets/u3-ammunition-v2-Y-OjZwg9.png",
+      "matched": true
+    },
+    {
+      "source": "src/ui/assets/u3-vitals-v2.png",
+      "sourceSha256": "d9eabfa4faee858d0c5afd3ed7508f1805abc2ea6bb75053382ff78393c3a3b0",
+      "built": "dist/assets/u3-vitals-v2-ZnB6VAjo.png",
+      "matched": true
+    },
+    {
+      "source": "src/ui/assets/u3-paper-v2.png",
+      "sourceSha256": "35899474e14353c91776bd4c164e2eafd5c7599bb768c61cad8799ac1294168d",
+      "built": "dist/assets/u3-paper-v2-B1PJTNNS.png",
+      "matched": true
+    },
+    {
+      "source": "src/ui/assets/u3-chassis-v2.png",
+      "sourceSha256": "1a9409530f400ae4583a6dd5b3fe152d690e2439f930ae3b5f25fde6ad254d5a",
+      "built": "dist/assets/u3-chassis-v2-C_6DVm15.png",
+      "matched": true
+    },
+    {
+      "source": "src/ui/assets/u3-containment-v2.png",
+      "sourceSha256": "c27af4f6b0ef75d0db229c8d20d6581ab72f873de4f70b0219db0c323ea68b14",
+      "built": "dist/assets/u3-containment-v2-DbfWqwA7.png",
+      "matched": true
+    }
+  ],
+  "u1ReusedHeroes": [
+    {
+      "file": "assets/art/u1/weapon-rifle-hero.png",
+      "matched": true
+    },
+    {
+      "file": "assets/art/u1/weapon-tesla-hero.png",
+      "matched": true
+    }
+  ],
+  "passed": true
+}
