@@ -1,0 +1,17 @@
+{
+  "name": "scp-survivor-desktop-electron",
+  "version": "0.0.0-poc",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "stage": "node scripts/stage-web.mjs",
+    "start": "npm run stage && electron-forge start",
+    "package:win": "npm run stage && electron-forge package --platform=win32 --arch=x64"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "7.11.2",
+    "electron": "43.1.0"
+  }
+}
